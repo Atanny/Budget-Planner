@@ -310,7 +310,7 @@ export default function DashboardPage() {
 
 function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
   const [name,    setName]    = useState(bank?.name    || '')
-  const [type,    setType]    = useState(bank?.type    || 'bank')
+  const [type,    setType]    = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type    || 'bank')
   const [balance, setBalance] = useState(bank?.balance?.toString() || '')
   const [color,   setColor]   = useState(bank?.color   || '#22703a')
 
