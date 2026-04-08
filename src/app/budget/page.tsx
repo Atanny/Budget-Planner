@@ -3,13 +3,23 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, Cutoff, PaymentStatus, STATUS_COLORS, UserSettings } from '@/lib/types'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, Check, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, Check } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 import EditSalaryModal from '@/components/EditSalaryModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const CURRENT_YEAR = new Date().getFullYear()
 const CURRENT_MONTH = new Date().getMonth()
+
+interface MobileItemCardProps {
+  item: BudgetItem
+  monthPaid: boolean[]
+  paidCount: number
+  onToggle: (month: number) => void
+  onEdit: () => void
+  onDelete: () => void
+  onStatus: (s: PaymentStatus) => void
+}
 
 export default function BudgetPage() {
   const [items, setItems] = useState<BudgetItem[]>([])
@@ -52,9 +62,7 @@ export default function BudgetPage() {
     if (!userId) return
     const current = payments[itemId]?.[month] ?? false
     const newVal = !current
-
     setPayments(prev => ({ ...prev, [itemId]: { ...(prev[itemId] || {}), [month]: newVal } }))
-
     await supabase.from('monthly_payments').upsert({
       budget_item_id: itemId, user_id: userId,
       year: CURRENT_YEAR, month, paid: newVal,
@@ -94,10 +102,16 @@ export default function BudgetPage() {
           <p className="text-slate-400 text-sm mt-1">{CURRENT_YEAR}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowSalary(true)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <button
+            onClick={() => setShowSalary(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white transition"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <Settings size={15} /> Salary
           </button>
-          <button onClick={() => { setEditCutoff(activeTab); setEditItem(null); setShowAdd(true) }} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white transition" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+          <button
+            onClick={() => { setEditCutoff(activeTab); setEditItem(null); setShowAdd(true) }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white transition"
+            style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
             <Plus size={15} /> Add Item
           </button>
         </div>
@@ -106,7 +120,13 @@ export default function BudgetPage() {
       {/* Cutoff Tabs */}
       <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
         {(['1st', '2nd'] as Cutoff[]).map(c => (
-          <button key={c} onClick={() => setActiveTab(c)} className="flex-1 py-2 rounded-lg text-sm font-medium transition-all" style={{ background: activeTab === c ? 'rgba(59,130,246,0.2)' : 'transparent', color: activeTab === c ? '#3b82f6' : '#64748b', border: activeTab === c ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent' }}>
+          <button key={c} onClick={() => setActiveTab(c)}
+            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: activeTab === c ? 'rgba(59,130,246,0.2)' : 'transparent',
+              color: activeTab === c ? '#3b82f6' : '#64748b',
+              border: activeTab === c ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent'
+            }}>
             {c === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
           </button>
         ))}
@@ -147,17 +167,22 @@ export default function BudgetPage() {
             </thead>
             <tbody>
               {cutoffItems.length === 0 && (
-                <tr><td colSpan={18} className="text-center py-12 text-slate-500">No items yet. Click "Add Item" to get started.</td></tr>
+                <tr>
+                  <td colSpan={18} className="text-center py-12 text-slate-500">
+                    No items yet. Click &quot;Add Item&quot; to get started.
+                  </td>
+                </tr>
               )}
               {cutoffItems.map((item, idx) => {
                 const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
                 const paidCount = monthPaid.filter(Boolean).length
-                const remaining = 12 - paidCount
                 const isLoan = item.is_loan
-                const totalMonths = (item.loan_details as any)?.total_months || 12
+                const totalMonths = (item.loan_details as Record<string, number> | null)?.total_months || 12
 
                 return (
-                  <tr key={item.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }} className="hover:bg-white/5 transition-colors group">
+                  <tr key={item.id}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}
+                    className="hover:bg-white/5 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {isLoan && <span className="w-2 h-2 rounded-full bg-purple-400" title="Loan" />}
@@ -173,21 +198,39 @@ export default function BudgetPage() {
                       const isCurrent = i === CURRENT_MONTH
                       return (
                         <td key={i} className="px-1 py-3 text-center">
-                          <button onClick={() => toggleMonth(item.id, i + 1)} className="w-7 h-7 rounded-md flex items-center justify-center mx-auto transition-all" style={{
-                            background: paid ? 'rgba(16,185,129,0.2)' : isCurrent ? 'rgba(59,130,246,0.1)' : 'transparent',
-                            border: `1px solid ${paid ? 'rgba(16,185,129,0.4)' : isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                          }}>
-                            {paid ? <Check size={12} className="text-green-400" /> : <span className="w-1.5 h-1.5 rounded-full" style={{ background: isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.2)' }} />}
+                          <button
+                            onClick={() => toggleMonth(item.id, i + 1)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center mx-auto transition-all"
+                            style={{
+                              background: paid ? 'rgba(16,185,129,0.2)' : isCurrent ? 'rgba(59,130,246,0.1)' : 'transparent',
+                              border: `1px solid ${paid ? 'rgba(16,185,129,0.4)' : isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                            }}>
+                            {paid
+                              ? <Check size={12} className="text-green-400" />
+                              : <span className="w-1.5 h-1.5 rounded-full" style={{ background: isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.2)' }} />
+                            }
                           </button>
                         </td>
                       )
                     })}
-                    <td className="px-4 py-3 text-center text-green-400 font-medium">{isLoan ? paidCount + (totalMonths - 12) : paidCount}</td>
-                    <td className="px-4 py-3 text-center text-slate-400">{isLoan ? `${Math.max(totalMonths - paidCount - (totalMonths - 12), 0)} mo` : `${remaining} mo`}</td>
+                    <td className="px-4 py-3 text-center text-green-400 font-medium">
+                      {isLoan ? paidCount + (totalMonths - 12) : paidCount}
+                    </td>
+                    <td className="px-4 py-3 text-center text-slate-400">
+                      {isLoan ? `${Math.max(totalMonths - paidCount - (totalMonths - 12), 0)} mo` : `${12 - paidCount} mo`}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }} className="p-1.5 rounded-lg hover:bg-blue-500/20 text-blue-400"><Edit2 size={14} /></button>
-                        <button onClick={() => deleteItem(item.id)} className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400"><Trash2 size={14} /></button>
+                        <button
+                          onClick={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }}
+                          className="p-1.5 rounded-lg hover:bg-blue-500/20 text-blue-400">
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => deleteItem(item.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -208,7 +251,9 @@ export default function BudgetPage() {
                 </tr>
                 <tr style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
                   <td className="px-4 py-3 text-white font-semibold">Remaining Budget</td>
-                  <td className={cn("px-4 py-3 text-right font-bold text-lg", afterSavings >= 0 ? 'text-green-400' : 'text-red-400')}>{formatCurrency(afterSavings)}</td>
+                  <td className={cn('px-4 py-3 text-right font-bold text-lg', afterSavings >= 0 ? 'text-green-400' : 'text-red-400')}>
+                    {formatCurrency(afterSavings)}
+                  </td>
                   <td colSpan={16} />
                 </tr>
               </tfoot>
@@ -218,51 +263,84 @@ export default function BudgetPage() {
 
         {/* Mobile cards */}
         <div className="md:hidden divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          {cutoffItems.length === 0 && <p className="text-center py-10 text-slate-500 text-sm">No items yet.</p>}
+          {cutoffItems.length === 0 && (
+            <p className="text-center py-10 text-slate-500 text-sm">No items yet.</p>
+          )}
           {cutoffItems.map(item => {
             const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
             const paidCount = monthPaid.filter(Boolean).length
             return (
-              <MobileItemCard key={item.id} item={item} monthPaid={monthPaid} paidCount={paidCount}
-                onToggle={(m) => toggleMonth(item.id, m)}
+              <MobileItemCard
+                key={item.id}
+                item={item}
+                monthPaid={monthPaid}
+                paidCount={paidCount}
+                onToggle={(m: number) => toggleMonth(item.id, m)}
                 onEdit={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }}
                 onDelete={() => deleteItem(item.id)}
-                onStatus={(s) => updateStatus(item.id, s)}
+                onStatus={(s: PaymentStatus) => updateStatus(item.id, s)}
               />
             )
           })}
           {cutoffItems.length > 0 && (
             <div className="p-4 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Total Expenses</span><span className="text-red-400 font-bold">{formatCurrency(totalExpenses)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-400">Savings Goal</span><span className="text-purple-400">- {formatCurrency(savings)}</span></div>
-              <div className="flex justify-between text-sm font-semibold"><span className="text-white">Remaining</span><span className={afterSavings >= 0 ? 'text-green-400' : 'text-red-400'}>{formatCurrency(afterSavings)}</span></div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Total Expenses</span>
+                <span className="text-red-400 font-bold">{formatCurrency(totalExpenses)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-400">Savings Goal</span>
+                <span className="text-purple-400">- {formatCurrency(savings)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold">
+                <span className="text-white">Remaining</span>
+                <span className={afterSavings >= 0 ? 'text-green-400' : 'text-red-400'}>{formatCurrency(afterSavings)}</span>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {showAdd && (
-        <AddItemModal defaultCutoff={editCutoff} editItem={editItem} onClose={() => { setShowAdd(false); setEditItem(null) }} onSave={load} />
+        <AddItemModal
+          defaultCutoff={editCutoff}
+          editItem={editItem}
+          onClose={() => { setShowAdd(false); setEditItem(null) }}
+          onSave={load}
+        />
       )}
       {showSalary && (
-        <EditSalaryModal settings={settings} onClose={() => setShowSalary(false)} onSave={(s) => { setSettings(s); setShowSalary(false) }} />
+        <EditSalaryModal
+          settings={settings}
+          onClose={() => setShowSalary(false)}
+          onSave={(s) => { setSettings(s); setShowSalary(false) }}
+        />
       )}
     </div>
   )
 }
 
-function StatusBadge({ status, itemId, onUpdate }: { status: PaymentStatus; itemId: string; onUpdate: (id: string, s: PaymentStatus) => void }) {
+function StatusBadge({ status, itemId, onUpdate }: {
+  status: PaymentStatus
+  itemId: string
+  onUpdate: (id: string, s: PaymentStatus) => void
+}) {
   const [open, setOpen] = useState(false)
   const statuses: PaymentStatus[] = ['Required','Optional','First Payment','Last Payment','Once','Suspended','Paid']
   return (
     <div className="relative inline-block">
-      <button onClick={() => setOpen(!open)} className={cn('text-xs px-2 py-1 rounded-full border flex items-center gap-1', STATUS_COLORS[status])}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn('text-xs px-2 py-1 rounded-full border flex items-center gap-1', STATUS_COLORS[status])}>
         {status} {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 rounded-xl overflow-hidden shadow-xl w-36" style={{ background: '#141b2d', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 rounded-xl overflow-hidden shadow-xl w-36"
+          style={{ background: '#141b2d', border: '1px solid rgba(255,255,255,0.1)' }}>
           {statuses.map(s => (
-            <button key={s} onClick={() => { onUpdate(itemId, s); setOpen(false) }} className={cn('w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors', status === s ? 'text-blue-400' : 'text-slate-300')}>
+            <button key={s}
+              onClick={() => { onUpdate(itemId, s); setOpen(false) }}
+              className={cn('w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors', status === s ? 'text-blue-400' : 'text-slate-300')}>
               {s}
             </button>
           ))}
@@ -272,7 +350,7 @@ function StatusBadge({ status, itemId, onUpdate }: { status: PaymentStatus; item
   )
 }
 
-function MobileItemCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete, onStatus }: any) {
+function MobileItemCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: MobileItemCardProps) {
   const [expanded, setExpanded] = useState(false)
   return (
     <div className="p-4 space-y-3">
@@ -285,8 +363,12 @@ function MobileItemCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete
           <p className="text-blue-400 font-mono text-sm mt-0.5">{formatCurrency(item.amount)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={cn('text-xs px-2 py-0.5 rounded-full border', STATUS_COLORS[item.status])}>{item.status}</span>
-          <button onClick={() => setExpanded(!expanded)} className="text-slate-400"><ChevronDown size={16} className={expanded ? 'rotate-180' : ''} /></button>
+          <span className={cn('text-xs px-2 py-0.5 rounded-full border', STATUS_COLORS[item.status])}>
+            {item.status}
+          </span>
+          <button onClick={() => setExpanded(!expanded)} className="text-slate-400">
+            <ChevronDown size={16} className={expanded ? 'rotate-180' : ''} />
+          </button>
         </div>
       </div>
       {expanded && (
@@ -296,7 +378,13 @@ function MobileItemCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete
               const paid = monthPaid[i]
               const isCurrent = i === CURRENT_MONTH
               return (
-                <button key={i} onClick={() => onToggle(i + 1)} className="flex flex-col items-center gap-1 p-1 rounded-lg" style={{ background: paid ? 'rgba(16,185,129,0.15)' : isCurrent ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${paid ? 'rgba(16,185,129,0.3)' : isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}` }}>
+                <button key={i}
+                  onClick={() => onToggle(i + 1)}
+                  className="flex flex-col items-center gap-1 p-1 rounded-lg"
+                  style={{
+                    background: paid ? 'rgba(16,185,129,0.15)' : isCurrent ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${paid ? 'rgba(16,185,129,0.3)' : isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}`
+                  }}>
                   <span className="text-xs" style={{ color: paid ? '#10b981' : isCurrent ? '#3b82f6' : '#475569' }}>
                     {['J','F','M','A','M','J','J','A','S','O','N','D'][i]}
                   </span>
@@ -308,8 +396,12 @@ function MobileItemCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span>{paidCount} months paid</span>
             <div className="flex gap-2">
-              <button onClick={onEdit} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400"><Edit2 size={13} /></button>
-              <button onClick={onDelete} className="p-1.5 rounded-lg bg-red-500/10 text-red-400"><Trash2 size={13} /></button>
+              <button onClick={onEdit} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+                <Edit2 size={13} />
+              </button>
+              <button onClick={onDelete} className="p-1.5 rounded-lg bg-red-500/10 text-red-400">
+                <Trash2 size={13} />
+              </button>
             </div>
           </div>
         </div>
