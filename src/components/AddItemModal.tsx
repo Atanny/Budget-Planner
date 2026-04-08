@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, Cutoff, PaymentStatus } from '@/lib/types'
-import { X, Calculator } from 'lucide-react'
+import { X, Calculator, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react'
 
 interface Props {
   defaultCutoff: Cutoff
@@ -32,7 +32,17 @@ const BADGE: Record<PaymentStatus, { bg: string; text: string; border: string }>
   Paid:            { bg: 'rgba(16,185,129,0.15)',  text: '#34d399', border: 'rgba(16,185,129,0.35)' },
 }
 
+// Build schedule label for a given month offset from startDate
+function getMonthLabel(startDate: string, monthIndex: number): string {
+  const d = new Date(startDate)
+  d.setMonth(d.getMonth() + monthIndex)
+  return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
+}
+
 export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave }: Props) {
+  const existingLoanDetail = editItem?.loan_details as any
+  const existingMonthlyAmounts: Record<string, number> = existingLoanDetail?.monthly_amounts || {}
+
   const [name, setName] = useState(editItem?.name || '')
   const [amount, setAmount] = useState(editItem?.amount?.toString() || '')
   const [cutoff, setCutoff] = useState<Cutoff>(editItem?.cutoff || defaultCutoff)
@@ -40,32 +50,87 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     editItem?.status === 'Optional' ? 'Optional' : 'Required'
   )
   const [isLoan, setIsLoan] = useState(editItem?.is_loan || false)
-  const [totalMonths, setTotalMonths] = useState((editItem?.loan_details as any)?.total_months?.toString() || '12')
-  const [startDate, setStartDate] = useState((editItem?.loan_details as any)?.start_date || new Date().toISOString().split('T')[0])
-  const [notes, setNotes] = useState((editItem?.loan_details as any)?.notes || '')
+  const [totalMonths, setTotalMonths] = useState(existingLoanDetail?.total_months?.toString() || '12')
+  const [startDate, setStartDate] = useState(existingLoanDetail?.start_date || new Date().toISOString().split('T')[0])
+  const [notes, setNotes] = useState(existingLoanDetail?.notes || '')
   const [saving, setSaving] = useState(false)
-  const [useCompute, setUseCompute] = useState(false)
-  const [totalLoanAmount, setTotalLoanAmount] = useState('')
 
-  useEffect(() => {
-    if (useCompute && totalLoanAmount && totalMonths) {
-      const total = parseFloat(totalLoanAmount)
-      const months = parseInt(totalMonths)
-      if (!isNaN(total) && !isNaN(months) && months > 0) {
-        setAmount((total / months).toFixed(2))
-      }
+  // Compute mode: 'flat' = equal monthly, 'reducing' = per-month amounts
+  const [computeMode, setComputeMode] = useState<'none' | 'flat' | 'reducing'>('none')
+  const [totalLoanAmount, setTotalLoanAmount] = useState('')
+  const [showSchedule, setShowSchedule] = useState(Object.keys(existingMonthlyAmounts).length > 0)
+
+  // Per-month amounts array: index 0 = month 1 of loan
+  const numMonths = parseInt(totalMonths) || 0
+  const [monthlyAmounts, setMonthlyAmounts] = useState<string[]>(() => {
+    if (Object.keys(existingMonthlyAmounts).length > 0) {
+      return Array.from({ length: parseInt(existingLoanDetail?.total_months || 12) }, (_, i) =>
+        existingMonthlyAmounts[String(i + 1)]?.toString() || ''
+      )
     }
-  }, [useCompute, totalLoanAmount, totalMonths])
+    return Array.from({ length: 12 }, () => '')
+  })
+
+  // Keep monthlyAmounts array length in sync with totalMonths
+  useEffect(() => {
+    const n = parseInt(totalMonths) || 0
+    setMonthlyAmounts(prev => {
+      if (prev.length === n) return prev
+      if (prev.length < n) return [...prev, ...Array(n - prev.length).fill('')]
+      return prev.slice(0, n)
+    })
+  }, [totalMonths])
+
+  // Flat compute: fill all months equally
+  useEffect(() => {
+    if (computeMode === 'flat' && totalLoanAmount && numMonths > 0) {
+      const perMonth = (parseFloat(totalLoanAmount) / numMonths).toFixed(2)
+      setAmount(perMonth)
+      setMonthlyAmounts(Array(numMonths).fill(perMonth))
+    }
+  }, [computeMode, totalLoanAmount, numMonths])
+
+  // Reducing: when per-month amounts change, set amount = current month's due
+  useEffect(() => {
+    if (computeMode === 'reducing') {
+      // Find what month we're on based on startDate
+      const start = new Date(startDate)
+      const now = new Date()
+      const elapsed = Math.max(0,
+        (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
+      )
+      const currentMonthIdx = Math.min(elapsed, numMonths - 1)
+      const currentAmt = monthlyAmounts[currentMonthIdx]
+      if (currentAmt) setAmount(currentAmt)
+    }
+  }, [monthlyAmounts, computeMode, startDate, numMonths])
 
   const computedStatus: PaymentStatus = isLoan
     ? computeAutoStatus(parseInt(totalMonths) || 1, startDate, baseStatus)
     : baseStatus
+
+  const totalScheduled = monthlyAmounts.reduce((s, v) => s + (parseFloat(v) || 0), 0)
+  const allFilled = numMonths > 0 && monthlyAmounts.slice(0, numMonths).every(v => v !== '' && !isNaN(parseFloat(v)))
 
   async function handleSave() {
     if (!name.trim() || !amount) return
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
+
+    // Build monthly_amounts object if we have a schedule
+    let monthlyAmountsObj: Record<string, number> | null = null
+    if (isLoan && computeMode === 'reducing' && allFilled) {
+      monthlyAmountsObj = {}
+      monthlyAmounts.slice(0, numMonths).forEach((v, i) => {
+        monthlyAmountsObj![String(i + 1)] = parseFloat(v)
+      })
+    } else if (isLoan && computeMode === 'flat' && allFilled) {
+      monthlyAmountsObj = {}
+      monthlyAmounts.slice(0, numMonths).forEach((v, i) => {
+        monthlyAmountsObj![String(i + 1)] = parseFloat(v)
+      })
+    }
 
     if (editItem) {
       await supabase.from('budget_items').update({
@@ -74,7 +139,8 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
       if (isLoan) {
         await supabase.from('loan_details').upsert({
           budget_item_id: editItem.id, user_id: user.id,
-          total_months: parseInt(totalMonths), start_date: startDate, notes
+          total_months: parseInt(totalMonths), start_date: startDate, notes,
+          monthly_amounts: monthlyAmountsObj
         }, { onConflict: 'budget_item_id' })
       }
     } else {
@@ -84,7 +150,8 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
       if (newItem && isLoan) {
         await supabase.from('loan_details').insert({
           budget_item_id: newItem.id, user_id: user.id,
-          total_months: parseInt(totalMonths), start_date: startDate, notes
+          total_months: parseInt(totalMonths), start_date: startDate, notes,
+          monthly_amounts: monthlyAmountsObj
         })
       }
     }
@@ -95,9 +162,15 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
 
   const badgeColor = BADGE[computedStatus]
 
+  // Find current elapsed month for highlighting
+  const start = new Date(startDate)
+  const now = new Date()
+  const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+  const currentMonthIdx = Math.min(elapsed, numMonths - 1)
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-overlay p-4">
-      <div className="glass-card w-full max-w-md slide-up" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+      <div className="glass-card w-full max-w-md slide-up" style={{ maxHeight: '92vh', overflowY: 'auto' }}>
         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <h2 className="font-semibold text-white text-lg">{editItem ? 'Edit Item' : 'Add Budget Item'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-slate-400"><X size={18} /></button>
@@ -114,7 +187,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div>
               <p className="text-sm text-white font-medium">Is this a Loan?</p>
-              <p className="text-xs text-slate-500 mt-0.5">Track duration and remaining months</p>
+              <p className="text-xs text-slate-500 mt-0.5">Track duration and monthly payments</p>
             </div>
             <button onClick={() => setIsLoan(!isLoan)} className="w-12 h-6 rounded-full relative transition-colors" style={{ background: isLoan ? '#3b82f6' : 'rgba(255,255,255,0.1)' }}>
               <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all" style={{ left: isLoan ? '26px' : '2px' }} />
@@ -125,6 +198,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           {isLoan && (
             <div className="space-y-3 p-4 rounded-xl slide-up" style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
               <p className="text-xs text-purple-400 font-medium uppercase tracking-wide">Loan Details</p>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 mb-1.5 block">Total Months</label>
@@ -136,32 +210,118 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
                 </div>
               </div>
 
-              {/* Auto-compute toggle */}
-              <div className="flex items-center gap-2 p-2.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <Calculator size={14} className="text-purple-400 shrink-0" />
-                <span className="text-xs text-slate-400 flex-1">Auto-compute monthly from total loan amount?</span>
-                <button
-                  onClick={() => { setUseCompute(!useCompute); if (!useCompute) setAmount('') }}
-                  className="w-10 h-5 rounded-full relative transition-colors"
-                  style={{ background: useCompute ? '#8b5cf6' : 'rgba(255,255,255,0.1)' }}>
-                  <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all" style={{ left: useCompute ? '22px' : '2px' }} />
-                </button>
+              {/* Compute mode selector */}
+              <div>
+                <p className="text-xs text-slate-400 mb-2">Payment Computation</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: 'none', label: 'Manual', desc: 'Enter amount yourself' },
+                    { key: 'flat', label: 'Equal', desc: 'Same every month' },
+                    { key: 'reducing', label: 'Reducing', desc: 'Different each month' },
+                  ].map(m => (
+                    <button
+                      key={m.key}
+                      onClick={() => {
+                        setComputeMode(m.key as any)
+                        if (m.key === 'none') { setMonthlyAmounts(Array(numMonths).fill('')) }
+                      }}
+                      className="p-2.5 rounded-xl text-center transition-all"
+                      style={{
+                        background: computeMode === m.key ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${computeMode === m.key ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                      }}>
+                      <p className="text-xs font-semibold" style={{ color: computeMode === m.key ? '#c4b5fd' : '#94a3b8' }}>{m.label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: computeMode === m.key ? '#a78bfa' : '#475569', fontSize: '10px' }}>{m.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {useCompute && (
-                <div className="slide-up">
+              {/* Flat mode: enter total → auto split */}
+              {computeMode === 'flat' && (
+                <div className="slide-up space-y-2">
                   <label className="text-xs text-slate-400 mb-1.5 block">Total Loan Amount *</label>
                   <input
                     type="number"
                     value={totalLoanAmount}
                     onChange={e => setTotalLoanAmount(e.target.value)}
-                    placeholder="e.g. 36000"
+                    placeholder="e.g. 3063.79"
                     className="w-full px-3 py-2 text-sm"
                   />
-                  {totalLoanAmount && totalMonths && parseInt(totalMonths) > 0 && (
-                    <p className="text-xs text-purple-300 mt-1.5 font-medium">
-                      ₱{(parseFloat(totalLoanAmount) / parseInt(totalMonths)).toFixed(2)} / month × {totalMonths} months = ₱{parseFloat(totalLoanAmount).toLocaleString()}
-                    </p>
+                  {totalLoanAmount && numMonths > 0 && (
+                    <div className="p-2.5 rounded-lg text-xs" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                      <span className="text-purple-300 font-semibold">
+                        ₱{(parseFloat(totalLoanAmount) / numMonths).toFixed(2)}
+                      </span>
+                      <span className="text-slate-400"> × {numMonths} months = </span>
+                      <span className="text-purple-300 font-semibold">₱{parseFloat(totalLoanAmount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Reducing mode: per-month amount entry */}
+              {computeMode === 'reducing' && numMonths > 0 && (
+                <div className="slide-up space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-400">Enter each month's actual bill amount</p>
+                    <button onClick={() => setShowSchedule(!showSchedule)} className="text-xs text-purple-400 flex items-center gap-1">
+                      {showSchedule ? 'Hide' : 'Show'} {showSchedule ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
+
+                  {showSchedule && (
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                      {Array.from({ length: numMonths }, (_, i) => {
+                        const isCurrent = i === currentMonthIdx
+                        const label = getMonthLabel(startDate, i)
+                        return (
+                          <div key={i} className="flex items-center gap-2 p-2 rounded-lg"
+                            style={{
+                              background: isCurrent ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)',
+                              border: `1px solid ${isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`,
+                            }}>
+                            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+                              style={{ background: isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)', color: isCurrent ? '#60a5fa' : '#64748b' }}>
+                              {i + 1}
+                            </div>
+                            <span className="text-xs text-slate-400 w-20 shrink-0">{label}</span>
+                            {isCurrent && <span className="text-xs text-blue-400 shrink-0">← now</span>}
+                            <div className="flex-1 flex items-center gap-1">
+                              <span className="text-xs text-slate-500">₱</span>
+                              <input
+                                type="number"
+                                value={monthlyAmounts[i] || ''}
+                                onChange={e => {
+                                  const updated = [...monthlyAmounts]
+                                  updated[i] = e.target.value
+                                  setMonthlyAmounts(updated)
+                                }}
+                                placeholder="0.00"
+                                className="flex-1 px-2 py-1 text-xs"
+                                style={{ minWidth: 0 }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {!showSchedule && (
+                    <button onClick={() => setShowSchedule(true)} className="w-full py-2 rounded-lg text-xs text-purple-400 transition"
+                      style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                      + Enter monthly amounts ({monthlyAmounts.filter(v => v !== '').length}/{numMonths} filled)
+                    </button>
+                  )}
+
+                  {/* Running total */}
+                  {totalScheduled > 0 && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg text-xs"
+                      style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                      <span className="text-slate-400">Scheduled total</span>
+                      <span className="text-green-400 font-semibold">₱{totalScheduled.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
                   )}
                 </div>
               )}
@@ -176,17 +336,20 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           {/* Amount & Cutoff */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Monthly Amount *</label>
+              <label className="text-xs text-slate-400 mb-1.5 block">
+                {computeMode === 'reducing' ? "Current Month's Amount *" : "Monthly Amount *"}
+              </label>
               <input
                 type="number"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
                 placeholder="0.00"
-                readOnly={useCompute}
+                readOnly={computeMode === 'flat'}
                 className="w-full px-3 py-2.5 text-sm"
-                style={useCompute ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+                style={computeMode === 'flat' ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
               />
-              {useCompute && <p className="text-xs text-purple-400 mt-1">Auto-computed</p>}
+              {computeMode === 'flat' && <p className="text-xs text-purple-400 mt-1">Auto-computed</p>}
+              {computeMode === 'reducing' && <p className="text-xs text-blue-400 mt-1">Shows current month's due</p>}
             </div>
             <div>
               <label className="text-xs text-slate-400 mb-1.5 block">Cutoff</label>
@@ -197,7 +360,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             </div>
           </div>
 
-          {/* Status — only Required / Optional selectable */}
+          {/* Status */}
           <div>
             <label className="text-xs text-slate-400 mb-1.5 block">Status</label>
             <div className="flex gap-2">
@@ -211,17 +374,14 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
                 </button>
               ))}
             </div>
-            {/* Show auto-status when it differs */}
             {isLoan && computedStatus !== baseStatus && (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-500">Auto-detected status →</span>
+                <span className="text-xs text-slate-500">Auto-detected →</span>
                 <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: badgeColor.bg, color: badgeColor.text, border: `1px solid ${badgeColor.border}` }}>
                   {computedStatus}
                 </span>
                 <span className="text-xs text-slate-600">
-                  {computedStatus === 'Once' ? '(1 month)' :
-                   computedStatus === 'First Payment' ? '(month 1)' :
-                   computedStatus === 'Last Payment' ? '(final month)' : ''}
+                  {computedStatus === 'Once' ? '(1 month)' : computedStatus === 'First Payment' ? '(month 1)' : computedStatus === 'Last Payment' ? '(final month)' : ''}
                 </span>
               </div>
             )}

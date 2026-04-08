@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
-import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2 } from 'lucide-react'
+import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
@@ -14,13 +14,11 @@ const CURRENT_MONTH = new Date().getMonth() // 0-indexed
 function monthsBetween(startDateStr: string): number {
   const start = new Date(startDateStr)
   const now = new Date()
-  const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
-  return Math.max(0, months)
+  return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
+  return new Date(dateStr).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
 function addMonths(dateStr: string, n: number): string {
@@ -29,12 +27,26 @@ function addMonths(dateStr: string, n: number): string {
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
-function getAutoStatus(totalMonths: number, startDate: string): string {
+function getAutoStatus(totalMonths: number, startDate: string): string | null {
   if (totalMonths === 1) return 'Once'
   const elapsed = monthsBetween(startDate)
   if (elapsed === 0) return 'First Payment'
   if (elapsed >= totalMonths - 1) return 'Last Payment'
-  return null as any
+  return null
+}
+
+// Get the correct amount due for a specific loan-month index (0-based from start)
+function getAmountForMonth(monthIndex: number, baseAmount: number, monthlyAmounts: Record<string, number> | null): number {
+  if (!monthlyAmounts) return baseAmount
+  const key = String(monthIndex + 1) // stored as 1-indexed
+  return monthlyAmounts[key] ?? baseAmount
+}
+
+// Get label for a calendar month relative to loan start
+function getMonthLabel(startDate: string, loanMonthIndex: number): string {
+  const d = new Date(startDate)
+  d.setMonth(d.getMonth() + loanMonthIndex)
+  return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }> = {
@@ -107,13 +119,22 @@ export default function LoansPage() {
     setLoans(prev => prev.filter(l => l.id !== id))
   }
 
-  const totalMonthlyLoan = loans.filter(l => l.status !== 'Suspended').reduce((s, l) => s + l.amount, 0)
+  const totalMonthlyLoan = loans
+    .filter(l => l.status !== 'Suspended')
+    .reduce((s, l) => {
+      const detail = l.loan_details as any
+      const monthlyAmounts: Record<string, number> | null = detail?.monthly_amounts || null
+      const elapsed = detail?.start_date ? monthsBetween(detail.start_date) : 0
+      const totalM = detail?.total_months || 12
+      const currentIdx = Math.min(elapsed, totalM - 1)
+      return s + getAmountForMonth(currentIdx, l.amount, monthlyAmounts)
+    }, 0)
+
   const paidOffCount = loans.filter(l => {
     const detail = l.loan_details as any
     const total = detail?.total_months || 12
     const start = detail?.start_date
-    const estimated = start ? monthsBetween(start) : 0
-    return estimated >= total
+    return start ? monthsBetween(start) >= total : false
   }).length
 
   if (loading) return (
@@ -142,7 +163,7 @@ export default function LoansPage() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Monthly', value: formatCurrency(totalMonthlyLoan), color: '#ef4444', icon: CreditCard },
+          { label: 'This Month Due', value: formatCurrency(totalMonthlyLoan), color: '#ef4444', icon: CreditCard },
           { label: 'Active Loans', value: String(loans.length), color: '#f59e0b', icon: Clock },
           { label: 'Paid Off', value: String(paidOffCount), color: '#10b981', icon: CheckCircle2 },
         ].map(s => (
@@ -166,9 +187,7 @@ export default function LoansPage() {
             <CreditCard size={40} className="text-slate-600 mx-auto mb-3" />
             <p className="text-slate-400">No loans tracked yet.</p>
             <p className="text-slate-500 text-sm mt-1">Add a loan to track its duration and monthly payments.</p>
-            <button
-              onClick={() => setShowAdd(true)}
-              className="mt-4 px-5 py-2 rounded-xl text-sm text-white"
+            <button onClick={() => setShowAdd(true)} className="mt-4 px-5 py-2 rounded-xl text-sm text-white"
               style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
               + Add First Loan
             </button>
@@ -179,30 +198,52 @@ export default function LoansPage() {
           const loanDetail = loan.loan_details as any
           const totalMonths = loanDetail?.total_months || 12
           const startDate = loanDetail?.start_date || new Date().toISOString().split('T')[0]
+          const monthlyAmounts: Record<string, number> | null = loanDetail?.monthly_amounts || null
+          const isReducing = !!monthlyAmounts && Object.keys(monthlyAmounts).length > 0
+
           const estimatedPaid = Math.min(monthsBetween(startDate), totalMonths)
+          const currentMonthIdx = estimatedPaid // 0-based index = months elapsed
+          const currentDue = getAmountForMonth(currentMonthIdx, loan.amount, monthlyAmounts)
+          const nextDue = currentMonthIdx + 1 < totalMonths
+            ? getAmountForMonth(currentMonthIdx + 1, loan.amount, monthlyAmounts)
+            : null
+
           const monthsPaidThisYear = Object.values(payments[loan.id] || {}).filter(Boolean).length
           const { pct, remaining } = getLoanProgress(estimatedPaid, totalMonths)
           const isFullyPaid = estimatedPaid >= totalMonths
           const isSuspended = loan.status === 'Suspended'
 
-          // Determine display status (auto-derived or stored)
           const autoStatus = getAutoStatus(totalMonths, startDate)
           const displayStatus = isSuspended ? 'Suspended' : (autoStatus || loan.status)
           const badge = STATUS_BADGE[displayStatus] || STATUS_BADGE['Required']
 
+          // Total remaining amount from schedule
+          const totalRemainingAmount = isReducing
+            ? Array.from({ length: totalMonths - estimatedPaid }, (_, i) =>
+                getAmountForMonth(estimatedPaid + i, loan.amount, monthlyAmounts)
+              ).reduce((s, v) => s + v, 0)
+            : remaining * loan.amount
+
           return (
-            <div key={loan.id} className="glass-card overflow-hidden" style={isSuspended ? { opacity: 0.7 } : {}}>
+            <div key={loan.id} className="glass-card overflow-hidden" style={isSuspended ? { opacity: 0.72 } : {}}>
               {/* Header */}
               <div className="p-5" style={{
                 background: isSuspended ? 'rgba(100,116,139,0.06)' : isFullyPaid ? 'rgba(16,185,129,0.08)' : 'rgba(59,130,246,0.05)',
                 borderBottom: '1px solid rgba(255,255,255,0.06)'
               }}>
-                <div className="flex items-start justify-between gap-3">
+                {/* Top row: name + actions */}
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-white">{loan.name}</h3>
-                      {/* Status badge */}
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}>
+                      {isReducing && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
+                          style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)' }}>
+                          <TrendingDown size={10} /> Reducing
+                        </span>
+                      )}
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}>
                         {displayStatus}
                       </span>
                     </div>
@@ -210,43 +251,52 @@ export default function LoansPage() {
                       {loan.cutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Suspend / Resume button */}
-                    <button
-                      onClick={() => toggleSuspend(loan)}
-                      title={isSuspended ? 'Resume loan' : 'Suspend loan'}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
-                      style={isSuspended ? {
-                        background: 'rgba(16,185,129,0.15)',
-                        border: '1px solid rgba(16,185,129,0.3)',
-                        color: '#34d399'
-                      } : {
-                        background: 'rgba(100,116,139,0.15)',
-                        border: '1px solid rgba(100,116,139,0.3)',
-                        color: '#94a3b8'
-                      }}>
-                      {isSuspended ? <PlayCircle size={13} /> : <PauseCircle size={13} />}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => toggleSuspend(loan)} title={isSuspended ? 'Resume' : 'Suspend'}
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      style={isSuspended ? { background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399' }
+                        : { background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.3)', color: '#94a3b8' }}>
+                      {isSuspended ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
                       {isSuspended ? 'Resume' : 'Suspend'}
                     </button>
-                    <button
-                      onClick={() => { setEditLoan(loan); setShowAdd(true) }}
+                    <button onClick={() => { setEditLoan(loan); setShowAdd(true) }}
                       className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/20 transition">
                       <Edit2 size={14} />
                     </button>
-                    <button
-                      onClick={() => deleteLoan(loan.id)}
+                    <button onClick={() => deleteLoan(loan.id)}
                       className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/20 transition">
                       <Trash2 size={14} />
                     </button>
-                    <div className="text-right">
-                      <p className="text-xl font-bold text-blue-400">{formatCurrency(loan.amount)}</p>
-                      <p className="text-xs text-slate-400">per month</p>
-                    </div>
                   </div>
                 </div>
 
+                {/* Amount row */}
+                <div className="flex items-end gap-4 mb-4">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-0.5">This month's due</p>
+                    <p className="text-2xl font-bold text-blue-400">{formatCurrency(currentDue)}</p>
+                  </div>
+                  {nextDue !== null && nextDue !== currentDue && (
+                    <div className="pb-0.5">
+                      <p className="text-xs text-slate-500 mb-0.5">Next month</p>
+                      <p className="text-base font-semibold" style={{ color: nextDue < currentDue ? '#10b981' : '#f87171' }}>
+                        {formatCurrency(nextDue)}
+                        <span className="text-xs ml-1" style={{ color: nextDue < currentDue ? '#10b981' : '#f87171' }}>
+                          {nextDue < currentDue ? '↓' : '↑'}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {isReducing && (
+                    <div className="pb-0.5 ml-auto text-right">
+                      <p className="text-xs text-slate-500 mb-0.5">Balance remaining</p>
+                      <p className="text-sm font-semibold text-orange-400">{formatCurrency(totalRemainingAmount)}</p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Progress */}
-                <div className="mt-4 space-y-2">
+                <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">{estimatedPaid} of {totalMonths} months</span>
                     <span className="text-white font-medium">{Math.round(pct)}%</span>
@@ -255,11 +305,9 @@ export default function LoansPage() {
                     <div className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${pct}%`,
-                        background: isSuspended
-                          ? 'linear-gradient(90deg, #64748b, #94a3b8)'
-                          : isFullyPaid
-                            ? 'linear-gradient(90deg, #10b981, #34d399)'
-                            : 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
+                        background: isSuspended ? 'linear-gradient(90deg, #64748b, #94a3b8)'
+                          : isFullyPaid ? 'linear-gradient(90deg, #10b981, #34d399)'
+                          : 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
                       }} />
                   </div>
                   <div className="flex justify-between text-xs text-slate-500">
@@ -268,11 +316,43 @@ export default function LoansPage() {
                   </div>
                 </div>
 
+                {/* Reducing schedule preview */}
+                {isReducing && !isFullyPaid && (
+                  <div className="mt-3 p-3 rounded-xl space-y-1.5" style={{ background: 'rgba(251,146,60,0.06)', border: '1px solid rgba(251,146,60,0.15)' }}>
+                    <p className="text-xs text-orange-400 font-medium uppercase tracking-wide mb-2">Upcoming Payments</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {Array.from({ length: Math.min(6, totalMonths - estimatedPaid) }, (_, i) => {
+                        const mIdx = estimatedPaid + i
+                        const amt = getAmountForMonth(mIdx, loan.amount, monthlyAmounts)
+                        const label = getMonthLabel(startDate, mIdx)
+                        const isCurr = i === 0
+                        return (
+                          <div key={i} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg"
+                            style={{
+                              background: isCurr ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${isCurr ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.05)'}`
+                            }}>
+                            <span className="text-xs" style={{ color: isCurr ? '#93c5fd' : '#64748b' }}>
+                              {label}{isCurr ? ' ←' : ''}
+                            </span>
+                            <span className="text-xs font-semibold" style={{ color: isCurr ? '#60a5fa' : '#94a3b8' }}>
+                              {formatCurrency(amt)}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {totalMonths - estimatedPaid > 6 && (
+                      <p className="text-xs text-slate-600 text-center">+{totalMonths - estimatedPaid - 6} more months</p>
+                    )}
+                  </div>
+                )}
+
                 {loanDetail?.notes && (
                   <p className="text-xs text-slate-500 mt-3 italic">{loanDetail.notes}</p>
                 )}
                 {isSuspended && (
-                  <p className="text-xs text-slate-500 mt-2 italic">⏸ Loan is currently suspended — payments paused.</p>
+                  <p className="text-xs text-slate-500 mt-2">⏸ Loan suspended — payments paused.</p>
                 )}
               </div>
 
@@ -285,10 +365,17 @@ export default function LoansPage() {
                   {MONTHS_SHORT.map((m, i) => {
                     const paid = payments[loan.id]?.[i + 1] ?? false
                     const isCurrent = i === CURRENT_MONTH
+                    // For reducing loans, show the amount for this calendar month
+                    // Map calendar month → loan month index
+                    const loanStart = new Date(startDate)
+                    const calDate = new Date(CURRENT_YEAR, i, 1)
+                    const loanMonthIdx = (calDate.getFullYear() - loanStart.getFullYear()) * 12 + (calDate.getMonth() - loanStart.getMonth())
+                    const monthAmt = loanMonthIdx >= 0 && loanMonthIdx < totalMonths
+                      ? getAmountForMonth(loanMonthIdx, loan.amount, monthlyAmounts)
+                      : null
+
                     return (
-                      <button
-                        key={m}
-                        onClick={() => toggleMonth(loan.id, i + 1)}
+                      <button key={m} onClick={() => toggleMonth(loan.id, i + 1)}
                         disabled={isSuspended}
                         className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
@@ -299,15 +386,35 @@ export default function LoansPage() {
                           style={{ color: paid ? '#10b981' : isCurrent ? '#60a5fa' : '#475569' }}>
                           {m}
                         </span>
-                        <div className="w-2 h-2 rounded-full"
-                          style={{ background: paid ? '#10b981' : isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.1)' }} />
+                        {isReducing && monthAmt !== null ? (
+                          <span className="font-medium" style={{ fontSize: '8px', color: paid ? '#10b981' : isCurrent ? '#93c5fd' : '#334155', lineHeight: 1 }}>
+                            ₱{monthAmt >= 1000 ? (monthAmt / 1000).toFixed(1) + 'k' : monthAmt.toFixed(0)}
+                          </span>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full"
+                            style={{ background: paid ? '#10b981' : isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.1)' }} />
+                        )}
                       </button>
                     )
                   })}
                 </div>
                 <div className="mt-3 flex justify-between text-xs text-slate-500">
                   <span>{monthsPaidThisYear} paid this year</span>
-                  <span>Total: {formatCurrency(monthsPaidThisYear * loan.amount)}</span>
+                  <span>
+                    {isReducing
+                      ? `Total paid: ${formatCurrency(
+                          Object.entries(payments[loan.id] || {})
+                            .filter(([, paid]) => paid)
+                            .reduce((s, [month]) => {
+                              const loanStart = new Date(startDate)
+                              const calDate = new Date(CURRENT_YEAR, parseInt(month) - 1, 1)
+                              const idx = (calDate.getFullYear() - loanStart.getFullYear()) * 12 + (calDate.getMonth() - loanStart.getMonth())
+                              return s + (idx >= 0 ? getAmountForMonth(idx, loan.amount, monthlyAmounts) : 0)
+                            }, 0)
+                        )}`
+                      : `Total: ${formatCurrency(monthsPaidThisYear * loan.amount)}`
+                    }
+                  </span>
                 </div>
               </div>
             </div>
