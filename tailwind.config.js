@@ -8,10 +8,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'bg-primary': '#0a0f1e',
-        'bg-secondary': '#0f1629',
-        'bg-card': '#141b2d',
+        'bg-page':    '#f2f8f4',
+        'bg-surface': '#ffffff',
+        'bg-card':    '#ffffff',
+        'bg-subtle':  '#eef6f1',
+        'g-500':      '#22703a',
+        'g-400':      '#2d9e50',
+        'g-300':      '#4cbb6e',
       },
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['DM Mono', 'monospace'],
+      }
     },
   },
   plugins: [],

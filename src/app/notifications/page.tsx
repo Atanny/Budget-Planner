@@ -188,10 +188,10 @@ export default function NotificationsPage() {
 
       {/* Notification History */}
       <div className="glass-card overflow-hidden">
-        <div className="p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <h2 className="font-semibold text-white">Notification History</h2>
         </div>
-        <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+        <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
           {notifs.length === 0 && <p className="text-center py-10 text-slate-500 text-sm">No notifications yet.</p>}
           {notifs.map(n => (
             <div key={n.id} className="p-4 flex items-start gap-3">

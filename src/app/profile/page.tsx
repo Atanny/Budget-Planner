@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { LogOut, User, Bell, Shield } from 'lucide-react'
+import { LogOut, User, Bell, Shield, Smartphone, CheckCircle2 } from 'lucide-react'
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null)
@@ -12,7 +12,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    // Only access Notification API on the client after mount
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotifStatus(Notification.permission === 'granted' ? 'Enabled' : 'Disabled')
     } else {
@@ -25,51 +24,83 @@ export default function ProfilePage() {
     router.push('/auth')
   }
 
+  async function requestNotif() {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission()
+      setNotifStatus(perm === 'granted' ? 'Enabled' : 'Disabled')
+    }
+  }
+
+  const initials = user?.email ? user.email[0].toUpperCase() : '?'
+
   return (
-    <div className="w-full space-y-5 max-w-lg">
+    <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Profile</h1>
-        <p className="text-slate-400 text-sm mt-1">Account settings</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Profile</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Account settings</p>
       </div>
 
-      <div className="glass-card p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold text-white"
-          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
-          {user?.email ? user.email[0].toUpperCase() : '👤'}
+      {/* Avatar card */}
+      <div className="glass-card p-5 flex items-center gap-4"
+        style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shrink-0"
+          style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+          {initials}
         </div>
-        <div>
-          <p className="text-white font-semibold">{user?.email || 'Guest User'}</p>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {user?.is_anonymous ? 'Anonymous account' : 'Email account'}
-          </p>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-base truncate" style={{ color: 'var(--text-primary)' }}>{user?.email || 'Guest User'}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <CheckCircle2 size={13} style={{ color: 'var(--green-500)' }} />
+            <p className="text-xs font-semibold" style={{ color: 'var(--green-600)' }}>
+              {user?.is_anonymous ? 'Anonymous account' : 'Email account — verified'}
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="glass-card overflow-hidden divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      {/* Info rows */}
+      <div className="glass-card overflow-hidden divide-y" style={{ borderColor: 'var(--border)' }}>
         {[
-          { icon: User, label: 'Account Type', value: user?.is_anonymous ? 'Guest' : 'Email', color: '#3b82f6' },
-          { icon: Shield, label: 'User ID', value: user?.id ? user.id.slice(0, 8) + '...' : '—', color: '#8b5cf6' },
-          { icon: Bell, label: 'Notifications', value: notifStatus, color: '#10b981' },
+          { icon: User,   label: 'Account Type', value: user?.is_anonymous ? 'Guest' : 'Email',  color: 'var(--blue-500)',   bg: '#dbeafe' },
+          { icon: Shield, label: 'User ID',       value: user?.id ? user.id.slice(0,8) + '...' : '—', color: '#7c3aed',   bg: '#ede9fe' },
+          { icon: Bell,   label: 'Notifications', value: notifStatus,                              color: 'var(--green-600)', bg: 'var(--green-100)' },
         ].map(item => (
-          <div key={item.label} className="flex items-center gap-4 px-5 py-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: `${item.color}20` }}>
+          <div key={item.label} className="flex items-center gap-4 px-5 py-4" style={{ borderColor: 'var(--border)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: item.bg }}>
               <item.icon size={16} style={{ color: item.color }} />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-slate-400">{item.label}</p>
-              <p className="text-sm text-white mt-0.5">{item.value}</p>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{item.label}</p>
+              <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--text-primary)' }}>{item.value}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium text-red-400 transition hover:bg-red-500/10"
-        style={{ border: '1px solid rgba(239,68,68,0.3)' }}>
-        <LogOut size={16} />
-        Sign Out
+      {/* Enable notifications */}
+      {notifStatus !== 'Enabled' && notifStatus !== 'Not supported' && (
+        <button onClick={requestNotif}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
+          style={{ background: 'var(--green-50)', color: 'var(--green-700)', border: '1.5px solid var(--green-300)' }}>
+          <Bell size={16} /> Enable Push Notifications
+        </button>
+      )}
+
+      {/* PWA tip */}
+      <div className="glass-card p-4 flex items-start gap-3" style={{ background: '#fef3c7', borderColor: '#fde68a' }}>
+        <Smartphone size={18} style={{ color: 'var(--amber-500)', shrink: 0, marginTop: 2 }} />
+        <div>
+          <p className="text-sm font-bold" style={{ color: '#92400e' }}>Install as App</p>
+          <p className="text-xs mt-0.5" style={{ color: '#a16207' }}>
+            Tap the Share button in your browser and choose "Add to Home Screen" to use BudgetPH like a native app.
+          </p>
+        </div>
+      </div>
+
+      <button onClick={handleLogout}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
+        style={{ background: '#fee2e2', color: '#b91c1c', border: '1.5px solid #fca5a5' }}>
+        <LogOut size={16} /> Sign Out
       </button>
     </div>
   )

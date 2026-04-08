@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, Cutoff, PaymentStatus } from '@/lib/types'
-import { X, Calculator, ChevronDown, ChevronUp, Plus, Minus } from 'lucide-react'
+import { BudgetItem, BankAccount, Cutoff, PaymentStatus, EXPENSE_CATEGORIES } from '@/lib/types'
+import { X, ChevronDown, ChevronUp, Banknote } from 'lucide-react'
 
 interface Props {
   defaultCutoff: Cutoff
@@ -11,67 +11,71 @@ interface Props {
   onSave: () => void
 }
 
-function computeAutoStatus(totalMonths: number, startDate: string, baseStatus: 'Required' | 'Optional'): PaymentStatus {
+function computeAutoStatus(totalMonths: number, startDate: string, base: 'Required' | 'Optional'): PaymentStatus {
   if (totalMonths === 1) return 'Once'
   const start = new Date(startDate)
   const now = new Date()
-  const elapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
-  const monthsElapsed = Math.max(0, elapsed)
-  if (monthsElapsed === 0) return 'First Payment'
-  if (monthsElapsed >= totalMonths - 1) return 'Last Payment'
-  return baseStatus
+  const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+  if (elapsed === 0) return 'First Payment'
+  if (elapsed >= totalMonths - 1) return 'Last Payment'
+  return base
 }
 
-const BADGE: Record<PaymentStatus, { bg: string; text: string; border: string }> = {
-  Required:        { bg: 'rgba(239,68,68,0.15)',   text: '#f87171', border: 'rgba(239,68,68,0.35)' },
-  Optional:        { bg: 'rgba(245,158,11,0.15)',  text: '#fbbf24', border: 'rgba(245,158,11,0.35)' },
-  'First Payment': { bg: 'rgba(59,130,246,0.15)',  text: '#60a5fa', border: 'rgba(59,130,246,0.35)' },
-  'Last Payment':  { bg: 'rgba(139,92,246,0.15)',  text: '#a78bfa', border: 'rgba(139,92,246,0.35)' },
-  Once:            { bg: 'rgba(249,115,22,0.15)',  text: '#fb923c', border: 'rgba(249,115,22,0.35)' },
-  Suspended:       { bg: 'rgba(100,116,139,0.15)', text: '#94a3b8', border: 'rgba(100,116,139,0.35)' },
-  Paid:            { bg: 'rgba(16,185,129,0.15)',  text: '#34d399', border: 'rgba(16,185,129,0.35)' },
-}
-
-// Build schedule label for a given month offset from startDate
-function getMonthLabel(startDate: string, monthIndex: number): string {
-  const d = new Date(startDate)
-  d.setMonth(d.getMonth() + monthIndex)
+function getMonthLabel(startDate: string, idx: number): string {
+  const d = new Date(startDate); d.setMonth(d.getMonth() + idx)
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
-export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave }: Props) {
-  const existingLoanDetail = editItem?.loan_details as any
-  const existingMonthlyAmounts: Record<string, number> = existingLoanDetail?.monthly_amounts || {}
+const STATUS_BADGE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
+  Required:        { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+  Optional:        { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  'First Payment': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
+  'Last Payment':  { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
+  Once:            { bg: '#ffedd5', color: '#c2410c', border: '#fdba74' },
+  Suspended:       { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+  Paid:            { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+}
 
-  const [name, setName] = useState(editItem?.name || '')
-  const [amount, setAmount] = useState(editItem?.amount?.toString() || '')
-  const [cutoff, setCutoff] = useState<Cutoff>(editItem?.cutoff || defaultCutoff)
+export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave }: Props) {
+  const existingLD = editItem?.loan_details as any
+  const existingMA: Record<string, number> = existingLD?.monthly_amounts || {}
+
+  const [name,       setName]       = useState(editItem?.name || '')
+  const [amount,     setAmount]     = useState(editItem?.amount?.toString() || '')
+  const [cutoff,     setCutoff]     = useState<Cutoff>(editItem?.cutoff || defaultCutoff)
+  const [category,   setCategory]   = useState(editItem?.category || 'Other')
+  const [bankId,     setBankId]     = useState<string>(editItem?.bank_account_id || '')
   const [baseStatus, setBaseStatus] = useState<'Required' | 'Optional'>(
     editItem?.status === 'Optional' ? 'Optional' : 'Required'
   )
-  const [isLoan, setIsLoan] = useState(editItem?.is_loan || false)
-  const [totalMonths, setTotalMonths] = useState(existingLoanDetail?.total_months?.toString() || '12')
-  const [startDate, setStartDate] = useState(existingLoanDetail?.start_date || new Date().toISOString().split('T')[0])
-  const [notes, setNotes] = useState(existingLoanDetail?.notes || '')
-  const [saving, setSaving] = useState(false)
+  const [isLoan,     setIsLoan]     = useState(editItem?.is_loan || false)
+  const [totalMonths,setTotalMonths]= useState(existingLD?.total_months?.toString() || '12')
+  const [startDate,  setStartDate]  = useState(existingLD?.start_date || new Date().toISOString().split('T')[0])
+  const [notes,      setNotes]      = useState(existingLD?.notes || '')
+  const [computeMode,setComputeMode]= useState<'none'|'flat'|'reducing'>('none')
+  const [totalLoan,  setTotalLoan]  = useState('')
+  const [showSched,  setShowSched]  = useState(Object.keys(existingMA).length > 0)
+  const [saving,     setSaving]     = useState(false)
+  const [banks,      setBanks]      = useState<BankAccount[]>([])
 
-  // Compute mode: 'flat' = equal monthly, 'reducing' = per-month amounts
-  const [computeMode, setComputeMode] = useState<'none' | 'flat' | 'reducing'>('none')
-  const [totalLoanAmount, setTotalLoanAmount] = useState('')
-  const [showSchedule, setShowSchedule] = useState(Object.keys(existingMonthlyAmounts).length > 0)
-
-  // Per-month amounts array: index 0 = month 1 of loan
   const numMonths = parseInt(totalMonths) || 0
   const [monthlyAmounts, setMonthlyAmounts] = useState<string[]>(() => {
-    if (Object.keys(existingMonthlyAmounts).length > 0) {
-      return Array.from({ length: parseInt(existingLoanDetail?.total_months || 12) }, (_, i) =>
-        existingMonthlyAmounts[String(i + 1)]?.toString() || ''
-      )
+    if (Object.keys(existingMA).length > 0) {
+      return Array.from({ length: parseInt(existingLD?.total_months || 12) }, (_, i) =>
+        existingMA[String(i + 1)]?.toString() || '')
     }
     return Array.from({ length: 12 }, () => '')
   })
 
-  // Keep monthlyAmounts array length in sync with totalMonths
+  // Load banks
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('bank_accounts').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order')
+        .then(({ data }) => setBanks(data || []))
+    })
+  }, [])
+
   useEffect(() => {
     const n = parseInt(totalMonths) || 0
     setMonthlyAmounts(prev => {
@@ -81,27 +85,19 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     })
   }, [totalMonths])
 
-  // Flat compute: fill all months equally
   useEffect(() => {
-    if (computeMode === 'flat' && totalLoanAmount && numMonths > 0) {
-      const perMonth = (parseFloat(totalLoanAmount) / numMonths).toFixed(2)
-      setAmount(perMonth)
-      setMonthlyAmounts(Array(numMonths).fill(perMonth))
+    if (computeMode === 'flat' && totalLoan && numMonths > 0) {
+      const per = (parseFloat(totalLoan) / numMonths).toFixed(2)
+      setAmount(per); setMonthlyAmounts(Array(numMonths).fill(per))
     }
-  }, [computeMode, totalLoanAmount, numMonths])
+  }, [computeMode, totalLoan, numMonths])
 
-  // Reducing: when per-month amounts change, set amount = current month's due
   useEffect(() => {
     if (computeMode === 'reducing') {
-      // Find what month we're on based on startDate
-      const start = new Date(startDate)
-      const now = new Date()
-      const elapsed = Math.max(0,
-        (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
-      )
-      const currentMonthIdx = Math.min(elapsed, numMonths - 1)
-      const currentAmt = monthlyAmounts[currentMonthIdx]
-      if (currentAmt) setAmount(currentAmt)
+      const start = new Date(startDate), now = new Date()
+      const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+      const idx = Math.min(elapsed, numMonths - 1)
+      if (monthlyAmounts[idx]) setAmount(monthlyAmounts[idx])
     }
   }, [monthlyAmounts, computeMode, startDate, numMonths])
 
@@ -109,8 +105,15 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     ? computeAutoStatus(parseInt(totalMonths) || 1, startDate, baseStatus)
     : baseStatus
 
-  const totalScheduled = monthlyAmounts.reduce((s, v) => s + (parseFloat(v) || 0), 0)
-  const allFilled = numMonths > 0 && monthlyAmounts.slice(0, numMonths).every(v => v !== '' && !isNaN(parseFloat(v)))
+  const start = new Date(startDate), now = new Date()
+  const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+  const curIdx = Math.min(elapsed, numMonths - 1)
+  const totalSched = monthlyAmounts.reduce((s, v) => s + (parseFloat(v) || 0), 0)
+  const allFilled  = numMonths > 0 && monthlyAmounts.slice(0, numMonths).every(v => v !== '' && !isNaN(parseFloat(v)))
+  const isFirstPayment = computedStatus === 'First Payment'
+
+  const selCat = EXPENSE_CATEGORIES.find(c => c.value === category)
+  const selBadge = STATUS_BADGE_STYLE[computedStatus] || STATUS_BADGE_STYLE['Required']
 
   async function handleSave() {
     if (!name.trim() || !amount) return
@@ -118,217 +121,212 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
 
-    // Build monthly_amounts object if we have a schedule
-    let monthlyAmountsObj: Record<string, number> | null = null
-    if (isLoan && computeMode === 'reducing' && allFilled) {
-      monthlyAmountsObj = {}
-      monthlyAmounts.slice(0, numMonths).forEach((v, i) => {
-        monthlyAmountsObj![String(i + 1)] = parseFloat(v)
-      })
-    } else if (isLoan && computeMode === 'flat' && allFilled) {
-      monthlyAmountsObj = {}
-      monthlyAmounts.slice(0, numMonths).forEach((v, i) => {
-        monthlyAmountsObj![String(i + 1)] = parseFloat(v)
-      })
+    let maObj: Record<string, number> | null = null
+    if (isLoan && (computeMode === 'flat' || computeMode === 'reducing') && allFilled) {
+      maObj = {}
+      monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
+    }
+
+    const payload: any = {
+      name, amount: parseFloat(amount), cutoff, status: computedStatus,
+      is_loan: isLoan, category, bank_account_id: bankId || null
     }
 
     if (editItem) {
-      await supabase.from('budget_items').update({
-        name, amount: parseFloat(amount), cutoff, status: computedStatus, is_loan: isLoan
-      }).eq('id', editItem.id)
+      await supabase.from('budget_items').update(payload).eq('id', editItem.id)
       if (isLoan) {
         await supabase.from('loan_details').upsert({
           budget_item_id: editItem.id, user_id: user.id,
-          total_months: parseInt(totalMonths), start_date: startDate, notes,
-          monthly_amounts: monthlyAmountsObj
+          total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
         }, { onConflict: 'budget_item_id' })
       }
     } else {
-      const { data: newItem } = await supabase.from('budget_items').insert({
-        user_id: user.id, name, amount: parseFloat(amount), cutoff, status: computedStatus, is_loan: isLoan
-      }).select().single()
+      const { data: newItem } = await supabase.from('budget_items')
+        .insert({ user_id: user.id, ...payload }).select().single()
       if (newItem && isLoan) {
         await supabase.from('loan_details').insert({
           budget_item_id: newItem.id, user_id: user.id,
-          total_months: parseInt(totalMonths), start_date: startDate, notes,
-          monthly_amounts: monthlyAmountsObj
+          total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
         })
       }
     }
-    setSaving(false)
-    onSave()
-    onClose()
+    setSaving(false); onSave(); onClose()
   }
 
-  const badgeColor = BADGE[computedStatus]
-
-  // Find current elapsed month for highlighting
-  const start = new Date(startDate)
-  const now = new Date()
-  const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
-  const currentMonthIdx = Math.min(elapsed, numMonths - 1)
+  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', padding: '9px 12px', fontSize: 14, width: '100%', outline: 'none', fontFamily: 'inherit' }
+  const labelStyle = { fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' as const }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center modal-overlay p-4">
-      <div className="glass-card w-full max-w-md slide-up" style={{ maxHeight: '92vh', overflowY: 'auto' }}>
-        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <h2 className="font-semibold text-white text-lg">{editItem ? 'Edit Item' : 'Add Budget Item'}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-slate-400"><X size={18} /></button>
+      <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 12px 40px rgba(13,40,24,0.15)', maxHeight: '94vh', display: 'flex', flexDirection: 'column' }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0"
+          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+          <h2 className="font-bold text-base" style={{ color: 'var(--green-900)' }}>
+            {editItem ? 'Edit Budget Item' : 'Add Budget Item'}
+          </h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}><X size={17} /></button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+
           {/* Name */}
           <div>
-            <label className="text-xs text-slate-400 mb-1.5 block">Payment Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Motorcycle, Shopee..." className="w-full px-3 py-2.5 text-sm" />
+            <label style={labelStyle}>Payment Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Meralco, Groceries, Netflix..." style={inputStyle} />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label style={labelStyle}>Category *</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {EXPENSE_CATEGORIES.map(cat => (
+                <button key={cat.value} onClick={() => setCategory(cat.value)}
+                  className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-left transition-all"
+                  style={{
+                    background: category === cat.value ? `${cat.color}18` : 'var(--bg-subtle)',
+                    border: `1.5px solid ${category === cat.value ? cat.color : 'var(--border)'}`,
+                    fontSize: 12, fontWeight: category === cat.value ? 700 : 500,
+                    color: category === cat.value ? cat.color : 'var(--text-muted)',
+                  }}>
+                  <span>{cat.label.split(' ')[0]}</span>
+                  <span className="truncate">{cat.label.split(' ').slice(1).join(' ')}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Deduct from bank */}
+          <div>
+            <label style={labelStyle}><Banknote size={12} className="inline mr-1" />Deduct from Account</label>
+            <select value={bankId} onChange={e => setBankId(e.target.value)} style={inputStyle}>
+              <option value="">— No specific account —</option>
+              {banks.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+            {banks.length === 0 && (
+              <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>Add bank accounts in the Dashboard → Net Worth section</p>
+            )}
           </div>
 
           {/* Is Loan toggle */}
-          <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex items-center justify-between p-3 rounded-xl"
+            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
             <div>
-              <p className="text-sm text-white font-medium">Is this a Loan?</p>
-              <p className="text-xs text-slate-500 mt-0.5">Track duration and monthly payments</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Is this a Loan?</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Track duration and monthly payments</p>
             </div>
-            <button onClick={() => setIsLoan(!isLoan)} className="w-12 h-6 rounded-full relative transition-colors" style={{ background: isLoan ? '#3b82f6' : 'rgba(255,255,255,0.1)' }}>
-              <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all" style={{ left: isLoan ? '26px' : '2px' }} />
+            <button onClick={() => setIsLoan(!isLoan)}
+              className="toggle-track"
+              style={{ background: isLoan ? 'var(--green-400)' : 'var(--border-strong)' }}>
+              <span className="toggle-thumb" style={{ left: isLoan ? '21px' : '3px' }} />
             </button>
           </div>
 
           {/* Loan details */}
           {isLoan && (
-            <div className="space-y-3 p-4 rounded-xl slide-up" style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
-              <p className="text-xs text-purple-400 font-medium uppercase tracking-wide">Loan Details</p>
+            <div className="space-y-3 p-4 rounded-xl slide-up"
+              style={{ background: 'var(--purple-100)', border: '1.5px solid #c4b5fd' }}>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6d28d9' }}>Loan Details</p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 mb-1.5 block">Total Months</label>
-                  <input type="number" value={totalMonths} onChange={e => setTotalMonths(e.target.value)} min="1" max="360" className="w-full px-3 py-2 text-sm" />
+                  <label style={{ ...labelStyle, color: '#6d28d9' }}>Total Months</label>
+                  <input type="number" value={totalMonths} onChange={e => setTotalMonths(e.target.value)} min="1" max="360" style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1.5 block">Start Date</label>
-                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2 text-sm" />
+                  <label style={{ ...labelStyle, color: '#6d28d9' }}>Start Date</label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
                 </div>
               </div>
 
-              {/* Compute mode selector */}
+              {/* Compute mode */}
               <div>
-                <p className="text-xs text-slate-400 mb-2">Payment Computation</p>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#7c3aed' }}>Payment Computation</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { key: 'none', label: 'Manual', desc: 'Enter amount yourself' },
-                    { key: 'flat', label: 'Equal', desc: 'Same every month' },
-                    { key: 'reducing', label: 'Reducing', desc: 'Different each month' },
+                    { key: 'none',     label: 'Manual',   desc: 'Enter yourself' },
+                    { key: 'flat',     label: 'Equal',    desc: 'Same each month' },
+                    { key: 'reducing', label: 'Reducing', desc: 'Different amounts' },
                   ].map(m => (
-                    <button
-                      key={m.key}
-                      onClick={() => {
-                        setComputeMode(m.key as any)
-                        if (m.key === 'none') { setMonthlyAmounts(Array(numMonths).fill('')) }
-                      }}
+                    <button key={m.key} onClick={() => {
+                      setComputeMode(m.key as any)
+                      if (m.key === 'none') setMonthlyAmounts(Array(numMonths).fill(''))
+                    }}
                       className="p-2.5 rounded-xl text-center transition-all"
                       style={{
-                        background: computeMode === m.key ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.03)',
-                        border: `1px solid ${computeMode === m.key ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                        background: computeMode === m.key ? '#ede9fe' : 'white',
+                        border: `1.5px solid ${computeMode === m.key ? '#8b5cf6' : '#ddd6fe'}`,
                       }}>
-                      <p className="text-xs font-semibold" style={{ color: computeMode === m.key ? '#c4b5fd' : '#94a3b8' }}>{m.label}</p>
-                      <p className="text-xs mt-0.5" style={{ color: computeMode === m.key ? '#a78bfa' : '#475569', fontSize: '10px' }}>{m.desc}</p>
+                      <p className="text-xs font-bold" style={{ color: computeMode === m.key ? '#7c3aed' : '#94a3b8' }}>{m.label}</p>
+                      <p style={{ fontSize: 10, color: computeMode === m.key ? '#8b5cf6' : '#94a3b8' }}>{m.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Flat mode: enter total → auto split */}
               {computeMode === 'flat' && (
                 <div className="slide-up space-y-2">
-                  <label className="text-xs text-slate-400 mb-1.5 block">Total Loan Amount *</label>
-                  <input
-                    type="number"
-                    value={totalLoanAmount}
-                    onChange={e => setTotalLoanAmount(e.target.value)}
-                    placeholder="e.g. 3063.79"
-                    className="w-full px-3 py-2 text-sm"
-                  />
-                  {totalLoanAmount && numMonths > 0 && (
-                    <div className="p-2.5 rounded-lg text-xs" style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)' }}>
-                      <span className="text-purple-300 font-semibold">
-                        ₱{(parseFloat(totalLoanAmount) / numMonths).toFixed(2)}
-                      </span>
-                      <span className="text-slate-400"> × {numMonths} months = </span>
-                      <span className="text-purple-300 font-semibold">₱{parseFloat(totalLoanAmount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                  <label style={{ ...labelStyle, color: '#6d28d9' }}>Total Loan Amount *</label>
+                  <input type="number" value={totalLoan} onChange={e => setTotalLoan(e.target.value)} placeholder="e.g. 36000" style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
+                  {totalLoan && numMonths > 0 && (
+                    <div className="p-2.5 rounded-lg text-xs" style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                      <span className="font-bold">₱{(parseFloat(totalLoan) / numMonths).toFixed(2)}</span>
+                      <span style={{ color: '#7c3aed' }}> × {numMonths} months</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Reducing mode: per-month amount entry */}
               {computeMode === 'reducing' && numMonths > 0 && (
                 <div className="slide-up space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-400">Enter each month's actual bill amount</p>
-                    <button onClick={() => setShowSchedule(!showSchedule)} className="text-xs text-purple-400 flex items-center gap-1">
-                      {showSchedule ? 'Hide' : 'Show'} {showSchedule ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    <p className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Monthly Schedule</p>
+                    <button onClick={() => setShowSched(!showSched)} className="text-xs flex items-center gap-1" style={{ color: '#7c3aed' }}>
+                      {showSched ? 'Hide' : 'Show'} {showSched ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                     </button>
                   </div>
-
-                  {showSchedule && (
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                  {showSched && (
+                    <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
                       {Array.from({ length: numMonths }, (_, i) => {
-                        const isCurrent = i === currentMonthIdx
-                        const label = getMonthLabel(startDate, i)
+                        const isCur = i === curIdx
                         return (
-                          <div key={i} className="flex items-center gap-2 p-2 rounded-lg"
-                            style={{
-                              background: isCurrent ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)',
-                              border: `1px solid ${isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.05)'}`,
-                            }}>
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                              style={{ background: isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)', color: isCurrent ? '#60a5fa' : '#64748b' }}>
-                              {i + 1}
-                            </div>
-                            <span className="text-xs text-slate-400 w-20 shrink-0">{label}</span>
-                            {isCurrent && <span className="text-xs text-blue-400 shrink-0">← now</span>}
-                            <div className="flex-1 flex items-center gap-1">
-                              <span className="text-xs text-slate-500">₱</span>
-                              <input
-                                type="number"
-                                value={monthlyAmounts[i] || ''}
-                                onChange={e => {
-                                  const updated = [...monthlyAmounts]
-                                  updated[i] = e.target.value
-                                  setMonthlyAmounts(updated)
-                                }}
-                                placeholder="0.00"
-                                className="flex-1 px-2 py-1 text-xs"
-                                style={{ minWidth: 0 }}
-                              />
-                            </div>
+                          <div key={i} className="flex items-center gap-1.5 p-2 rounded-lg"
+                            style={{ background: isCur ? '#dbeafe' : 'white', border: `1px solid ${isCur ? '#93c5fd' : '#e2e8f0'}` }}>
+                            <span className="text-xs w-14 shrink-0" style={{ color: isCur ? '#1d4ed8' : '#64748b' }}>
+                              {getMonthLabel(startDate, i).split(' ')[0]}
+                            </span>
+                            <input type="number" value={monthlyAmounts[i] || ''} placeholder="0.00"
+                              onChange={e => { const u = [...monthlyAmounts]; u[i] = e.target.value; setMonthlyAmounts(u) }}
+                              style={{ ...inputStyle, padding: '4px 8px', fontSize: 12, background: 'transparent', border: 'none', boxShadow: 'none' }} />
                           </div>
                         )
                       })}
                     </div>
                   )}
-
-                  {!showSchedule && (
-                    <button onClick={() => setShowSchedule(true)} className="w-full py-2 rounded-lg text-xs text-purple-400 transition"
-                      style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                  {!showSched && (
+                    <button onClick={() => setShowSched(true)}
+                      className="w-full py-2 rounded-lg text-xs font-semibold transition"
+                      style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd' }}>
                       + Enter monthly amounts ({monthlyAmounts.filter(v => v !== '').length}/{numMonths} filled)
                     </button>
                   )}
-
-                  {/* Running total */}
-                  {totalScheduled > 0 && (
-                    <div className="flex items-center justify-between p-2.5 rounded-lg text-xs"
-                      style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                      <span className="text-slate-400">Scheduled total</span>
-                      <span className="text-green-400 font-semibold">₱{totalScheduled.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                  {totalSched > 0 && (
+                    <div className="flex justify-between p-2 rounded-lg text-xs" style={{ background: '#dcfce7', color: '#15803d' }}>
+                      <span>Scheduled total</span>
+                      <span className="font-bold">₱{totalSched.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                 </div>
               )}
 
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Notes (optional)</label>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. Billease 12-month plan..." className="w-full px-3 py-2 text-sm resize-none" />
+                <label style={{ ...labelStyle, color: '#6d28d9' }}>Notes (optional)</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="e.g. Billease 12-month plan..."
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd', resize: 'none' }} />
               </div>
             </div>
           )}
@@ -336,63 +334,83 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           {/* Amount & Cutoff */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">
+              <label style={labelStyle}>
                 {computeMode === 'reducing' ? "Current Month's Amount *" : "Monthly Amount *"}
               </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
                 placeholder="0.00"
                 readOnly={computeMode === 'flat'}
-                className="w-full px-3 py-2.5 text-sm"
-                style={computeMode === 'flat' ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
-              />
-              {computeMode === 'flat' && <p className="text-xs text-purple-400 mt-1">Auto-computed</p>}
-              {computeMode === 'reducing' && <p className="text-xs text-blue-400 mt-1">Shows current month's due</p>}
+                style={{ ...inputStyle, opacity: computeMode === 'flat' ? 0.6 : 1, cursor: computeMode === 'flat' ? 'not-allowed' : 'text' }} />
+              {computeMode === 'flat' && <p className="text-xs mt-1" style={{ color: '#7c3aed' }}>Auto-computed</p>}
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Cutoff</label>
-              <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} className="w-full px-3 py-2.5 text-sm">
+              <label style={labelStyle}>Cutoff</label>
+              <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} style={inputStyle}>
                 <option value="1st">1st Cutoff (15th)</option>
                 <option value="2nd">2nd Cutoff (30th)</option>
               </select>
             </div>
           </div>
 
-          {/* Status */}
+          {/* Status — Required/Optional selector SEPARATE from auto badges */}
           <div>
-            <label className="text-xs text-slate-400 mb-1.5 block">Status</label>
-            <div className="flex gap-2">
+            <label style={labelStyle}>Priority</label>
+            <div className="flex gap-2 mb-3">
               {(['Required', 'Optional'] as const).map(s => (
-                <button key={s} onClick={() => setBaseStatus(s)} className="flex-1 px-3 py-2.5 rounded-lg text-sm transition-all" style={{
-                  background: baseStatus === s ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${baseStatus === s ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                  color: baseStatus === s ? '#93c5fd' : '#94a3b8'
-                }}>
+                <button key={s} onClick={() => setBaseStatus(s)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                  style={{
+                    background: baseStatus === s ? (s === 'Required' ? '#fee2e2' : '#fef3c7') : 'var(--bg-subtle)',
+                    border: `1.5px solid ${baseStatus === s ? (s === 'Required' ? '#fca5a5' : '#fde68a') : 'var(--border)'}`,
+                    color: baseStatus === s ? (s === 'Required' ? '#b91c1c' : '#92400e') : 'var(--text-muted)',
+                  }}>
                   {s}
                 </button>
               ))}
             </div>
-            {isLoan && computedStatus !== baseStatus && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-500">Auto-detected →</span>
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: badgeColor.bg, color: badgeColor.text, border: `1px solid ${badgeColor.border}` }}>
-                  {computedStatus}
-                </span>
-                <span className="text-xs text-slate-600">
-                  {computedStatus === 'Once' ? '(1 month)' : computedStatus === 'First Payment' ? '(month 1)' : computedStatus === 'Last Payment' ? '(final month)' : ''}
-                </span>
+
+            {/* Auto-detected payment type badges — display only */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Payment Type (Auto-detected)</p>
+              <div className="flex flex-wrap gap-2">
+                {(['First Payment', 'Last Payment', 'Once', 'Suspended'] as PaymentStatus[]).map(s => {
+                  const st = STATUS_BADGE_STYLE[s]
+                  const isActive = computedStatus === s
+                  return (
+                    <span key={s}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', padding: '4px 12px',
+                        borderRadius: 999, fontSize: 11, fontWeight: 700,
+                        background: isActive ? st.bg : 'var(--bg-subtle)',
+                        color: isActive ? st.color : 'var(--text-faint)',
+                        border: `1.5px solid ${isActive ? st.border : 'var(--border)'}`,
+                        opacity: isActive ? 1 : 0.5,
+                      }}>
+                      {s}
+                    </span>
+                  )
+                })}
               </div>
-            )}
+              {isFirstPayment && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+                  ℹ️ First Payment — monthly checkbox is disabled until next month
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="p-5 border-t flex gap-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm text-slate-400 hover:text-white transition" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* Footer */}
+        <div className="px-5 py-4 border-t flex gap-3 shrink-0"
+          style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+          <button onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
             Cancel
           </button>
-          <button onClick={handleSave} disabled={saving || !name || !amount} className="flex-1 py-2.5 rounded-xl text-sm text-white font-medium transition disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+          <button onClick={handleSave} disabled={saving || !name || !amount}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
             {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Item'}
           </button>
         </div>

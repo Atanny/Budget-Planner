@@ -2,6 +2,8 @@ export type Cutoff = '1st' | '2nd'
 export type PaymentStatus = 'Required' | 'Optional' | 'First Payment' | 'Last Payment' | 'Once' | 'Suspended' | 'Paid'
 
 export interface UserSettings {
+  extra_income_1st: number
+  extra_income_2nd: number
   id: string
   user_id: string
   first_cutoff_salary: number
@@ -19,6 +21,8 @@ export interface BudgetItem {
   cutoff: Cutoff
   status: PaymentStatus
   is_loan: boolean
+  category: string
+  bank_account_id?: string | null
   is_active: boolean
   sort_order: number
   loan_details?: LoanDetail
@@ -83,4 +87,50 @@ export const STATUS_COLORS: Record<PaymentStatus, string> = {
   Once: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   Suspended: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   Paid: 'bg-green-500/20 text-green-400 border-green-500/30',
+}
+
+// Light-theme badge class map
+export const BADGE_CLASSES: Record<PaymentStatus, string> = {
+  Required:        'badge-required',
+  Optional:        'badge-optional',
+  'First Payment': 'badge-first',
+  'Last Payment':  'badge-last',
+  Once:            'badge-once',
+  Suspended:       'badge-suspended',
+  Paid:            'badge-paid',
+}
+
+export const EXPENSE_CATEGORIES = [
+  { value: 'Food',         label: '🍱 Food & Dining',     color: '#f97316' },
+  { value: 'Transport',    label: '🚗 Transport',          color: '#3b82f6' },
+  { value: 'Utilities',    label: '💡 Utilities',          color: '#eab308' },
+  { value: 'Subscription', label: '📱 Subscriptions',      color: '#8b5cf6' },
+  { value: 'Healthcare',   label: '🏥 Healthcare',         color: '#ef4444' },
+  { value: 'Shopping',     label: '🛍️ Shopping',           color: '#ec4899' },
+  { value: 'Education',    label: '📚 Education',          color: '#06b6d4' },
+  { value: 'Loan',         label: '🏦 Loan / Installment', color: '#6366f1' },
+  { value: 'Rent',         label: '🏠 Rent / Housing',     color: '#22703a' },
+  { value: 'Savings',      label: '💰 Savings Transfer',   color: '#10b981' },
+  { value: 'Other',        label: '📌 Other',              color: '#94a3b8' },
+]
+
+export const BANK_TYPES = [
+  { value: 'bank',       label: '🏦 Bank',         color: '#3b82f6' },
+  { value: 'ewallet',    label: '📲 E-Wallet',     color: '#22703a' },
+  { value: 'cash',       label: '💵 Cash',         color: '#f59e0b' },
+  { value: 'investment', label: '📈 Investment',   color: '#8b5cf6' },
+  { value: 'other',      label: '🗃️ Other',        color: '#94a3b8' },
+]
+
+export interface BankAccount {
+  id: string
+  user_id: string
+  name: string
+  type: 'bank' | 'ewallet' | 'cash' | 'investment' | 'other'
+  balance: number
+  color: string
+  category: string
+  bank_account_id?: string | null
+  is_active: boolean
+  sort_order: number
 }

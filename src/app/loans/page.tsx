@@ -147,8 +147,8 @@ export default function LoansPage() {
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Loan Tracker</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Loan Tracker</h1>
+          <p className="text-muted text-sm mt-1">
             {loans.length} active loan{loans.length !== 1 ? 's' : ''} · {formatCurrency(totalMonthlyLoan)}/month
           </p>
         </div>
@@ -174,7 +174,7 @@ export default function LoansPage() {
             </div>
             <div>
               <p className="text-xl font-bold text-white">{s.value}</p>
-              <p className="text-xs text-slate-400">{s.label}</p>
+              <p className="text-xs text-muted">{s.label}</p>
             </div>
           </div>
         ))}
@@ -185,7 +185,7 @@ export default function LoansPage() {
         {loans.length === 0 && (
           <div className="glass-card p-12 text-center">
             <CreditCard size={40} className="text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400">No loans tracked yet.</p>
+            <p className="text-muted">No loans tracked yet.</p>
             <p className="text-slate-500 text-sm mt-1">Add a loan to track its duration and monthly payments.</p>
             <button onClick={() => setShowAdd(true)} className="mt-4 px-5 py-2 rounded-xl text-sm text-white"
               style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
@@ -247,7 +247,7 @@ export default function LoansPage() {
                         {displayStatus}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-400 mt-0.5">
+                    <p className="text-sm text-muted mt-0.5">
                       {loan.cutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
                     </p>
                   </div>
@@ -255,7 +255,7 @@ export default function LoansPage() {
                     <button onClick={() => toggleSuspend(loan)} title={isSuspended ? 'Resume' : 'Suspend'}
                       className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all"
                       style={isSuspended ? { background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399' }
-                        : { background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.3)', color: '#94a3b8' }}>
+                        : { background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.3)', color: 'var(--text-faint)' }}>
                       {isSuspended ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
                       {isSuspended ? 'Resume' : 'Suspend'}
                     </button>
@@ -298,10 +298,10 @@ export default function LoansPage() {
                 {/* Progress */}
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">{estimatedPaid} of {totalMonths} months</span>
+                    <span className="text-muted">{estimatedPaid} of {totalMonths} months</span>
                     <span className="text-white font-medium">{Math.round(pct)}%</span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
                     <div className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${pct}%`,
@@ -380,7 +380,7 @@ export default function LoansPage() {
                         className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
                           background: paid ? 'rgba(16,185,129,0.15)' : isCurrent ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${paid ? 'rgba(16,185,129,0.4)' : isCurrent ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                          border: `1px solid ${paid ? 'rgba(16,185,129,0.4)' : isCurrent ? 'rgba(59,130,246,0.35)' : 'var(--border)'}`,
                         }}>
                         <span className="text-xs font-medium"
                           style={{ color: paid ? '#10b981' : isCurrent ? '#60a5fa' : '#475569' }}>
@@ -392,7 +392,7 @@ export default function LoansPage() {
                           </span>
                         ) : (
                           <div className="w-2 h-2 rounded-full"
-                            style={{ background: paid ? '#10b981' : isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.1)' }} />
+                            style={{ background: paid ? '#10b981' : isCurrent ? '#3b82f6' : 'var(--border)' }} />
                         )}
                       </button>
                     )

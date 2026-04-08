@@ -10,8 +10,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!isAuthPage && <Navbar />}
-      <main className={`${!isAuthPage ? 'md:pl-56 w-full px-4 py-6 pb-24 md:pb-6' : ''}`}>
-        {children}
+      <main className={`${!isAuthPage ? 'md:pl-56 w-full' : ''}`}>
+        <div className={`${!isAuthPage ? 'w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 pb-28 md:pb-8' : ''}`}>
+          {children}
+        </div>
       </main>
       {!isAuthPage && <NotificationInit />}
     </>

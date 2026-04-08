@@ -2,41 +2,45 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, MonthlySavings, UserSettings } from '@/lib/types'
+import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight } from 'lucide-react'
+import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function DashboardPage() {
-  const [settings, setSettings] = useState<UserSettings | null>(null)
-  const [items, setItems] = useState<BudgetItem[]>([])
-  const [savings, setSavings] = useState<MonthlySavings[]>([])
-  const [payments, setPayments] = useState<Record<string, boolean[]>>({})
-  const [loading, setLoading] = useState(true)
+  const [settings,  setSettings]  = useState<UserSettings | null>(null)
+  const [items,     setItems]     = useState<BudgetItem[]>([])
+  const [savings,   setSavings]   = useState<MonthlySavings[]>([])
+  const [payments,  setPayments]  = useState<Record<string, boolean[]>>({})
+  const [banks,     setBanks]     = useState<BankAccount[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [netHidden, setNetHidden] = useState(false)
+  const [showBankForm, setShowBankForm] = useState(false)
+  const [editBank,  setEditBank]  = useState<BankAccount | null>(null)
+  const [userId,    setUserId]    = useState<string | null>(null)
 
-  const year = new Date().getFullYear()
+  const year  = new Date().getFullYear()
   const month = new Date().getMonth() + 1
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
-
-      const [settRes, itemRes, savRes, payRes] = await Promise.all([
+      setUserId(user.id)
+      const [settRes, itemRes, savRes, payRes, bankRes] = await Promise.all([
         supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
         supabase.from('budget_items').select('*, loan_details(*)').eq('user_id', user.id).eq('is_active', true),
         supabase.from('monthly_savings').select('*').eq('user_id', user.id).eq('year', year),
         supabase.from('monthly_payments').select('*').eq('user_id', user.id).eq('year', year),
+        supabase.from('bank_accounts').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
       ])
-
       setSettings(settRes.data)
       setItems(itemRes.data || [])
       setSavings(savRes.data || [])
-
-      // Build payments map
+      setBanks(bankRes.data || [])
       const map: Record<string, boolean[]> = {}
       for (const p of (payRes.data || [])) {
         if (!map[p.budget_item_id]) map[p.budget_item_id] = Array(12).fill(false)
@@ -48,56 +52,67 @@ export default function DashboardPage() {
     load()
   }, [year])
 
-  const firstCutoffTotal = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
-  const secondCutoffTotal = items.filter(i => i.cutoff === '2nd').reduce((s, i) => s + i.amount, 0)
-  const salary1 = settings?.first_cutoff_salary || 0
-  const salary2 = settings?.second_cutoff_salary || 0
-  const remaining1 = salary1 - firstCutoffTotal - (settings?.savings_goal || 0)
-  const remaining2 = salary2 - secondCutoffTotal - (settings?.savings_goal || 0)
-  const totalSavings = savings.reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
-  const loans = items.filter(i => i.is_loan)
-  const daysUntil = getDaysUntilCutoff()
-  const nextCutoff = getNextCutoffDate()
+  const firstTotal  = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
+  const secondTotal = items.filter(i => i.cutoff === '2nd').reduce((s, i) => s + i.amount, 0)
+  const salary1     = (settings?.first_cutoff_salary  || 0) + (settings?.extra_income_1st || 0)
+  const salary2     = (settings?.second_cutoff_salary || 0) + (settings?.extra_income_2nd || 0)
+  const rem1        = salary1 - firstTotal  - (settings?.savings_goal || 0)
+  const rem2        = salary2 - secondTotal - (settings?.savings_goal || 0)
+  const totalSavings= savings.reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
+  const loans       = items.filter(i => i.is_loan)
+  const daysUntil   = getDaysUntilCutoff()
+  const nextCutoff  = getNextCutoffDate()
   const cutoffLabel = nextCutoff.getDate() === 15 ? '1st Cutoff' : '2nd Cutoff'
+  const totalBanks  = banks.reduce((s, b) => s + b.balance, 0)
+  const netWorth    = totalBanks + totalSavings
 
-  // Chart data - monthly expenses
   const chartData = MONTHS_SHORT.map((m, idx) => {
-    const total = items.reduce((sum, item) => {
-      const paid = payments[item.id]?.[idx] ?? false
-      return sum + (paid ? item.amount : 0)
-    }, 0)
+    const total = items.reduce((sum, item) => sum + (payments[item.id]?.[idx] ? item.amount : 0), 0)
     return { month: m, amount: total }
   })
+  const curMonthExp = items.reduce((s, i) => s + (payments[i.id]?.[month-1] ? i.amount : 0), 0)
 
-  const currentMonthExpense = items.reduce((s, i) => {
-    const paid = payments[i.id]?.[month - 1] ?? false
-    return s + (paid ? i.amount : 0)
-  }, 0)
+  async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string }) {
+    if (!userId) return
+    if (editBank) {
+      const { data } = await supabase.from('bank_accounts').update(bank).eq('id', editBank.id).select().single()
+      if (data) setBanks(prev => prev.map(b => b.id === editBank.id ? data : b))
+    } else {
+      const { data } = await supabase.from('bank_accounts').insert({ ...bank, user_id: userId }).select().single()
+      if (data) setBanks(prev => [...prev, data])
+    }
+    setShowBankForm(false); setEditBank(null)
+  }
 
-  if (loading) return (
-    <div className="w-full flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-    </div>
-  )
+  async function deleteBank(id: string) {
+    if (!confirm('Remove this account?')) return
+    await supabase.from('bank_accounts').update({ is_active: false }).eq('id', id)
+    setBanks(prev => prev.filter(b => b.id !== id))
+  }
+
+  if (loading) return <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
 
   return (
     <div className="w-full space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-slate-400 text-sm mt-1">{new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
       </div>
 
       {/* Cutoff Alert */}
-      <div className="glass-card p-4 flex items-center justify-between" style={{ background: daysUntil <= 3 ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)', borderColor: daysUntil <= 3 ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)' }}>
+      <div className="glass-card p-4 flex items-center justify-between"
+        style={{ background: daysUntil <= 3 ? '#fee2e2' : 'var(--green-50)', borderColor: daysUntil <= 3 ? '#fca5a5' : 'var(--green-200)' }}>
         <div className="flex items-center gap-3">
-          <AlertCircle size={20} className={daysUntil <= 3 ? 'text-red-400' : 'text-blue-400'} />
+          <AlertCircle size={20} style={{ color: daysUntil <= 3 ? '#b91c1c' : 'var(--green-500)' }} />
           <div>
-            <p className="font-semibold text-white text-sm">{cutoffLabel} in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
-            <p className="text-xs text-slate-400">Due on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })}</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{cutoffLabel} in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Due on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })}</p>
           </div>
         </div>
-        <Link href="/budget" className="text-xs text-blue-400 flex items-center gap-1 hover:text-blue-300">
+        <Link href="/budget" className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
           View <ChevronRight size={14} />
         </Link>
       </div>
@@ -105,67 +120,157 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: '1st Cutoff Remaining', value: formatCurrency(remaining1), icon: Wallet, color: remaining1 >= 0 ? '#10b981' : '#ef4444', sub: `of ${formatCurrency(salary1)}` },
-          { label: '2nd Cutoff Remaining', value: formatCurrency(remaining2), icon: Wallet, color: remaining2 >= 0 ? '#10b981' : '#ef4444', sub: `of ${formatCurrency(salary2)}` },
-          { label: 'Total Savings', value: formatCurrency(totalSavings), icon: PiggyBank, color: '#8b5cf6', sub: `${year}` },
-          { label: 'Active Loans', value: `${loans.length}`, icon: CreditCard, color: '#f59e0b', sub: 'items' },
-        ].map((stat) => (
-          <div key={stat.label} className="glass-card p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-slate-400">{stat.label}</p>
-              <stat.icon size={16} style={{ color: stat.color }} />
-            </div>
-            <p className="text-xl font-bold text-white">{stat.value}</p>
-            <p className="text-xs text-slate-500">{stat.sub}</p>
+          { label: '1st Cutoff Left',  value: formatCurrency(rem1),        color: rem1  >= 0 ? 'var(--green-600)' : 'var(--red-500)', sub: `of ${formatCurrency(salary1)}` },
+          { label: '2nd Cutoff Left',  value: formatCurrency(rem2),        color: rem2  >= 0 ? 'var(--green-600)' : 'var(--red-500)', sub: `of ${formatCurrency(salary2)}` },
+          { label: 'Total Savings',    value: formatCurrency(totalSavings),color: 'var(--purple-500)', sub: `${year}` },
+          { label: 'Active Loans',     value: `${loans.length}`,           color: 'var(--amber-500)', sub: 'items' },
+        ].map(stat => (
+          <div key={stat.label} className="glass-card p-4">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{stat.label}</p>
+            <p className="text-xl font-bold mt-1" style={{ color: stat.color }}>{stat.value}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{stat.sub}</p>
           </div>
         ))}
       </div>
 
+      {/* Net Worth Panel */}
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+          <div>
+            <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>Net Worth</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>All accounts + savings</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {!netHidden && (
+              <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
+                {formatCurrency(netWorth)}
+              </span>
+            )}
+            {netHidden && <span className="text-2xl font-bold tracking-widest" style={{ color: 'var(--text-faint)' }}>₱ •••••</span>}
+            <button onClick={() => setNetHidden(!netHidden)}
+              className="p-2 rounded-xl transition" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+              {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {!netHidden && (
+          <div className="p-5 space-y-4 fade-in">
+            {/* Bank list */}
+            <div className="space-y-2">
+              {banks.length === 0 && (
+                <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No accounts added yet. Add one below.</p>
+              )}
+              {banks.map(bank => {
+                const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
+                return (
+                  <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl group"
+                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                        style={{ background: `${bank.color}20`, border: `1.5px solid ${bank.color}40` }}>
+                        {typeInfo?.label.split(' ')[0]}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{bank.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{typeInfo?.label.split(' ').slice(1).join(' ')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold font-mono" style={{ color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
+                        {formatCurrency(bank.balance)}
+                      </span>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
+                          className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}><Edit2 size={12} /></button>
+                        <button onClick={() => deleteBank(bank.id)}
+                          className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Savings summary row */}
+            <div className="flex items-center justify-between p-3 rounded-xl"
+              style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">💰</span>
+                <div>
+                  <p className="font-semibold text-sm" style={{ color: '#6d28d9' }}>Savings Tracker</p>
+                  <p className="text-xs" style={{ color: '#7c3aed' }}>From monthly ipon</p>
+                </div>
+              </div>
+              <span className="font-bold font-mono" style={{ color: '#6d28d9' }}>{formatCurrency(totalSavings)}</span>
+            </div>
+
+            {/* Total row */}
+            <div className="flex items-center justify-between p-3 rounded-xl"
+              style={{ background: 'var(--green-50)', border: '1.5px solid var(--green-300)' }}>
+              <p className="font-bold" style={{ color: 'var(--green-800)' }}>Total Net Worth</p>
+              <span className="font-bold text-lg font-mono" style={{ color: 'var(--green-600)' }}>{formatCurrency(netWorth)}</span>
+            </div>
+
+            <button onClick={() => { setEditBank(null); setShowBankForm(true) }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
+              style={{ background: 'var(--green-100)', color: 'var(--green-700)', border: '1.5px dashed var(--green-300)' }}>
+              <Plus size={15} /> Add Account / Wallet
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Bank form modal */}
+      {showBankForm && (
+        <BankFormModal
+          bank={editBank}
+          onClose={() => { setShowBankForm(false); setEditBank(null) }}
+          onSave={saveBank}
+        />
+      )}
+
       {/* Chart + Loans */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly expenses chart */}
         <div className="glass-card p-5">
-          <h2 className="font-semibold text-white mb-4">Monthly Payments Paid</h2>
+          <h2 className="font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Monthly Payments Paid</h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData}>
-              <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₱${v/1000}k`} />
-              <Tooltip
-                contentStyle={{ background: '#141b2d', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#e2e8f0' }}
-                formatter={(v: number) => [formatCurrency(v), 'Paid']}
-              />
-              <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+              <XAxis dataKey="month" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${v/1000}k`} />
+              <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }}
+                formatter={(v: number) => [formatCurrency(v), 'Paid']} />
+              <Bar dataKey="amount" radius={[5, 5, 0, 0]}>
                 {chartData.map((_, idx) => (
-                  <Cell key={idx} fill={idx === month - 1 ? '#3b82f6' : '#1e3a5f'} />
+                  <Cell key={idx} fill={idx === month - 1 ? 'var(--green-500)' : 'var(--green-100)'} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Active Loans Summary */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">Active Loans</h2>
-            <Link href="/loans" className="text-xs text-blue-400 hover:text-blue-300">View all</Link>
+            <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Active Loans</h2>
+            <Link href="/loans" className="text-xs font-semibold" style={{ color: 'var(--green-600)' }}>View all</Link>
           </div>
           <div className="space-y-3">
-            {loans.length === 0 && <p className="text-slate-500 text-sm text-center py-4">No active loans</p>}
-            {loans.slice(0, 4).map((loan) => {
+            {loans.length === 0 && <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No active loans</p>}
+            {loans.slice(0, 4).map(loan => {
               const paidMonths = Object.values(payments[loan.id] || []).filter(Boolean).length
               const total = (loan.loan_details as any)?.total_months || 12
               const { pct, remaining } = getLoanProgress(paidMonths, total)
               return (
                 <div key={loan.id} className="space-y-1.5">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white">{loan.name}</span>
-                    <span className="text-slate-400">{remaining}mo left</span>
+                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{loan.name}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{remaining}mo left</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 100 ? '#10b981' : '#3b82f6' }} />
+                    <div className="progress-fill" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>{paidMonths}/{total} months paid</span>
+                  <div className="flex justify-between text-xs" style={{ color: 'var(--text-faint)' }}>
+                    <span>{paidMonths}/{total} paid</span>
                     <span>{formatCurrency(loan.amount)}/mo</span>
                   </div>
                 </div>
@@ -175,22 +280,100 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* This month breakdown */}
+      {/* This Month */}
       <div className="glass-card p-5">
-        <h2 className="font-semibold text-white mb-4">This Month — {MONTHS_SHORT[month - 1]} {year}</h2>
+        <h2 className="font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+          This Month — {MONTHS_SHORT[month - 1]} {year}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)' }}>
-            <p className="text-2xl font-bold text-blue-400">{formatCurrency(currentMonthExpense)}</p>
-            <p className="text-xs text-slate-400 mt-1">Already Paid</p>
+          <div className="p-4 rounded-xl" style={{ background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
+            <p className="text-2xl font-bold" style={{ color: 'var(--green-600)' }}>{formatCurrency(curMonthExp)}</p>
+            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Already Paid</p>
           </div>
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.08)' }}>
-            <p className="text-2xl font-bold text-red-400">{formatCurrency(firstCutoffTotal + secondCutoffTotal - currentMonthExpense)}</p>
-            <p className="text-xs text-slate-400 mt-1">Still Due</p>
+          <div className="p-4 rounded-xl" style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
+            <p className="text-2xl font-bold" style={{ color: 'var(--red-500)' }}>
+              {formatCurrency(firstTotal + secondTotal - curMonthExp)}
+            </p>
+            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Still Due</p>
           </div>
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.08)' }}>
-            <p className="text-2xl font-bold text-green-400">{formatCurrency((salary1 + salary2) - firstCutoffTotal - secondCutoffTotal)}</p>
-            <p className="text-xs text-slate-400 mt-1">Net After Expenses</p>
+          <div className="p-4 rounded-xl" style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
+            <p className="text-2xl font-bold" style={{ color: '#7c3aed' }}>
+              {formatCurrency((salary1 + salary2) - firstTotal - secondTotal)}
+            </p>
+            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Net After Expenses</p>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
+  const [name,    setName]    = useState(bank?.name    || '')
+  const [type,    setType]    = useState(bank?.type    || 'bank')
+  const [balance, setBalance] = useState(bank?.balance?.toString() || '')
+  const [color,   setColor]   = useState(bank?.color   || '#22703a')
+
+  const COLORS = ['#22703a','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#14b8a6','#ec4899','#f97316','#64748b']
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+      <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b"
+          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+          <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>{bank ? 'Edit Account' : 'Add Account'}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}><X size={17} /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Account Name *</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GCash, BDO Savings..." className="w-full px-3 py-2.5 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Account Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {BANK_TYPES.map(t => (
+                <button key={t.value} onClick={() => setType(t.value)}
+                  className="p-2.5 rounded-xl text-center transition-all"
+                  style={{
+                    background: type === t.value ? `${t.color}18` : 'var(--bg-subtle)',
+                    border: `1.5px solid ${type === t.value ? t.color : 'var(--border)'}`,
+                  }}>
+                  <p style={{ fontSize: 16 }}>{t.label.split(' ')[0]}</p>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: type === t.value ? t.color : 'var(--text-faint)' }}>
+                    {t.label.split(' ').slice(1).join(' ')}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Current Balance (₱)</label>
+            <input type="number" value={balance} onChange={e => setBalance(e.target.value)} placeholder="0.00" className="w-full px-3 py-2.5 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--text-secondary)' }}>Color</label>
+            <div className="flex gap-2 flex-wrap">
+              {COLORS.map(c => (
+                <button key={c} onClick={() => setColor(c)}
+                  className="w-7 h-7 rounded-full transition-all"
+                  style={{ background: c, border: `3px solid ${color === c ? 'var(--text-primary)' : 'transparent'}`, outline: `2px solid ${color === c ? c : 'transparent'}`, outlineOffset: 2 }} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="px-5 pb-5 flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+            Cancel
+          </button>
+          <button onClick={() => onSave({ name, type, balance: parseFloat(balance) || 0, color })}
+            disabled={!name}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+            {bank ? 'Save Changes' : 'Add Account'}
+          </button>
         </div>
       </div>
     </div>
