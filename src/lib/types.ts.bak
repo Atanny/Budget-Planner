@@ -115,11 +115,11 @@ export const EXPENSE_CATEGORIES = [
 ]
 
 export const BANK_TYPES = [
-  { value: 'bank'        as const, label: '🏦 Bank',         color: '#3b82f6' },
-  { value: 'ewallet'     as const, label: '📲 E-Wallet',     color: '#22703a' },
-  { value: 'cash'        as const, label: '💵 Cash',         color: '#f59e0b' },
-  { value: 'investment'  as const, label: '📈 Investment',   color: '#8b5cf6' },
-  { value: 'other'       as const, label: '🗃️ Other',        color: '#94a3b8' },
+  { value: 'bank',       label: '🏦 Bank',         color: '#3b82f6' },
+  { value: 'ewallet',    label: '📲 E-Wallet',     color: '#22703a' },
+  { value: 'cash',       label: '💵 Cash',         color: '#f59e0b' },
+  { value: 'investment', label: '📈 Investment',   color: '#8b5cf6' },
+  { value: 'other',      label: '🗃️ Other',        color: '#94a3b8' },
 ]
 
 export interface BankAccount {

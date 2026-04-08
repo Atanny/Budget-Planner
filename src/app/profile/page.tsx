@@ -88,7 +88,7 @@ export default function ProfilePage() {
 
       {/* PWA tip */}
       <div className="glass-card p-4 flex items-start gap-3" style={{ background: '#fef3c7', borderColor: '#fde68a' }}>
-        <Smartphone size={18} style={{ color: 'var(--amber-500)', shrink: 0, marginTop: 2 }} />
+        <Smartphone size={18} style={{ color: 'var(--amber-500)', flexShrink: 0, marginTop: 2 }} />
         <div>
           <p className="text-sm font-bold" style={{ color: '#92400e' }}>Install as App</p>
           <p className="text-xs mt-0.5" style={{ color: '#a16207' }}>
