@@ -122,6 +122,20 @@ export const BANK_TYPES = [
   { value: 'other'       as const, label: '🗃️ Other',        color: '#94a3b8' },
 ]
 
+export interface TransactionLog {
+  id: string
+  user_id: string
+  budget_item_id?: string | null
+  action: 'add' | 'edit' | 'delete' | 'paid' | 'unpaid'
+  item_name: string
+  amount: number
+  category?: string | null
+  payment_method?: string | null
+  cutoff?: string | null
+  notes?: string | null
+  created_at: string
+}
+
 export interface BankAccount {
   id: string
   user_id: string

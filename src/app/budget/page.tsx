@@ -2,9 +2,9 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, Cutoff, PaymentStatus, UserSettings, EXPENSE_CATEGORIES } from '@/lib/types'
+import { BudgetItem, Cutoff, PaymentStatus, UserSettings, TransactionLog, EXPENSE_CATEGORIES } from '@/lib/types'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Edit2, Trash2, Settings, Check, PiggyBank, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { Plus, Edit2, Trash2, Settings, Check, PiggyBank, ChevronDown, ChevronUp, Calendar, History, ArrowDownLeft, ArrowUpRight, Clock } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 import EditSalaryModal from '@/components/EditSalaryModal'
 
@@ -38,6 +38,26 @@ function PriorityBadge({ status }: { status: PaymentStatus }) {
   )
 }
 
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1)  return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)  return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7)  return `${days}d ago`
+  return new Date(dateStr).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
+
+const ACTION_META: Record<string, { icon: string; color: string; label: string }> = {
+  add:    { icon: '+', color: '#16a34a', label: 'Added'   },
+  edit:   { icon: '✎', color: '#2563eb', label: 'Edited'  },
+  delete: { icon: '✕', color: '#dc2626', label: 'Deleted' },
+  paid:   { icon: '✓', color: '#16a34a', label: 'Paid'    },
+  unpaid: { icon: '↩', color: '#d97706', label: 'Unpaid'  },
+}
+
 export default function BudgetPage() {
   const [items,      setItems]      = useState<BudgetItem[]>([])
   const [payments,   setPayments]   = useState<Record<string, Record<number, boolean>>>({})
@@ -51,20 +71,29 @@ export default function BudgetPage() {
   const [activeTab,  setActiveTab]  = useState<Cutoff>('1st')
   const [loading,    setLoading]    = useState(true)
   const [showYearly, setShowYearly] = useState(false)
+  const [showHistory,setShowHistory]= useState(true)
+  const [logs,       setLogs]       = useState<TransactionLog[]>([])
+  const [banks,      setBanks]      = useState<Record<string, string>>({}) // id -> name
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     setUserId(user.id)
-    const [itemRes, payRes, settRes, savRes] = await Promise.all([
+    const [itemRes, payRes, settRes, savRes, logRes, bankRes] = await Promise.all([
       supabase.from('budget_items').select('*, loan_details(*)').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
       supabase.from('monthly_payments').select('*').eq('user_id', user.id).eq('year', CURRENT_YEAR),
       supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
       supabase.from('monthly_savings').select('*').eq('user_id', user.id).eq('year', CURRENT_YEAR).eq('month', CURRENT_MONTH_1).single(),
+      supabase.from('transaction_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
+      supabase.from('bank_accounts').select('id, name').eq('user_id', user.id).eq('is_active', true),
     ])
     setItems(itemRes.data || [])
     setSettings(settRes.data)
     setSavings(savRes.data || {})
+    setLogs(logRes.data || [])
+    const bmap: Record<string, string> = {}
+    for (const b of (bankRes.data || [])) bmap[b.id] = b.name
+    setBanks(bmap)
     const map: Record<string, Record<number, boolean>> = {}
     for (const p of (payRes.data || [])) {
       if (!map[p.budget_item_id]) map[p.budget_item_id] = {}
@@ -76,6 +105,23 @@ export default function BudgetPage() {
 
   useEffect(() => { load() }, [load])
 
+  async function logAction(action: TransactionLog['action'], item: BudgetItem, paymentMethod?: string, notes?: string) {
+    if (!userId) return
+    const entry: any = {
+      user_id: userId,
+      budget_item_id: item.id,
+      action,
+      item_name: item.name,
+      amount: item.amount,
+      category: item.category,
+      payment_method: paymentMethod || null,
+      cutoff: item.cutoff,
+      notes: notes || null,
+    }
+    const { data } = await supabase.from('transaction_logs').insert(entry).select().single()
+    if (data) setLogs(prev => [data, ...prev].slice(0, 50))
+  }
+
   async function toggleMonth(itemId: string, month: number, disabled: boolean) {
     if (!userId || disabled) return
     const cur = payments[itemId]?.[month] ?? false
@@ -84,12 +130,23 @@ export default function BudgetPage() {
       budget_item_id: itemId, user_id: userId,
       year: CURRENT_YEAR, month, paid: !cur, paid_at: !cur ? new Date().toISOString() : null
     }, { onConflict: 'budget_item_id,year,month' })
+    // Log the paid/unpaid action
+    const item = items.find(i => i.id === itemId)
+    if (item) {
+      const payMethod = item.bank_account_id ? banks[item.bank_account_id] : undefined
+      await logAction(!cur ? 'paid' : 'unpaid', item, payMethod)
+      // refresh logs
+      const { data } = await supabase.from('transaction_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(50)
+      setLogs(data || [])
+    }
   }
 
   async function deleteItem(id: string) {
     if (!confirm('Delete this item?')) return
+    const item = items.find(i => i.id === id)
     await supabase.from('budget_items').update({ is_active: false }).eq('id', id)
     setItems(prev => prev.filter(i => i.id !== id))
+    if (item) await logAction('delete', item)
   }
 
   async function toggleSavingCheck(cutoffKey: '1st' | '2nd') {
@@ -132,7 +189,7 @@ export default function BudgetPage() {
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Budget Planner</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Budget Tracker</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{CURRENT_YEAR}</p>
         </div>
         <div className="flex gap-2">
@@ -252,6 +309,9 @@ export default function BudgetPage() {
                         {item.is_loan && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: '#8b5cf6' }} />}
                         <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{item.name}</span>
                       </div>
+                      {item.bank_account_id && banks[item.bank_account_id] && (
+                        <span className="text-xs mt-0.5 block" style={{ color: 'var(--text-faint)' }}>via {banks[item.bank_account_id]}</span>
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       {catInfo && (
@@ -263,7 +323,6 @@ export default function BudgetPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(item.amount)}</td>
 
-                    {/* Type — auto-detected badge */}
                     <td className="px-3 py-3 text-center">
                       {autoType && (() => {
                         const b = getBadgeStyle(autoType)
@@ -276,7 +335,6 @@ export default function BudgetPage() {
                       })()}
                     </td>
 
-                    {/* Priority — static badge only, editable via modal */}
                     <td className="px-3 py-3 text-center">
                       <PriorityBadge status={item.status} />
                     </td>
@@ -285,22 +343,34 @@ export default function BudgetPage() {
                       const paid = monthPaid[i]
                       const isCurrent = i === CURRENT_MONTH
                       const isFuture  = i > CURRENT_MONTH
-                      const isDisabled = isFuture || (item.status === 'First Payment' && isCurrent) || isSuspended
+
+                      const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details
+                      let isOutOfScope = false
+                      if (item.is_loan && ld?.start_date && ld?.total_months) {
+                        const loanStart = new Date(ld.start_date)
+                        const loanStartMonth = loanStart.getMonth()
+                        const loanEndMonth   = loanStartMonth + parseInt(ld.total_months) - 1
+                        isOutOfScope = i < loanStartMonth || i > loanEndMonth
+                      } else {
+                        isOutOfScope = isFuture
+                      }
+
+                      const isDisabled = isOutOfScope || isSuspended
+                      const disabledTitle =
+                        isSuspended ? 'Suspended' :
+                        isOutOfScope && item.is_loan ? 'Outside loan payment period' :
+                        isFuture ? 'Future month' : ''
                       return (
                         <td key={i} className="py-3 text-center" style={{ padding: '0 2px' }}>
                           <button
                             onClick={() => toggleMonth(item.id, i + 1, isDisabled)}
                             disabled={isDisabled}
-                            title={
-                              isFuture    ? 'Future month' :
-                              isSuspended ? 'Suspended' :
-                              item.status === 'First Payment' && isCurrent ? 'First Payment — not yet checkable' : ''
-                            }
+                            title={disabledTitle}
                             className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all"
                             style={{
                               background: paid ? 'var(--green-100)' : isCurrent ? 'var(--green-50)' : 'transparent',
                               border: `1.5px solid ${paid ? 'var(--green-300)' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
-                              opacity: isDisabled && !paid ? (isFuture ? 0.2 : 0.35) : 1,
+                              opacity: isDisabled && !paid ? 0.2 : 1,
                               cursor: isDisabled ? 'not-allowed' : 'pointer',
                             }}>
                             {paid
@@ -362,6 +432,7 @@ export default function BudgetPage() {
             const paidCount = monthPaid.filter(Boolean).length
             return (
               <MobileCard key={item.id} item={item} monthPaid={monthPaid} paidCount={paidCount}
+                bankName={item.bank_account_id ? banks[item.bank_account_id] : undefined}
                 onToggle={(m: number) => toggleMonth(item.id, m,
                   (m - 1) > CURRENT_MONTH ||
                   (item.status === 'First Payment' && m === CURRENT_MONTH_1) ||
@@ -379,6 +450,115 @@ export default function BudgetPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ═══ History Log ═══ */}
+      <div className="glass-card overflow-hidden">
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+          style={{
+            borderBottom: showHistory ? '1.5px solid var(--border)' : 'none',
+            background: showHistory ? 'var(--green-50)' : 'var(--bg-surface)',
+          }}>
+          <div className="flex items-center gap-2.5">
+            <History size={16} style={{ color: 'var(--green-500)' }} />
+            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+              Transaction History
+            </span>
+            {logs.length > 0 && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
+                {logs.length} entries
+              </span>
+            )}
+          </div>
+          {showHistory
+            ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />
+          }
+        </button>
+
+        {showHistory && (
+          <div>
+            {logs.length === 0 ? (
+              <div className="py-12 text-center" style={{ color: 'var(--text-faint)' }}>
+                <Clock size={28} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No activity yet. Add or pay items to see history.</p>
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {logs.map((log) => {
+                  const meta = ACTION_META[log.action] || ACTION_META['add']
+                  const isDebit = log.action === 'paid' || log.action === 'add'
+                  const catInfo = EXPENSE_CATEGORIES.find(c => c.value === log.category)
+
+                  return (
+                    <div key={log.id} className="flex items-center gap-3 px-5 py-3 hover:bg-opacity-50 transition-colors"
+                      style={{ background: 'transparent' }}>
+                      {/* Action icon */}
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                        style={{
+                          background: meta.color + '18',
+                          color: meta.color,
+                          border: `1.5px solid ${meta.color}30`,
+                        }}>
+                        {meta.icon}
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                            {log.item_name}
+                          </span>
+                          {catInfo && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0"
+                              style={{ background: `${catInfo.color}18`, color: catInfo.color, fontSize: 10 }}>
+                              {catInfo.label.split(' ')[0]}
+                            </span>
+                          )}
+                          {log.payment_method && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold shrink-0"
+                              style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 10 }}>
+                              {log.payment_method}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs font-medium" style={{ color: meta.color }}>{meta.label}</span>
+                          {log.cutoff && (
+                            <span className="text-xs" style={{ color: 'var(--text-faint)' }}>· {log.cutoff} cutoff</span>
+                          )}
+                          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>· {timeAgo(log.created_at)}</span>
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="text-right shrink-0">
+                        <p className="font-bold font-mono text-sm"
+                          style={{
+                            color: log.action === 'delete' ? 'var(--text-faint)'
+                              : log.action === 'unpaid'  ? 'var(--amber-500)'
+                              : log.action === 'edit'    ? '#2563eb'
+                              : '#dc2626',
+                          }}>
+                          {log.action === 'delete' ? '—'
+                            : log.action === 'unpaid'  ? `+${formatCurrency(log.amount)}`
+                            : log.action === 'edit'    ? formatCurrency(log.amount)
+                            : `-${formatCurrency(log.amount)}`}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>
+                          {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ═══ Yearly Payment Overview ═══ */}
@@ -504,13 +684,32 @@ export default function BudgetPage() {
         )}
       </div>
 
-      {showAdd && <AddItemModal defaultCutoff={editCutoff} editItem={editItem} onClose={() => { setShowAdd(false); setEditItem(null) }} onSave={load} />}
+      {showAdd && (
+        <AddItemModal
+          defaultCutoff={editCutoff}
+          editItem={editItem}
+          onClose={() => { setShowAdd(false); setEditItem(null) }}
+          onSave={async (savedItem?: BudgetItem) => {
+            await load()
+            if (savedItem) {
+              const action = editItem ? 'edit' : 'add'
+              const payMethod = savedItem.bank_account_id ? banks[savedItem.bank_account_id] : undefined
+              await logAction(action, savedItem, payMethod)
+              const uid = userId
+              if (uid) {
+                const { data } = await supabase.from('transaction_logs').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(50)
+                setLogs(data || [])
+              }
+            }
+          }}
+        />
+      )}
       {showSalary && <EditSalaryModal settings={settings} onClose={() => setShowSalary(false)} onSave={(s) => { setSettings(s); setShowSalary(false) }} />}
     </div>
   )
 }
 
-function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: any) {
+function MobileCard({ item, monthPaid, paidCount, bankName, onToggle, onEdit, onDelete }: any) {
   const [expanded, setExpanded] = useState(false)
   const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category)
   const badge = getBadgeStyle(item.status)
@@ -529,6 +728,7 @@ function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: 
             )}
           </div>
           <p className="font-mono font-bold text-sm mt-0.5" style={{ color: 'var(--green-600)' }}>{formatCurrency(item.amount)}</p>
+          {bankName && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>via {bankName}</p>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           <span className="text-xs px-2 py-0.5 rounded-full font-bold"
@@ -547,7 +747,17 @@ function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: 
               const paid = monthPaid[i]
               const isCur     = i === CURRENT_MONTH
               const isFuture  = i > CURRENT_MONTH
-              const isDisabled = isFuture || (item.status === 'First Payment' && isCur) || item.status === 'Suspended'
+              const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details
+              let isOutOfScope = false
+              if (item.is_loan && ld?.start_date && ld?.total_months) {
+                const loanStart = new Date(ld.start_date)
+                const loanStartMonth = loanStart.getMonth()
+                const loanEndMonth   = loanStartMonth + parseInt(ld.total_months) - 1
+                isOutOfScope = i < loanStartMonth || i > loanEndMonth
+              } else {
+                isOutOfScope = isFuture
+              }
+              const isDisabled = isOutOfScope || item.status === 'Suspended'
               return (
                 <button key={i} onClick={() => !isDisabled && onToggle(i + 1)}
                   disabled={isDisabled}
@@ -555,7 +765,7 @@ function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: 
                   style={{
                     background: paid ? 'var(--green-100)' : isCur ? 'var(--green-50)' : 'var(--bg-subtle)',
                     border: `1.5px solid ${paid ? 'var(--green-300)' : isCur ? 'var(--green-200)' : 'var(--border)'}`,
-                    opacity: isDisabled && !paid ? 0.3 : 1,
+                    opacity: isDisabled && !paid ? 0.2 : 1,
                   }}>
                   <span className="text-xs font-bold"
                     style={{ color: paid ? 'var(--green-600)' : isCur ? 'var(--green-500)' : 'var(--text-faint)' }}>

@@ -8,7 +8,7 @@ interface Props {
   defaultCutoff: Cutoff
   editItem?: BudgetItem | null
   onClose: () => void
-  onSave: () => void
+  onSave: (savedItem?: BudgetItem) => void
 }
 
 function computeAutoStatus(totalMonths: number, startDate: string, base: 'Required' | 'Optional'): PaymentStatus {
@@ -132,8 +132,11 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
       is_loan: isLoan, category, bank_account_id: bankId || null
     }
 
+    let savedItem: BudgetItem | undefined
+
     if (editItem) {
-      await supabase.from('budget_items').update(payload).eq('id', editItem.id)
+      const { data: updated } = await supabase.from('budget_items').update(payload).eq('id', editItem.id).select().single()
+      savedItem = updated ?? undefined
       if (isLoan) {
         await supabase.from('loan_details').upsert({
           budget_item_id: editItem.id, user_id: user.id,
@@ -143,6 +146,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     } else {
       const { data: newItem } = await supabase.from('budget_items')
         .insert({ user_id: user.id, ...payload }).select().single()
+      savedItem = newItem ?? undefined
       if (newItem && isLoan) {
         await supabase.from('loan_details').insert({
           budget_item_id: newItem.id, user_id: user.id,
@@ -150,7 +154,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
         })
       }
     }
-    setSaving(false); onSave(); onClose()
+    setSaving(false); onSave(savedItem); onClose()
   }
 
   const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', padding: '9px 12px', fontSize: 14, width: '100%', outline: 'none', fontFamily: 'inherit' }
@@ -371,7 +375,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
 
             {/* Auto-detected payment type badges — display only */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Payment Type (Auto-detected)</p>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Payment Type</p>
               <div className="flex flex-wrap gap-2">
                 {(['First Payment', 'Last Payment', 'Once', 'Suspended'] as PaymentStatus[]).map(s => {
                   const st = STATUS_BADGE_STYLE[s]
@@ -391,9 +395,19 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
                   )
                 })}
               </div>
-              {isFirstPayment && (
+              {computedStatus === 'First Payment' && (
                 <p className="text-xs px-3 py-2 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-                  ℹ️ First Payment — monthly checkbox is disabled until next month
+                  ℹ️ First Payment — this is month 1 of {totalMonths} months
+                </p>
+              )}
+              {computedStatus === 'Last Payment' && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                  ℹ️ Last Payment — final month of {totalMonths} months
+                </p>
+              )}
+              {computedStatus === 'Once' && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: '#ffedd5', color: '#c2410c' }}>
+                  ℹ️ Once — single month payment (total months = 1)
                 </p>
               )}
             </div>
