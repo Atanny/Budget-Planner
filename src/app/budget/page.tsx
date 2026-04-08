@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, Cutoff, PaymentStatus, UserSettings, EXPENSE_CATEGORIES } from '@/lib/types'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, Check, PauseCircle, PlayCircle, PiggyBank } from 'lucide-react'
+import { Plus, Edit2, Trash2, Settings, Check, PiggyBank, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 import EditSalaryModal from '@/components/EditSalaryModal'
 
@@ -25,6 +25,19 @@ const BADGE: Record<PaymentStatus, { bg: string; color: string; border: string }
 
 function getBadgeStyle(s: PaymentStatus) { return BADGE[s] || BADGE['Required'] }
 
+function PriorityBadge({ status }: { status: PaymentStatus }) {
+  const priority: PaymentStatus =
+    status === 'Optional'  ? 'Optional'  :
+    status === 'Suspended' ? 'Suspended' : 'Required'
+  const b = getBadgeStyle(priority)
+  return (
+    <span className="text-xs px-2.5 py-1 rounded-full font-bold whitespace-nowrap"
+      style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
+      {priority}
+    </span>
+  )
+}
+
 export default function BudgetPage() {
   const [items,      setItems]      = useState<BudgetItem[]>([])
   const [payments,   setPayments]   = useState<Record<string, Record<number, boolean>>>({})
@@ -37,6 +50,7 @@ export default function BudgetPage() {
   const [editItem,   setEditItem]   = useState<BudgetItem | null>(null)
   const [activeTab,  setActiveTab]  = useState<Cutoff>('1st')
   const [loading,    setLoading]    = useState(true)
+  const [showYearly, setShowYearly] = useState(false)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -50,8 +64,7 @@ export default function BudgetPage() {
     ])
     setItems(itemRes.data || [])
     setSettings(settRes.data)
-    const savRow = savRes.data
-    setSavings(savRow || {})
+    setSavings(savRes.data || {})
     const map: Record<string, Record<number, boolean>> = {}
     for (const p of (payRes.data || [])) {
       if (!map[p.budget_item_id]) map[p.budget_item_id] = {}
@@ -63,8 +76,8 @@ export default function BudgetPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function toggleMonth(itemId: string, month: number, isFirstPay: boolean) {
-    if (!userId || isFirstPay) return
+  async function toggleMonth(itemId: string, month: number, disabled: boolean) {
+    if (!userId || disabled) return
     const cur = payments[itemId]?.[month] ?? false
     setPayments(prev => ({ ...prev, [itemId]: { ...(prev[itemId] || {}), [month]: !cur } }))
     await supabase.from('monthly_payments').upsert({
@@ -77,11 +90,6 @@ export default function BudgetPage() {
     if (!confirm('Delete this item?')) return
     await supabase.from('budget_items').update({ is_active: false }).eq('id', id)
     setItems(prev => prev.filter(i => i.id !== id))
-  }
-
-  async function updateStatus(id: string, status: PaymentStatus) {
-    await supabase.from('budget_items').update({ status }).eq('id', id)
-    setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i))
   }
 
   async function toggleSavingCheck(cutoffKey: '1st' | '2nd') {
@@ -112,7 +120,6 @@ export default function BudgetPage() {
   const savingsGoal   = settings?.savings_goal || 0
   const remaining     = totalIncome - totalExpenses
   const afterSavings  = remaining - savingsGoal
-
   const isSavChecked  = activeTab === '1st' ? !!savings.from_budget_1st : !!savings.from_budget_2nd
 
   if (loading) return (
@@ -161,9 +168,9 @@ export default function BudgetPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Income', value: totalIncome, color: 'var(--green-600)', sub: extraIncome > 0 ? `+${formatCurrency(extraIncome)} extra` : '' },
-          { label: 'Expenses',     value: totalExpenses, color: 'var(--red-500)',  sub: `${cutoffItems.length} items` },
-          { label: 'Remaining',    value: remaining,     color: remaining >= 0 ? 'var(--amber-500)' : 'var(--red-500)', sub: 'before savings' },
+          { label: 'Total Income', value: totalIncome,   color: 'var(--green-600)', sub: extraIncome > 0 ? `+${formatCurrency(extraIncome)} extra` : '' },
+          { label: 'Expenses',     value: totalExpenses, color: 'var(--red-500)',   sub: `${cutoffItems.length} items` },
+          { label: 'Remaining',    value: remaining,     color: remaining   >= 0 ? 'var(--amber-500)' : 'var(--red-500)', sub: 'before savings' },
           { label: 'After Savings',value: afterSavings,  color: afterSavings >= 0 ? 'var(--green-500)' : 'var(--red-500)', sub: `goal: ${formatCurrency(savingsGoal)}` },
         ].map(s => (
           <div key={s.label} className="glass-card p-4">
@@ -174,7 +181,7 @@ export default function BudgetPage() {
         ))}
       </div>
 
-      {/* Savings checkbox for current month */}
+      {/* Savings check */}
       <div className="glass-card p-4 flex items-center justify-between"
         style={{ background: isSavChecked ? 'var(--green-50)' : 'var(--bg-surface)', borderColor: isSavChecked ? 'var(--green-300)' : 'var(--border)' }}>
         <div className="flex items-center gap-3">
@@ -209,8 +216,13 @@ export default function BudgetPage() {
                 <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Amount</th>
                 <th className="text-center px-3 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Type</th>
                 <th className="text-center px-3 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Priority</th>
-                {MONTHS_SHORT.map(m => (
-                  <th key={m} className="text-center py-3 font-semibold w-9" style={{ color: 'var(--text-faint)', fontSize: 10 }}>{m}</th>
+                {MONTHS_SHORT.map((m, i) => (
+                  <th key={m} className="text-center py-3 font-semibold w-9"
+                    style={{
+                      color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)',
+                      fontSize: 10,
+                      fontWeight: i === CURRENT_MONTH ? 800 : 600,
+                    }}>{m}</th>
                 ))}
                 <th className="text-center px-3 py-3 font-semibold text-xs" style={{ color: 'var(--text-muted)' }}>Paid</th>
                 <th className="px-3 py-3" />
@@ -223,10 +235,13 @@ export default function BudgetPage() {
               {cutoffItems.map((item, idx) => {
                 const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
                 const paidCount = monthPaid.filter(Boolean).length
-                const isFirstPay = item.status === 'First Payment'
                 const isSuspended = item.status === 'Suspended'
                 const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category)
-                const badge = getBadgeStyle(item.status)
+
+                const autoType: PaymentStatus | null =
+                  item.status === 'First Payment' ? 'First Payment' :
+                  item.status === 'Last Payment'  ? 'Last Payment'  :
+                  item.status === 'Once'          ? 'Once'          : null
 
                 return (
                   <tr key={item.id}
@@ -248,41 +263,50 @@ export default function BudgetPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(item.amount)}</td>
 
-                    {/* Type badge — auto (First Payment, Last Payment, Once, Suspended) */}
+                    {/* Type — auto-detected badge */}
                     <td className="px-3 py-3 text-center">
-                      {['First Payment','Last Payment','Once','Suspended'].includes(item.status) && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap"
-                          style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>
-                          {item.status}
-                        </span>
-                      )}
+                      {autoType && (() => {
+                        const b = getBadgeStyle(autoType)
+                        return (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap"
+                            style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
+                            {autoType}
+                          </span>
+                        )
+                      })()}
                     </td>
 
-                    {/* Priority badge — Required/Optional (user-set) */}
+                    {/* Priority — static badge only, editable via modal */}
                     <td className="px-3 py-3 text-center">
-                      <StatusDropdown status={item.status} itemId={item.id} onUpdate={updateStatus} />
+                      <PriorityBadge status={item.status} />
                     </td>
 
                     {Array.from({ length: 12 }, (_, i) => {
                       const paid = monthPaid[i]
                       const isCurrent = i === CURRENT_MONTH
-                      const disabled = isFirstPay && isCurrent
+                      const isFuture  = i > CURRENT_MONTH
+                      const isDisabled = isFuture || (item.status === 'First Payment' && isCurrent) || isSuspended
                       return (
                         <td key={i} className="py-3 text-center" style={{ padding: '0 2px' }}>
                           <button
-                            onClick={() => toggleMonth(item.id, i + 1, isFirstPay && isCurrent)}
-                            disabled={disabled || isSuspended}
-                            title={disabled ? 'First Payment — not yet checkable' : ''}
+                            onClick={() => toggleMonth(item.id, i + 1, isDisabled)}
+                            disabled={isDisabled}
+                            title={
+                              isFuture    ? 'Future month' :
+                              isSuspended ? 'Suspended' :
+                              item.status === 'First Payment' && isCurrent ? 'First Payment — not yet checkable' : ''
+                            }
                             className="w-7 h-7 rounded-lg flex items-center justify-center mx-auto transition-all"
                             style={{
                               background: paid ? 'var(--green-100)' : isCurrent ? 'var(--green-50)' : 'transparent',
                               border: `1.5px solid ${paid ? 'var(--green-300)' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
-                              opacity: (disabled || isSuspended) ? 0.35 : 1,
-                              cursor: (disabled || isSuspended) ? 'not-allowed' : 'pointer',
+                              opacity: isDisabled && !paid ? (isFuture ? 0.2 : 0.35) : 1,
+                              cursor: isDisabled ? 'not-allowed' : 'pointer',
                             }}>
                             {paid
                               ? <Check size={11} style={{ color: 'var(--green-600)' }} />
-                              : <span className="w-1.5 h-1.5 rounded-full" style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
+                              : <span className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
                             }
                           </button>
                         </td>
@@ -319,7 +343,8 @@ export default function BudgetPage() {
                 </tr>
                 <tr style={{ borderTop: '1.5px solid var(--border)', background: 'var(--green-50)' }}>
                   <td className="px-4 py-3 font-bold" style={{ color: 'var(--green-800)' }}>Remaining Budget</td>
-                  <td colSpan={2} className="px-4 py-3 text-right font-bold text-lg" style={{ color: afterSavings >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
+                  <td colSpan={2} className="px-4 py-3 text-right font-bold text-lg"
+                    style={{ color: afterSavings >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
                     {formatCurrency(afterSavings)}
                   </td>
                   <td colSpan={17} />
@@ -337,10 +362,13 @@ export default function BudgetPage() {
             const paidCount = monthPaid.filter(Boolean).length
             return (
               <MobileCard key={item.id} item={item} monthPaid={monthPaid} paidCount={paidCount}
-                onToggle={(m) => toggleMonth(item.id, m, item.status === 'First Payment' && m === CURRENT_MONTH_1)}
+                onToggle={(m: number) => toggleMonth(item.id, m,
+                  (m - 1) > CURRENT_MONTH ||
+                  (item.status === 'First Payment' && m === CURRENT_MONTH_1) ||
+                  item.status === 'Suspended'
+                )}
                 onEdit={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }}
-                onDelete={() => deleteItem(item.id)}
-                onStatus={(s) => updateStatus(item.id, s)} />
+                onDelete={() => deleteItem(item.id)} />
             )
           })}
           {cutoffItems.length > 0 && (
@@ -353,46 +381,139 @@ export default function BudgetPage() {
         </div>
       </div>
 
+      {/* ═══ Yearly Payment Overview ═══ */}
+      <div className="glass-card overflow-hidden">
+        <button
+          onClick={() => setShowYearly(!showYearly)}
+          className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+          style={{
+            borderBottom: showYearly ? '1.5px solid var(--border)' : 'none',
+            background: showYearly ? 'var(--green-50)' : 'var(--bg-surface)',
+          }}>
+          <div className="flex items-center gap-2.5">
+            <Calendar size={16} style={{ color: 'var(--green-500)' }} />
+            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+              Yearly Payment Overview — {CURRENT_YEAR}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
+              All {items.length} payments
+            </span>
+          </div>
+          {showYearly
+            ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} />
+            : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />
+          }
+        </button>
+
+        {showYearly && (
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
+                  <th className="text-left px-4 py-2.5 font-semibold sticky left-0 z-10"
+                    style={{ color: 'var(--text-muted)', minWidth: 160, background: 'var(--bg-subtle)' }}>Payment</th>
+                  {MONTHS_SHORT.map((m, i) => (
+                    <th key={m} className="text-center py-2.5 font-semibold" style={{
+                      color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)',
+                      fontWeight: i === CURRENT_MONTH ? 800 : 600,
+                      width: 38,
+                      minWidth: 38,
+                    }}>{m}</th>
+                  ))}
+                  <th className="text-center px-3 py-2.5 font-semibold" style={{ color: 'var(--text-muted)', minWidth: 80 }}>Progress</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.length === 0 && (
+                  <tr><td colSpan={14} className="text-center py-8" style={{ color: 'var(--text-faint)' }}>No items yet.</td></tr>
+                )}
+                {items.map((item, idx) => {
+                  const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
+                  const paidCount = monthPaid.filter(Boolean).length
+                  const totalPayable = CURRENT_MONTH + 1
+                  const pct = totalPayable > 0 ? Math.round((paidCount / totalPayable) * 100) : 0
+                  const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category)
+                  const rowBg = idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)'
+
+                  return (
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
+                      <td className="px-4 py-2.5 sticky left-0 z-10" style={{ background: rowBg }}>
+                        <div className="flex items-center gap-1.5">
+                          {item.is_loan && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#8b5cf6' }} />}
+                          <span className="font-semibold truncate" style={{ color: 'var(--text-primary)', maxWidth: 110 }}>{item.name}</span>
+                          <span className="shrink-0 px-1.5 py-0.5 rounded font-semibold"
+                            style={{ fontSize: 9, background: 'var(--bg-subtle)', color: 'var(--text-faint)', border: '1px solid var(--border)' }}>
+                            {item.cutoff}
+                          </span>
+                        </div>
+                        {catInfo && (
+                          <p className="mt-0.5" style={{ fontSize: 10, color: catInfo.color }}>
+                            {catInfo.label.split(' ')[0]} {catInfo.label.split(' ')[1]}
+                          </p>
+                        )}
+                      </td>
+                      {monthPaid.map((paid, i) => {
+                        const isCurrent = i === CURRENT_MONTH
+                        const isFuture  = i > CURRENT_MONTH
+                        return (
+                          <td key={i} className="text-center" style={{ padding: '6px 2px' }}>
+                            <div className="w-7 h-7 mx-auto flex items-center justify-center rounded-lg"
+                              style={{
+                                background: paid ? 'var(--green-100)' : isCurrent ? 'var(--green-50)' : 'transparent',
+                                border: `1.5px solid ${paid ? 'var(--green-300)' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
+                                opacity: isFuture ? 0.25 : 1,
+                              }}>
+                              {paid
+                                ? <Check size={10} style={{ color: 'var(--green-600)' }} />
+                                : <span className="w-1.5 h-1.5 rounded-full"
+                                    style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
+                              }
+                            </div>
+                          </td>
+                        )
+                      })}
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex justify-between" style={{ fontSize: 10 }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{paidCount}/{totalPayable}</span>
+                            <span style={{
+                              fontWeight: 700,
+                              color: pct >= 80 ? 'var(--green-600)' : pct >= 50 ? 'var(--amber-500)' : 'var(--red-500)',
+                            }}>{pct}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                            <div className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${pct}%`,
+                                background: pct >= 80
+                                  ? 'linear-gradient(90deg, var(--green-500), var(--green-300))'
+                                  : pct >= 50
+                                  ? 'linear-gradient(90deg, var(--amber-500), var(--amber-300))'
+                                  : 'linear-gradient(90deg, var(--red-500), var(--red-400))',
+                              }} />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {showAdd && <AddItemModal defaultCutoff={editCutoff} editItem={editItem} onClose={() => { setShowAdd(false); setEditItem(null) }} onSave={load} />}
       {showSalary && <EditSalaryModal settings={settings} onClose={() => setShowSalary(false)} onSave={(s) => { setSettings(s); setShowSalary(false) }} />}
     </div>
   )
 }
 
-function StatusDropdown({ status, itemId, onUpdate }: { status: PaymentStatus; itemId: string; onUpdate: (id: string, s: PaymentStatus) => void }) {
-  const [open, setOpen] = useState(false)
-  const isAutoType = ['First Payment','Last Payment','Once'].includes(status)
-  const displayStatus = isAutoType ? 'Required' : status
-  const b = getBadgeStyle(status === 'Required' || isAutoType ? 'Required' : status === 'Optional' ? 'Optional' : 'Suspended')
-  return (
-    <div className="relative inline-block">
-      <button onClick={() => setOpen(!open)}
-        className="text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1"
-        style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
-        {isAutoType ? 'Required' : status === 'Suspended' ? 'Suspended' : status}
-        {!['Once','First Payment','Last Payment'].includes(status) && (open ? <ChevronUp size={9} /> : <ChevronDown size={9} />)}
-      </button>
-      {open && (
-        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 rounded-xl overflow-hidden shadow-lg w-36"
-          style={{ background: 'var(--bg-surface)', border: '1.5px solid var(--border)' }}>
-          {(['Required','Optional','Suspended'] as PaymentStatus[]).map(s => (
-            <button key={s} onClick={() => { onUpdate(itemId, s); setOpen(false) }}
-              className="w-full text-left px-3 py-2 text-xs font-semibold hover:bg-green-50 transition-colors"
-              style={{ color: status === s ? 'var(--green-600)' : 'var(--text-secondary)' }}>
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete, onStatus }: any) {
+function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete }: any) {
   const [expanded, setExpanded] = useState(false)
   const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category)
   const badge = getBadgeStyle(item.status)
-  const isFirstPay = item.status === 'First Payment'
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-start justify-between">
@@ -424,18 +545,20 @@ function MobileCard({ item, monthPaid, paidCount, onToggle, onEdit, onDelete, on
           <div className="grid grid-cols-6 gap-1">
             {Array.from({ length: 12 }, (_, i) => {
               const paid = monthPaid[i]
-              const isCur = i === CURRENT_MONTH
-              const disabled = isFirstPay && isCur
+              const isCur     = i === CURRENT_MONTH
+              const isFuture  = i > CURRENT_MONTH
+              const isDisabled = isFuture || (item.status === 'First Payment' && isCur) || item.status === 'Suspended'
               return (
-                <button key={i} onClick={() => !disabled && onToggle(i + 1)}
-                  disabled={disabled}
+                <button key={i} onClick={() => !isDisabled && onToggle(i + 1)}
+                  disabled={isDisabled}
                   className="flex flex-col items-center gap-0.5 p-1.5 rounded-lg transition"
                   style={{
                     background: paid ? 'var(--green-100)' : isCur ? 'var(--green-50)' : 'var(--bg-subtle)',
                     border: `1.5px solid ${paid ? 'var(--green-300)' : isCur ? 'var(--green-200)' : 'var(--border)'}`,
-                    opacity: disabled ? 0.4 : 1,
+                    opacity: isDisabled && !paid ? 0.3 : 1,
                   }}>
-                  <span className="text-xs font-bold" style={{ color: paid ? 'var(--green-600)' : isCur ? 'var(--green-500)' : 'var(--text-faint)' }}>
+                  <span className="text-xs font-bold"
+                    style={{ color: paid ? 'var(--green-600)' : isCur ? 'var(--green-500)' : 'var(--text-faint)' }}>
                     {['J','F','M','A','M','J','J','A','S','O','N','D'][i]}
                   </span>
                   {paid && <Check size={9} style={{ color: 'var(--green-600)' }} />}
