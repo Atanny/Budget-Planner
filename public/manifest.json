@@ -1,0 +1,37 @@
+{
+  "name": "BudgetPH - Sahod Tracker",
+  "short_name": "BudgetPH",
+  "description": "Advanced budget planner with cutoff tracking, loans, and savings",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1e",
+  "theme_color": "#0a0f1e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Budget",
+      "url": "/budget",
+      "description": "View budget cutoffs"
+    },
+    {
+      "name": "Loans",
+      "url": "/loans",
+      "description": "Track loans"
+    }
+  ]
+}
