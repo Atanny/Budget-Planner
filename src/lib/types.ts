@@ -11,6 +11,7 @@ export interface UserSettings {
   savings_goal: number
   notifications_enabled: boolean
   push_subscription: PushSubscriptionJSON | null
+  total_salary_received: number
 }
 
 export interface BudgetItem {
@@ -147,4 +148,5 @@ export interface BankAccount {
   bank_account_id?: string | null
   is_active: boolean
   sort_order: number
+  is_main_bank: boolean
 }

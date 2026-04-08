@@ -4,23 +4,26 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
-import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X } from 'lucide-react'
+import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X, Star, Banknote } from 'lucide-react'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function DashboardPage() {
-  const [settings,  setSettings]  = useState<UserSettings | null>(null)
-  const [items,     setItems]     = useState<BudgetItem[]>([])
-  const [savings,   setSavings]   = useState<MonthlySavings[]>([])
-  const [payments,  setPayments]  = useState<Record<string, boolean[]>>({})
-  const [banks,     setBanks]     = useState<BankAccount[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [netHidden, setNetHidden] = useState(false)
-  const [showBankForm, setShowBankForm] = useState(false)
-  const [editBank,  setEditBank]  = useState<BankAccount | null>(null)
-  const [userId,    setUserId]    = useState<string | null>(null)
+  const [settings,      setSettings]      = useState<UserSettings | null>(null)
+  const [items,         setItems]         = useState<BudgetItem[]>([])
+  const [savings,       setSavings]       = useState<MonthlySavings[]>([])
+  const [payments,      setPayments]      = useState<Record<string, boolean[]>>({})
+  const [banks,         setBanks]         = useState<BankAccount[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [netHidden,     setNetHidden]     = useState(false)
+  const [showBankForm,  setShowBankForm]  = useState(false)
+  const [editBank,      setEditBank]      = useState<BankAccount | null>(null)
+  const [userId,        setUserId]        = useState<string | null>(null)
+  const [showSahod,     setShowSahod]     = useState(false)
+  const [sahodAmount,   setSahodAmount]   = useState('')
+  const [sahodSaving,   setSahodSaving]   = useState(false)
 
   const year  = new Date().getFullYear()
   const month = new Date().getMonth() + 1
@@ -52,28 +55,38 @@ export default function DashboardPage() {
     load()
   }, [year])
 
-  const firstTotal  = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
-  const secondTotal = items.filter(i => i.cutoff === '2nd').reduce((s, i) => s + i.amount, 0)
-  const salary1     = (settings?.first_cutoff_salary  || 0) + (settings?.extra_income_1st || 0)
-  const salary2     = (settings?.second_cutoff_salary || 0) + (settings?.extra_income_2nd || 0)
-  const rem1        = salary1 - firstTotal  - (settings?.savings_goal || 0)
-  const rem2        = salary2 - secondTotal - (settings?.savings_goal || 0)
-  const totalSavings= savings.reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
-  const loans       = items.filter(i => i.is_loan)
-  const daysUntil   = getDaysUntilCutoff()
-  const nextCutoff  = getNextCutoffDate()
-  const cutoffLabel = nextCutoff.getDate() === 15 ? '1st Cutoff' : '2nd Cutoff'
-  const totalBanks  = banks.reduce((s, b) => s + b.balance, 0)
-  const netWorth    = totalBanks + totalSavings
+  // Sahod received: add salary to main bank + total_salary_received
+  async function handleSahod() {
+    if (!userId || !sahodAmount) return
+    setSahodSaving(true)
+    const amt = parseFloat(sahodAmount)
+    const mainBank = banks.find(b => b.is_main_bank)
 
-  const chartData = MONTHS_SHORT.map((m, idx) => {
-    const total = items.reduce((sum, item) => sum + (payments[item.id]?.[idx] ? item.amount : 0), 0)
-    return { month: m, amount: total }
-  })
-  const curMonthExp = items.reduce((s, i) => s + (payments[i.id]?.[month-1] ? i.amount : 0), 0)
+    // Add to main bank balance
+    if (mainBank) {
+      const newBalance = mainBank.balance + amt
+      await supabase.from('bank_accounts').update({ balance: newBalance }).eq('id', mainBank.id)
+      setBanks(prev => prev.map(b => b.id === mainBank.id ? { ...b, balance: newBalance } : b))
+    }
 
-  async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string }) {
+    // Track total salary received in settings
+    const prevTotal = settings?.total_salary_received || 0
+    const newTotal = prevTotal + amt
+    await supabase.from('user_settings').update({ total_salary_received: newTotal }).eq('user_id', userId)
+    setSettings(prev => prev ? { ...prev, total_salary_received: newTotal } : prev)
+
+    setSahodSaving(false)
+    setShowSahod(false)
+    setSahodAmount('')
+  }
+
+  async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string; is_main_bank: boolean }) {
     if (!userId) return
+    // If setting as main, unset all others first
+    if (bank.is_main_bank) {
+      await supabase.from('bank_accounts').update({ is_main_bank: false }).eq('user_id', userId)
+      setBanks(prev => prev.map(b => ({ ...b, is_main_bank: false })))
+    }
     if (editBank) {
       const { data } = await supabase.from('bank_accounts').update(bank).eq('id', editBank.id).select().single()
       if (data) setBanks(prev => prev.map(b => b.id === editBank.id ? data : b))
@@ -89,6 +102,30 @@ export default function DashboardPage() {
     await supabase.from('bank_accounts').update({ is_active: false }).eq('id', id)
     setBanks(prev => prev.filter(b => b.id !== id))
   }
+
+  const firstTotal  = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
+  const secondTotal = items.filter(i => i.cutoff === '2nd').reduce((s, i) => s + i.amount, 0)
+  const salary1     = (settings?.first_cutoff_salary  || 0) + (settings?.extra_income_1st || 0)
+  const salary2     = (settings?.second_cutoff_salary || 0) + (settings?.extra_income_2nd || 0)
+  const rem1        = salary1 - firstTotal  - (settings?.savings_goal || 0)
+  const rem2        = salary2 - secondTotal - (settings?.savings_goal || 0)
+  const totalSavings= savings.reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
+  const loans       = items.filter(i => i.is_loan)
+  const daysUntil   = getDaysUntilCutoff()
+  const nextCutoff  = getNextCutoffDate()
+  const cutoffLabel = nextCutoff.getDate() === 15 ? '1st Cutoff' : '2nd Cutoff'
+
+  // Net Worth = total salary received (not bank balances)
+  const netWorth = settings?.total_salary_received || 0
+  // Total bank balance = separate
+  const totalBankBalance = banks.reduce((s, b) => s + b.balance, 0)
+  const mainBank = banks.find(b => b.is_main_bank)
+
+  const chartData = MONTHS_SHORT.map((m, idx) => {
+    const total = items.reduce((sum, item) => sum + (payments[item.id]?.[idx] ? item.amount : 0), 0)
+    return { month: m, amount: total }
+  })
+  const curMonthExp = items.reduce((s, i) => s + (payments[i.id]?.[month-1] ? i.amount : 0), 0)
 
   if (loading) return <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
 
@@ -133,12 +170,53 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Net Worth Panel */}
+      {/* ═══ Main Bank + May Sahod Na ═══ */}
       <div className="glass-card overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+        <div className="px-5 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--border)', background: '#eff6ff' }}>
+          <div>
+            <h2 className="font-bold" style={{ color: '#1e3a5f' }}>
+              {mainBank ? `🏦 ${mainBank.name}` : '🏦 Main Bank Account'}
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: '#3b82f6' }}>
+              {mainBank ? 'Your primary salary account' : 'Set a main bank in Accounts below'}
+            </p>
+          </div>
+          {mainBank && (
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-2xl font-bold font-mono" style={{ color: '#2563eb' }}>
+                  {formatCurrency(mainBank.balance)}
+                </p>
+                <p className="text-xs" style={{ color: '#60a5fa' }}>current balance</p>
+              </div>
+              <button
+                onClick={() => { setSahodAmount((settings?.first_cutoff_salary || 0).toString()); setShowSahod(true) }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition"
+                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 2px 8px #2563eb40' }}>
+                <Banknote size={16} />
+                May sahod na!
+              </button>
+            </div>
+          )}
+          {!mainBank && (
+            <button
+              onClick={() => { setEditBank(null); setShowBankForm(true) }}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+              <Plus size={14} /> Set Main Bank
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ Net Worth (Salary Only) ═══ */}
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b"
+          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
           <div>
             <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>Net Worth</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>All accounts + savings</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Total salary received</p>
           </div>
           <div className="flex items-center gap-3">
             {!netHidden && (
@@ -155,71 +233,167 @@ export default function DashboardPage() {
         </div>
 
         {!netHidden && (
-          <div className="p-5 space-y-4 fade-in">
-            {/* Bank list */}
-            <div className="space-y-2">
-              {banks.length === 0 && (
-                <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No accounts added yet. Add one below.</p>
-              )}
-              {banks.map(bank => {
-                const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
-                return (
-                  <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl group"
-                    style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
-                        style={{ background: `${bank.color}20`, border: `1.5px solid ${bank.color}40` }}>
-                        {typeInfo?.label.split(' ')[0]}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{bank.name}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{typeInfo?.label.split(' ').slice(1).join(' ')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold font-mono" style={{ color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
-                        {formatCurrency(bank.balance)}
-                      </span>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
-                          className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}><Edit2 size={12} /></button>
-                        <button onClick={() => deleteBank(bank.id)}
-                          className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><Trash2 size={12} /></button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Savings summary row */}
+          <div className="p-5 space-y-3 fade-in">
             <div className="flex items-center justify-between p-3 rounded-xl"
-              style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
               <div className="flex items-center gap-2">
-                <span className="text-base">💰</span>
+                <span className="text-base">💸</span>
                 <div>
-                  <p className="font-semibold text-sm" style={{ color: '#6d28d9' }}>Savings Tracker</p>
-                  <p className="text-xs" style={{ color: '#7c3aed' }}>From monthly ipon</p>
+                  <p className="font-semibold text-sm" style={{ color: '#1d4ed8' }}>Total Salary Received</p>
+                  <p className="text-xs" style={{ color: '#60a5fa' }}>All sahod accumulated</p>
                 </div>
               </div>
-              <span className="font-bold font-mono" style={{ color: '#6d28d9' }}>{formatCurrency(totalSavings)}</span>
+              <span className="font-bold font-mono" style={{ color: '#2563eb' }}>{formatCurrency(netWorth)}</span>
             </div>
-
-            {/* Total row */}
             <div className="flex items-center justify-between p-3 rounded-xl"
               style={{ background: 'var(--green-50)', border: '1.5px solid var(--green-300)' }}>
-              <p className="font-bold" style={{ color: 'var(--green-800)' }}>Total Net Worth</p>
+              <p className="font-bold" style={{ color: 'var(--green-800)' }}>Net Worth Total</p>
               <span className="font-bold text-lg font-mono" style={{ color: 'var(--green-600)' }}>{formatCurrency(netWorth)}</span>
             </div>
-
-            <button onClick={() => { setEditBank(null); setShowBankForm(true) }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
-              style={{ background: 'var(--green-100)', color: 'var(--green-700)', border: '1.5px dashed var(--green-300)' }}>
-              <Plus size={15} /> Add Account / Wallet
-            </button>
           </div>
         )}
       </div>
+
+      {/* ═══ Bank Accounts & Wallets (separate from net worth) ═══ */}
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b"
+          style={{ borderColor: 'var(--border)', background: '#faf5ff' }}>
+          <div>
+            <h2 className="font-bold" style={{ color: '#4c1d95' }}>Accounts & Wallets</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Not counted in net worth</p>
+          </div>
+          <span className="text-lg font-bold font-mono" style={{ color: '#7c3aed' }}>
+            {formatCurrency(totalBankBalance)}
+          </span>
+        </div>
+
+        <div className="p-5 space-y-3">
+          {banks.length === 0 && (
+            <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No accounts yet. Add one below.</p>
+          )}
+          {banks.map(bank => {
+            const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
+            return (
+              <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl group"
+                style={{ background: 'var(--bg-subtle)', border: `1.5px solid ${bank.is_main_bank ? '#93c5fd' : 'var(--border)'}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
+                    style={{ background: `${bank.color}20`, border: `1.5px solid ${bank.color}40` }}>
+                    {typeInfo?.label.split(' ')[0]}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{bank.name}</p>
+                      {bank.is_main_bank && (
+                        <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full font-bold"
+                          style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+                          <Star size={9} fill="currentColor" /> Main
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{typeInfo?.label.split(' ').slice(1).join(' ')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-bold font-mono" style={{ color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
+                    {formatCurrency(bank.balance)}
+                  </span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
+                      className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}><Edit2 size={12} /></button>
+                    <button onClick={() => deleteBank(bank.id)}
+                      className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><Trash2 size={12} /></button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Total row */}
+          <div className="flex items-center justify-between p-3 rounded-xl"
+            style={{ background: '#faf5ff', border: '1.5px solid #c4b5fd' }}>
+            <p className="font-bold" style={{ color: '#6d28d9' }}>Total Balance</p>
+            <span className="font-bold text-lg font-mono" style={{ color: '#7c3aed' }}>{formatCurrency(totalBankBalance)}</span>
+          </div>
+
+          <button onClick={() => { setEditBank(null); setShowBankForm(true) }}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
+            style={{ background: '#ede9fe', color: '#7c3aed', border: '1.5px dashed #c4b5fd' }}>
+            <Plus size={15} /> Add Account / Wallet
+          </button>
+        </div>
+      </div>
+
+      {/* Sahod modal */}
+      {showSahod && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+          <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+            <div className="flex items-center justify-between px-5 py-4 border-b"
+              style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
+              <div>
+                <h2 className="font-bold" style={{ color: '#1e3a5f' }}>💸 May Sahod Na!</h2>
+                <p className="text-xs mt-0.5" style={{ color: '#3b82f6' }}>
+                  Adding to {mainBank?.name || 'Main Bank'} & Net Worth
+                </p>
+              </div>
+              <button onClick={() => setShowSahod(false)} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+                <X size={17} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>
+                  Salary Amount (₱)
+                </label>
+                <input
+                  type="number"
+                  value={sahodAmount}
+                  onChange={e => setSahodAmount(e.target.value)}
+                  placeholder="Enter sahod amount..."
+                  className="w-full px-3 py-2.5 text-sm"
+                  autoFocus
+                />
+                <p className="text-xs mt-1.5" style={{ color: 'var(--text-faint)' }}>
+                  This will add ₱{formatCurrency(parseFloat(sahodAmount) || 0)} to{' '}
+                  <strong>{mainBank?.name}</strong> balance and record it in Net Worth.
+                </p>
+              </div>
+              {/* Quick amount buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: '1st Cutoff', val: settings?.first_cutoff_salary || 0 },
+                  { label: '2nd Cutoff', val: settings?.second_cutoff_salary || 0 },
+                ].map(opt => (
+                  <button key={opt.label} onClick={() => setSahodAmount(opt.val.toString())}
+                    className="p-2.5 rounded-xl text-center transition-all"
+                    style={{
+                      background: sahodAmount === opt.val.toString() ? '#dbeafe' : 'var(--bg-subtle)',
+                      border: `1.5px solid ${sahodAmount === opt.val.toString() ? '#93c5fd' : 'var(--border)'}`,
+                    }}>
+                    <p className="text-xs font-bold" style={{ color: '#1d4ed8' }}>{opt.label}</p>
+                    <p className="text-sm font-bold font-mono" style={{ color: '#2563eb' }}>{formatCurrency(opt.val)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button onClick={() => setShowSahod(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleSahod}
+                disabled={!sahodAmount || sahodSaving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+                {sahodSaving ? 'Adding...' : 'Add Sahod 💸'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bank form modal */}
       {showBankForm && (
@@ -309,10 +483,11 @@ export default function DashboardPage() {
 }
 
 function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
-  const [name,    setName]    = useState(bank?.name    || '')
-  const [type,    setType]    = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type    || 'bank')
-  const [balance, setBalance] = useState(bank?.balance?.toString() || '')
-  const [color,   setColor]   = useState(bank?.color   || '#22703a')
+  const [name,      setName]      = useState(bank?.name      || '')
+  const [type,      setType]      = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type || 'bank')
+  const [balance,   setBalance]   = useState(bank?.balance?.toString() || '')
+  const [color,     setColor]     = useState(bank?.color     || '#22703a')
+  const [isMain,    setIsMain]    = useState(bank?.is_main_bank || false)
 
   const COLORS = ['#22703a','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#14b8a6','#ec4899','#f97316','#64748b']
 
@@ -328,7 +503,7 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
         <div className="p-5 space-y-4">
           <div>
             <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Account Name *</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GCash, BDO Savings..." className="w-full px-3 py-2.5 text-sm" />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. GCash, BDO Savings, BPI..." className="w-full px-3 py-2.5 text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Account Type</label>
@@ -352,6 +527,27 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
             <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Current Balance (₱)</label>
             <input type="number" value={balance} onChange={e => setBalance(e.target.value)} placeholder="0.00" className="w-full px-3 py-2.5 text-sm" />
           </div>
+          {/* Main bank toggle */}
+          <button onClick={() => setIsMain(!isMain)}
+            className="w-full flex items-center justify-between p-3 rounded-xl transition-all"
+            style={{
+              background: isMain ? '#dbeafe' : 'var(--bg-subtle)',
+              border: `1.5px solid ${isMain ? '#93c5fd' : 'var(--border)'}`,
+            }}>
+            <div className="flex items-center gap-2.5">
+              <Star size={16} style={{ color: isMain ? '#2563eb' : 'var(--text-faint)' }} fill={isMain ? '#2563eb' : 'none'} />
+              <div className="text-left">
+                <p className="text-sm font-bold" style={{ color: isMain ? '#1d4ed8' : 'var(--text-primary)' }}>Set as Main Bank</p>
+                <p className="text-xs" style={{ color: isMain ? '#3b82f6' : 'var(--text-faint)' }}>
+                  Where your salary (sahod) goes
+                </p>
+              </div>
+            </div>
+            <div className="w-5 h-5 rounded-md flex items-center justify-center"
+              style={{ background: isMain ? '#2563eb' : 'var(--bg-subtle)', border: `2px solid ${isMain ? '#2563eb' : 'var(--border-strong)'}` }}>
+              {isMain && <Check size={11} className="text-white" />}
+            </div>
+          </button>
           <div>
             <label className="text-xs font-semibold mb-2 block" style={{ color: 'var(--text-secondary)' }}>Color</label>
             <div className="flex gap-2 flex-wrap">
@@ -368,7 +564,7 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
             style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
             Cancel
           </button>
-          <button onClick={() => onSave({ name, type, balance: parseFloat(balance) || 0, color })}
+          <button onClick={() => onSave({ name, type, balance: parseFloat(balance) || 0, color, is_main_bank: isMain })}
             disabled={!name}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
             style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>

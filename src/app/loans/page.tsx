@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
 import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown, Check } from 'lucide-react'
-import AddItemModal from '@/components/AddItemModal'
+import AddLoanModal from '@/components/AddLoanModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const CURRENT_YEAR  = new Date().getFullYear()
@@ -372,7 +372,7 @@ export default function LoansPage() {
                   </span>
                 </div>
 
-                {/* Segmented progress bar — click each segment to toggle */}
+                {/* Monthly payment status bar — display only, manually checked via budget page */}
                 <div className="relative">
                   <div className="flex gap-0.5 h-9 rounded-xl overflow-hidden"
                     style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}>
@@ -385,37 +385,36 @@ export default function LoansPage() {
                         const calDate   = new Date(CURRENT_YEAR, i, 1)
                         return calDate < loanStart
                       })()
-                      const isClickable = !isSuspended && !isFuture && !isBeforeLoan
+                      // Overdue = past month, not paid
+                      const isOverdue = !isFuture && !isBeforeLoan && !paid && !isCurrent
 
                       return (
-                        <button key={m}
-                          onClick={() => isClickable && toggleMonth(loan.id, i + 1)}
-                          disabled={!isClickable}
-                          title={`${m} ${CURRENT_YEAR} — ${paid ? 'Paid ✓' : isFuture ? 'Not yet' : 'Not paid'}`}
-                          className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all relative"
+                        <div key={m}
+                          title={`${m} ${CURRENT_YEAR} — ${paid ? 'Paid ✓' : isFuture ? 'Not yet' : isOverdue ? 'NOT PAID ⚠' : 'Unpaid'}`}
+                          className="flex-1 flex flex-col items-center justify-center gap-0.5"
                           style={{
                             background: paid
                               ? 'var(--green-400)'
+                              : isOverdue
+                              ? '#fee2e2'
                               : isCurrent
                               ? 'var(--green-50)'
-                              : isBeforeLoan || isFuture
-                              ? 'transparent'
                               : 'transparent',
-                            cursor: isClickable ? 'pointer' : 'default',
                             opacity: (isFuture || isBeforeLoan) ? 0.25 : 1,
                             borderRight: i < 11 ? '1px solid var(--border)' : 'none',
                           }}>
                           <span style={{
                             fontSize: 9,
                             fontWeight: isCurrent ? 800 : 600,
-                            color: paid ? 'white' : isCurrent ? 'var(--green-700)' : 'var(--text-faint)',
+                            color: paid ? 'white' : isOverdue ? '#b91c1c' : isCurrent ? 'var(--green-700)' : 'var(--text-faint)',
                             lineHeight: 1,
                           }}>{m.slice(0, 1)}</span>
                           {paid && <Check size={8} color="white" />}
+                          {isOverdue && <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />}
                           {isCurrent && !paid && (
                             <span className="w-1 h-1 rounded-full" style={{ background: 'var(--green-400)' }} />
                           )}
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
@@ -573,8 +572,7 @@ export default function LoansPage() {
       )}
 
       {showAdd && (
-        <AddItemModal
-          defaultCutoff="1st"
+        <AddLoanModal
           editItem={editLoan}
           onClose={() => { setShowAdd(false); setEditLoan(null) }}
           onSave={() => { setShowAdd(false); setEditLoan(null); load() }}
