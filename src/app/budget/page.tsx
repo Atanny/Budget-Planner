@@ -177,7 +177,7 @@ export default function BudgetPage() {
                 const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
                 const paidCount = monthPaid.filter(Boolean).length
                 const isLoan = item.is_loan
-                const totalMonths = (item.loan_details as Record<string, number> | null)?.total_months || 12
+                const totalMonths = (item.loan_details as unknown as Record<string, number> | null)?.total_months || 12
 
                 return (
                   <tr key={item.id}
