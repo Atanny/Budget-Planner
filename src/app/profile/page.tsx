@@ -26,7 +26,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="md:ml-56 space-y-5 max-w-lg">
+    <div className="w-full space-y-5 max-w-lg">
       <div>
         <h1 className="text-2xl font-bold text-white">Profile</h1>
         <p className="text-slate-400 text-sm mt-1">Account settings</p>

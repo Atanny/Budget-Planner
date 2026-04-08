@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, Cutoff, PaymentStatus, STATUS_COLORS, UserSettings } from '@/lib/types'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, Check } from 'lucide-react'
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, Check, PauseCircle, PlayCircle } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 import EditSalaryModal from '@/components/EditSalaryModal'
 
@@ -90,13 +90,13 @@ export default function BudgetPage() {
   const afterSavings = remaining - savings
 
   if (loading) return (
-    <div className="md:ml-56 flex items-center justify-center h-64">
+    <div className="w-full flex items-center justify-center h-64">
       <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
     </div>
   )
 
   return (
-    <div className="md:ml-56 space-y-5">
+    <div className="w-full space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Budget Planner</h1>
@@ -327,26 +327,39 @@ function StatusBadge({ status, itemId, onUpdate }: {
   onUpdate: (id: string, s: PaymentStatus) => void
 }) {
   const [open, setOpen] = useState(false)
-  const statuses: PaymentStatus[] = ['Required','Optional','First Payment','Last Payment','Once','Suspended','Paid']
+  // Only Required/Optional are manually selectable; others are auto-set
+  const selectableStatuses: PaymentStatus[] = ['Required', 'Optional']
+  const isSuspended = status === 'Suspended'
   return (
-    <div className="relative inline-block">
+    <div className="flex items-center gap-1 justify-center">
+      <div className="relative inline-block">
+        <button
+          onClick={() => !isSuspended && setOpen(!open)}
+          className={cn('text-xs px-2 py-1 rounded-full border flex items-center gap-1', STATUS_COLORS[status])}
+          style={isSuspended ? { cursor: 'default' } : {}}>
+          {status} {!isSuspended && (open ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+        </button>
+        {open && !isSuspended && (
+          <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 rounded-xl overflow-hidden shadow-xl w-32"
+            style={{ background: '#141b2d', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {selectableStatuses.map(s => (
+              <button key={s}
+                onClick={() => { onUpdate(itemId, s); setOpen(false) }}
+                className={cn('w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors', status === s ? 'text-blue-400' : 'text-slate-300')}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Suspend toggle */}
       <button
-        onClick={() => setOpen(!open)}
-        className={cn('text-xs px-2 py-1 rounded-full border flex items-center gap-1', STATUS_COLORS[status])}>
-        {status} {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+        onClick={() => onUpdate(itemId, isSuspended ? 'Required' : 'Suspended')}
+        title={isSuspended ? 'Resume' : 'Suspend'}
+        className="p-1 rounded-lg transition"
+        style={isSuspended ? { color: '#34d399', background: 'rgba(16,185,129,0.15)' } : { color: '#64748b', background: 'rgba(255,255,255,0.04)' }}>
+        {isSuspended ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
       </button>
-      {open && (
-        <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 z-20 rounded-xl overflow-hidden shadow-xl w-36"
-          style={{ background: '#141b2d', border: '1px solid rgba(255,255,255,0.1)' }}>
-          {statuses.map(s => (
-            <button key={s}
-              onClick={() => { onUpdate(itemId, s); setOpen(false) }}
-              className={cn('w-full text-left px-3 py-2 text-xs hover:bg-white/5 transition-colors', status === s ? 'text-blue-400' : 'text-slate-300')}>
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

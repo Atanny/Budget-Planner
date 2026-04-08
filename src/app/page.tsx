@@ -75,13 +75,13 @@ export default function DashboardPage() {
   }, 0)
 
   if (loading) return (
-    <div className="md:ml-56 flex items-center justify-center h-64">
+    <div className="w-full flex items-center justify-center h-64">
       <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
     </div>
   )
 
   return (
-    <div className="md:ml-56 space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
