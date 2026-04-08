@@ -50,13 +50,14 @@ export function cn(...classes: (string | undefined | false | null)[]): string {
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) return false
+  if (typeof window === 'undefined' || !('Notification' in window)) return false
   if (Notification.permission === 'granted') return true
   const perm = await Notification.requestPermission()
   return perm === 'granted'
 }
 
 export function sendBrowserNotification(title: string, body: string, icon?: string) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return
   if (Notification.permission === 'granted') {
     new Notification(title, {
       body,
