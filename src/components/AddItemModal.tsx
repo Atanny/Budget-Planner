@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, BankAccount, Cutoff, PaymentStatus, EXPENSE_CATEGORIES } from '@/lib/types'
-import { X, ShoppingBag } from 'lucide-react'
+import { BudgetItem, BankAccount, Cutoff, EXPENSE_CATEGORIES } from '@/lib/types'
+import { X, ShoppingBag, Check } from 'lucide-react'
 
 interface Props {
   defaultCutoff: Cutoff
@@ -20,24 +20,12 @@ const labelStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6,
 }
 
-const STATUS_BADGE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  Required:  { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
-  Optional:  { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
-  Once:      { bg: '#ffedd5', color: '#c2410c', border: '#fdba74' },
-  Suspended: { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-}
-
 export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave }: Props) {
   const [name,     setName]     = useState(editItem?.name || '')
   const [amount,   setAmount]   = useState(editItem?.amount?.toString() || '')
   const [cutoff,   setCutoff]   = useState<Cutoff>(editItem?.cutoff || defaultCutoff)
   const [category, setCategory] = useState(editItem?.category || 'Food')
   const [bankId,   setBankId]   = useState<string>(editItem?.bank_account_id || '')
-  const [status,   setStatus]   = useState<PaymentStatus>(
-    editItem?.status && ['Required','Optional','Once','Suspended'].includes(editItem.status)
-      ? editItem.status as PaymentStatus
-      : 'Required'
-  )
   const [saving,   setSaving]   = useState(false)
   const [banks,    setBanks]    = useState<BankAccount[]>([])
 
@@ -49,6 +37,9 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     })
   }, [])
 
+  const selCat = EXPENSE_CATEGORIES.find(c => c.value === category)
+  const selBank = banks.find(b => b.id === bankId)
+
   async function handleSave() {
     if (!name.trim() || !amount) return
     setSaving(true)
@@ -56,8 +47,13 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     if (!user) { setSaving(false); return }
 
     const payload: any = {
-      name, amount: parseFloat(amount), cutoff, status,
-      is_loan: false, category, bank_account_id: bankId || null
+      name,
+      amount: parseFloat(amount),
+      cutoff,
+      status: 'Once' as const,   // expenses are always one-time / paid
+      is_loan: false,
+      category,
+      bank_account_id: bankId || null,
     }
 
     let savedItem: BudgetItem | undefined
@@ -69,19 +65,34 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
       const { data: newItem } = await supabase.from('budget_items')
         .insert({ user_id: user.id, ...payload }).select().single()
       savedItem = newItem ?? undefined
+
+      // Immediately deduct from bank when adding a new expense with a bank
+      if (newItem && bankId) {
+        const amt = parseFloat(amount)
+        await supabase.rpc('adjust_bank_balance', { p_id: bankId, p_delta: -amt })
+        // Also mark current month as paid automatically
+        const now = new Date()
+        await supabase.from('monthly_payments').upsert({
+          budget_item_id: newItem.id,
+          user_id: user.id,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          paid: true,
+          paid_at: now.toISOString(),
+        }, { onConflict: 'budget_item_id,year,month' })
+      }
     }
 
     setSaving(false)
     onSave(savedItem)
   }
 
-  const selCat = EXPENSE_CATEGORIES.find(c => c.value === category)
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
 
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0"
           style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
           <div className="flex items-center gap-2.5">
@@ -91,9 +102,11 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             </div>
             <div>
               <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>
-                {editItem ? 'Edit Expense' : 'Add Expense'}
+                {editItem ? 'Edit Expense' : 'Add Paid Expense'}
               </h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Recurring or one-time payment</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Automatically marked as paid
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
@@ -102,13 +115,16 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
+
+          {/* Name */}
           <div>
-            <label style={labelStyle}>Expense Name *</label>
+            <label style={labelStyle}>What did you pay for? *</label>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="e.g. Groceries, Netflix, Electric Bill..."
               style={inputStyle} autoFocus />
           </div>
 
+          {/* Amount & Cutoff */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label style={labelStyle}>Amount *</label>
@@ -124,6 +140,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             </div>
           </div>
 
+          {/* Category */}
           <div>
             <label style={labelStyle}>Category</label>
             <div className="grid grid-cols-3 gap-2">
@@ -143,46 +160,39 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             </div>
           </div>
 
+          {/* Bank / Wallet */}
           <div>
-            <label style={labelStyle}>Paid via (Account / Wallet)</label>
+            <label style={labelStyle}>Paid via</label>
             <select value={bankId} onChange={e => setBankId(e.target.value)} style={inputStyle}>
-              <option value="">— None / Cash —</option>
+              <option value="">— Cash / None —</option>
               {banks.map(b => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>
-              When marked paid, this account's balance will auto-decrease
+            {bankId && amount && (
+              <div className="mt-2 p-3 rounded-xl flex items-center gap-2"
+                style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
+                <span style={{ fontSize: 16 }}>💸</span>
+                <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
+                  ₱{parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })} will be
+                  deducted from <strong>{selBank?.name}</strong> immediately
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Status badge — display only */}
+          <div className="flex items-center gap-2 p-3 rounded-xl"
+            style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
+            <Check size={14} style={{ color: '#15803d' }} />
+            <p className="text-sm font-semibold" style={{ color: '#15803d' }}>
+              Paid Expense — will be recorded as paid this month
             </p>
           </div>
 
-          <div>
-            <label style={labelStyle}>Payment Type</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['Required', 'Optional', 'Once', 'Suspended'] as PaymentStatus[]).map(s => {
-                const st = STATUS_BADGE_STYLE[s]
-                return (
-                  <button key={s} onClick={() => setStatus(s)}
-                    className="py-2.5 rounded-xl text-sm font-semibold transition-all"
-                    style={{
-                      background: status === s ? st.bg : 'var(--bg-subtle)',
-                      border: `1.5px solid ${status === s ? st.border : 'var(--border)'}`,
-                      color: status === s ? st.color : 'var(--text-muted)',
-                    }}>
-                    {s}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>
-              {status === 'Required' && '📌 Must pay each cutoff period'}
-              {status === 'Optional' && '🟡 Nice-to-have, can be skipped'}
-              {status === 'Once' && '1️⃣ Single one-time payment (e.g. food, purchase)'}
-              {status === 'Suspended' && '⏸ Temporarily paused'}
-            </div>
-          </div>
         </div>
 
+        {/* Footer */}
         <div className="px-5 py-4 border-t flex gap-3 shrink-0"
           style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}

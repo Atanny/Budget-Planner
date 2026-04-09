@@ -65,15 +65,15 @@ export default function Navbar() {
       {/* Bottom nav — mobile, full width */}
       <nav className="fixed bottom-0 left-0 right-0 w-full z-50 border-t md:hidden"
         style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: '0 -1px 8px rgba(13,40,24,0.07)' }}>
-        <div className="w-full flex items-center justify-around h-16 px-1">
+        <div className="w-full flex items-center justify-around h-14 px-0">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = path === href
             return (
               <Link key={href} href={href}
-                className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl transition-all"
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all"
                 style={{ color: active ? 'var(--green-500)' : 'var(--text-faint)' }}>
-                <Icon size={19} />
-                <span className="font-semibold" style={{ fontSize: '10px' }}>{label}</span>
+                <Icon size={18} />
+                <span className="font-semibold" style={{ fontSize: '9px', lineHeight: 1 }}>{label}</span>
               </Link>
             )
           })}
