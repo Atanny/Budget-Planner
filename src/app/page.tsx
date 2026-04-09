@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
 import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X, Star, Banknote } from 'lucide-react'
+import ConfirmDialog from '@/components/ConfirmDialog'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
@@ -24,6 +25,7 @@ export default function DashboardPage() {
   const [showSahod,     setShowSahod]     = useState(false)
   const [sahodAmount,   setSahodAmount]   = useState('')
   const [sahodSaving,   setSahodSaving]   = useState(false)
+  const [deleteBankId,  setDeleteBankId]  = useState<string | null>(null)
 
   const year  = new Date().getFullYear()
   const month = new Date().getMonth() + 1
@@ -98,9 +100,13 @@ export default function DashboardPage() {
   }
 
   async function deleteBank(id: string) {
-    if (!confirm('Remove this account?')) return
+    setDeleteBankId(id)
+  }
+
+  async function doDeleteBank(id: string) {
     await supabase.from('bank_accounts').update({ is_active: false }).eq('id', id)
     setBanks(prev => prev.filter(b => b.id !== id))
+    setDeleteBankId(null)
   }
 
   const firstTotal  = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
@@ -401,6 +407,16 @@ export default function DashboardPage() {
           bank={editBank}
           onClose={() => { setShowBankForm(false); setEditBank(null) }}
           onSave={saveBank}
+        />
+      )}
+
+      {deleteBankId && (
+        <ConfirmDialog
+          title="Remove Account"
+          message="Remove this bank account from your tracker? This will not affect your actual bank account."
+          confirmLabel="Remove"
+          onConfirm={() => doDeleteBank(deleteBankId)}
+          onCancel={() => setDeleteBankId(null)}
         />
       )}
 

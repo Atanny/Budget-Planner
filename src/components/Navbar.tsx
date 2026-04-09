@@ -7,12 +7,12 @@ import { supabase } from '@/lib/supabase'
 import { getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
 
 const navItems = [
-  { href: '/',             label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/budget',       label: 'Budget',    icon: Wallet },
-  { href: '/loans',        label: 'Loans',     icon: CreditCard },
-  { href: '/savings',      label: 'Savings',   icon: PiggyBank },
-  { href: '/notifications',label: 'Alerts',    icon: Bell },
-  { href: '/profile',      label: 'Profile',   icon: User },
+  { href: '/',              label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/budget',        label: 'Budget',    icon: Wallet },
+  { href: '/loans',         label: 'Loans',     icon: CreditCard },
+  { href: '/savings',       label: 'Savings',   icon: PiggyBank },
+  { href: '/notifications', label: 'Alerts',    icon: Bell },
+  { href: '/profile',       label: 'Profile',   icon: User },
 ]
 
 export default function Navbar() {
@@ -40,10 +40,10 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Top header — full width */}
+      {/* Top header */}
       <header className="sticky top-0 z-50 w-full border-b"
         style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: '0 1px 3px rgba(13,40,24,0.06)' }}>
-        <div className="w-full md:pl-56 px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm"
               style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-300))' }}>₱</div>
@@ -53,7 +53,7 @@ export default function Navbar() {
             style={{
               background: urgent ? '#fee2e2' : 'var(--green-50)',
               color: urgent ? '#b91c1c' : 'var(--green-600)',
-              border: `1px solid ${urgent ? '#fca5a5' : 'var(--green-200)'}`,
+              border: '1px solid ' + (urgent ? '#fca5a5' : 'var(--green-200)'),
             }}>
             <span className="pulse-dot" style={{ background: urgent ? '#ef4444' : 'var(--green-400)' }} />
             <span className="hidden sm:inline">{days}d until {cutoffLabel}</span>
@@ -62,42 +62,52 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Bottom nav — mobile, full width */}
-      <nav className="fixed bottom-0 left-0 right-0 w-full z-50 border-t md:hidden"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', boxShadow: '0 -1px 8px rgba(13,40,24,0.07)' }}>
-        <div className="w-full flex items-center justify-around h-14 px-0">
+      {/* Floating bottom nav — all screens */}
+      <nav
+        className="fixed z-50"
+        style={{
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'min(calc(100vw - 24px), 520px)',
+          background: 'var(--bg-surface)',
+          border: '1.5px solid var(--border)',
+          borderRadius: 24,
+          boxShadow: '0 8px 32px rgba(13,40,24,0.18), 0 2px 8px rgba(13,40,24,0.10)',
+          padding: '6px 8px',
+        }}>
+        <div className="flex items-center justify-around">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = path === href
             return (
-              <Link key={href} href={href}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all"
-                style={{ color: active ? 'var(--green-500)' : 'var(--text-faint)' }}>
-                <Icon size={18} />
-                <span className="font-semibold" style={{ fontSize: '9px', lineHeight: 1 }}>{label}</span>
+              <Link
+                key={href}
+                href={href}
+                className="flex flex-col items-center justify-center gap-0.5 transition-all"
+                style={{
+                  flex: 1,
+                  padding: '6px 4px',
+                  borderRadius: 16,
+                  background: active ? 'var(--green-50)' : 'transparent',
+                  color: active ? 'var(--green-600)' : 'var(--text-faint)',
+                  minWidth: 0,
+                }}>
+                <div
+                  className="flex items-center justify-center rounded-xl transition-all"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    background: active ? 'var(--green-100)' : 'transparent',
+                  }}>
+                  <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                </div>
+                <span style={{ fontSize: 9, fontWeight: active ? 800 : 600, lineHeight: 1, letterSpacing: '0.01em' }}>
+                  {label}
+                </span>
               </Link>
             )
           })}
         </div>
-      </nav>
-
-      {/* Sidebar — desktop */}
-      <nav className="hidden md:flex fixed left-0 top-14 bottom-0 w-56 flex-col gap-0.5 p-3 border-r overflow-y-auto"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = path === href
-          return (
-            <Link key={href} href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-semibold"
-              style={{
-                background: active ? 'var(--bg-subtle)' : 'transparent',
-                color: active ? 'var(--green-600)' : 'var(--text-muted)',
-                borderLeft: active ? '3px solid var(--green-400)' : '3px solid transparent',
-              }}>
-              <Icon size={17} />
-              {label}
-            </Link>
-          )
-        })}
       </nav>
     </>
   )

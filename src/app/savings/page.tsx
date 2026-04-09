@@ -62,7 +62,17 @@ export default function SavingsPage() {
   const ytd = savings.slice(0, currentMonth + 1).reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
   const maxSaving = Math.max(...savings.map(s => s.kinsenas + s.atrenta), 1)
 
-  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', padding: '5px 10px', fontSize: 13, width: '100%', outline: 'none', fontFamily: 'inherit' }
+  const inputStyle = {
+    background: 'var(--bg-subtle)',
+    border: '1.5px solid var(--border)',
+    borderRadius: 8,
+    color: 'var(--text-primary)',
+    padding: '5px 10px',
+    fontSize: 13,
+    width: '100%',
+    outline: 'none',
+    fontFamily: 'inherit',
+  }
 
   if (loading) return <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
 
@@ -82,8 +92,22 @@ export default function SavingsPage() {
         </div>
       </div>
 
+      {/* Budget → Savings reminder */}
+      <div className="glass-card p-4 flex items-center gap-3"
+        style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
+        <PiggyBank size={18} style={{ color: 'var(--green-500)' }} />
+        <div>
+          <p className="text-sm font-semibold" style={{ color: 'var(--green-800)' }}>Savings from Budget</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Check the savings boxes in{' '}
+            <a href="/budget" className="underline font-semibold" style={{ color: 'var(--green-600)' }}>Budget Tracker</a>
+            {' '}to auto-fill this month's savings here.
+          </p>
+        </div>
+      </div>
+
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {[
           { label: 'Annual Total',    value: formatCurrency(grandTotal),    color: '#7c3aed', bg: '#ede9fe', icon: PiggyBank },
           { label: 'Year-to-Date',    value: formatCurrency(ytd),           color: 'var(--green-600)', bg: 'var(--green-50)', icon: TrendingUp },
@@ -94,8 +118,8 @@ export default function SavingsPage() {
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.bg }}>
               <s.icon size={18} style={{ color: s.color }} />
             </div>
-            <div>
-              <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
+            <div className="min-w-0">
+              <p className="text-lg font-bold truncate" style={{ color: s.color }}>{s.value}</p>
               <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
             </div>
           </div>
@@ -107,7 +131,7 @@ export default function SavingsPage() {
         <div className="p-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
           <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>Monthly Breakdown</h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Kinsenas/Atrenta from Budget checkboxes auto-fill; you can also edit manually
+            Auto-filled from Budget savings checkboxes · edit manually anytime
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -115,7 +139,8 @@ export default function SavingsPage() {
             <thead>
               <tr style={{ borderBottom: '1.5px solid var(--border)', background: 'var(--bg-subtle)' }}>
                 {['Month','Kinsenas (15th)','Atrenta (30th)','Total','Notes',''].map((h, i) => (
-                  <th key={i} className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide ${i > 0 ? 'text-right' : 'text-left'}`} style={{ color: 'var(--text-muted)' }}>{h}</th>
+                  <th key={i} className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide ${i > 0 ? 'text-right' : 'text-left'}`}
+                    style={{ color: 'var(--text-muted)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -124,35 +149,48 @@ export default function SavingsPage() {
                 const isEditing = editingId === row.id || editingId === `temp-${row.month}`
                 const isCurrent = idx === currentMonth && year === CURRENT_YEAR
                 const total = row.kinsenas + row.atrenta
-                const fromBudget1 = (row as any).from_budget_1st
-                const fromBudget2 = (row as any).from_budget_2nd
+                const hasSavings = total > 0
 
                 return (
                   <tr key={row.id} style={{
                     borderBottom: '1px solid var(--border)',
-                    background: isCurrent ? 'var(--green-50)' : idx % 2 === 0 ? 'transparent' : 'var(--bg-subtle)'
+                    background: isCurrent
+                      ? 'var(--green-50)'
+                      : hasSavings
+                      ? 'rgba(34,112,58,0.03)'
+                      : idx % 2 === 0 ? 'transparent' : 'var(--bg-subtle)',
                   }}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {isCurrent && <span className="w-2 h-2 rounded-full" style={{ background: 'var(--green-400)' }} />}
-                        <span className="font-semibold" style={{ color: isCurrent ? 'var(--green-700)' : 'var(--text-primary)' }}>{MONTHS[idx]}</span>
-                        {fromBudget1 && <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontSize: 9 }}>AUTO</span>}
+                        {hasSavings && !isCurrent && (
+                          <span className="w-2 h-2 rounded-full" style={{ background: 'var(--green-200)' }} />
+                        )}
+                        <span className="font-semibold" style={{ color: isCurrent ? 'var(--green-700)' : 'var(--text-primary)' }}>
+                          {MONTHS[idx]}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       {isEditing ? (
-                        <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
+                        <input type="number" value={editValues.kinsenas}
+                          onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))}
+                          style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
                       ) : (
-                        <span className="font-mono font-semibold" style={{ color: row.kinsenas > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>
+                        <span className="font-mono font-semibold"
+                          style={{ color: row.kinsenas > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>
                           {row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {isEditing ? (
-                        <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
+                        <input type="number" value={editValues.atrenta}
+                          onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))}
+                          style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
                       ) : (
-                        <span className="font-mono font-semibold" style={{ color: row.atrenta > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>
+                        <span className="font-mono font-semibold"
+                          style={{ color: row.atrenta > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>
                           {row.atrenta > 0 ? formatCurrency(row.atrenta) : '—'}
                         </span>
                       )}
@@ -169,7 +207,10 @@ export default function SavingsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
-                        <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="notes..." style={{ ...inputStyle, width: 120 }} />
+                        <input value={editValues.notes}
+                          onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
+                          placeholder="notes..."
+                          style={{ ...inputStyle, width: 100 }} />
                       ) : (
                         <span className="text-xs italic" style={{ color: 'var(--text-faint)' }}>{row.notes || ''}</span>
                       )}
@@ -177,11 +218,14 @@ export default function SavingsPage() {
                     <td className="px-4 py-3 text-right">
                       {isEditing ? (
                         <div className="flex gap-1 justify-end">
-                          <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}><Check size={14} /></button>
-                          <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><X size={14} /></button>
+                          <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg"
+                            style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}><Check size={14} /></button>
+                          <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg"
+                            style={{ background: '#fee2e2', color: '#b91c1c' }}><X size={14} /></button>
                         </div>
                       ) : (
-                        <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl transition" style={{ color: 'var(--text-faint)' }}><Edit2 size={14} /></button>
+                        <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl transition"
+                          style={{ color: 'var(--text-faint)' }}><Edit2 size={14} /></button>
                       )}
                     </td>
                   </tr>

@@ -10,8 +10,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!isAuthPage && <Navbar />}
-      <main className={`${!isAuthPage ? 'md:pl-56 w-full' : ''}`}>
-        <div className={`${!isAuthPage ? 'w-full max-w-[1400px] mx-auto px-3 sm:px-6 py-4 pb-24 md:pb-8' : ''}`}>
+      <main className={`${!isAuthPage ? 'w-full' : ''}`}>
+        <div className={`${!isAuthPage ? 'w-full max-w-2xl mx-auto px-3 sm:px-5 py-4 pb-28' : ''}`}>
           {children}
         </div>
       </main>

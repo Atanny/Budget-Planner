@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { BudgetItem, UserSettings } from '@/lib/types'
 import { formatCurrency, requestNotificationPermission, sendBrowserNotification, getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
 import { Bell, BellOff, Send, Calendar, Clock, CheckCircle, Trash2, Plus } from 'lucide-react'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 interface NotifTemplate {
   id: string
@@ -26,6 +27,7 @@ export default function NotificationsPage() {
   const [customBody, setCustomBody] = useState('')
   const [customCutoff, setCustomCutoff] = useState<'1st' | '2nd' | 'general'>('general')
   const [sending, setSending] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     setPermGranted(typeof window !== 'undefined' && Notification?.permission === 'granted')
@@ -33,13 +35,11 @@ export default function NotificationsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
       setUserId(user.id)
-
       const [settRes, itemRes, notifRes] = await Promise.all([
         supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
         supabase.from('budget_items').select('*').eq('user_id', user.id).eq('is_active', true),
         supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
       ])
-
       setSettings(settRes.data)
       setItems(itemRes.data || [])
       setNotifs(notifRes.data || [])
@@ -87,7 +87,6 @@ export default function NotificationsPage() {
     const date = cutoff === '1st' ? '15th' : '30th'
     const title = `💰 ${cutoff === '1st' ? '1st' : '2nd'} Cutoff Reminder (${date})`
     const body = `You have ${cutoffItems.length} payments due totaling ${formatCurrency(total)}:\n${cutoffItems.map(i => `• ${i.name}: ${formatCurrency(i.amount)}`).join('\n')}`
-
     const { data } = await supabase.from('notifications').insert({
       user_id: userId, title, body, cutoff, sent: false,
       scheduled_for: getNextCutoffDate().toISOString().split('T')[0]
@@ -98,6 +97,7 @@ export default function NotificationsPage() {
   async function deleteNotif(id: string) {
     await supabase.from('notifications').delete().eq('id', id)
     setNotifs(prev => prev.filter(n => n.id !== id))
+    setDeleteId(null)
   }
 
   const nextCutoff = getNextCutoffDate()
@@ -105,80 +105,111 @@ export default function NotificationsPage() {
 
   if (loading) return (
     <div className="w-full flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+      <div className="spinner" />
     </div>
   )
 
   return (
     <div className="w-full space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-white">Push Notifications</h1>
-        <p className="text-slate-400 text-sm mt-1">Cutoff reminders and payment alerts</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Push Notifications</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Cutoff reminders and payment alerts</p>
       </div>
 
       {/* Permission Banner */}
       {!permGranted && (
-        <div className="glass-card p-5 flex items-center justify-between" style={{ background: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.3)' }}>
+        <div className="glass-card p-5 flex items-center justify-between"
+          style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
           <div className="flex items-center gap-3">
-            <BellOff size={20} className="text-yellow-400" />
+            <BellOff size={20} style={{ color: '#d97706' }} />
             <div>
-              <p className="font-medium text-white">Enable Push Notifications</p>
-              <p className="text-xs text-slate-400 mt-0.5">Get reminded when cutoff is near</p>
+              <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Enable Push Notifications</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Get reminded when cutoff is near</p>
             </div>
           </div>
-          <button onClick={enableNotifications} className="px-4 py-2 rounded-xl text-sm text-white font-medium" style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}>
+          <button onClick={enableNotifications}
+            className="px-4 py-2 rounded-xl text-sm text-white font-semibold"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
             Enable
           </button>
         </div>
       )}
 
       {permGranted && (
-        <div className="glass-card p-4 flex items-center gap-3" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.3)' }}>
-          <CheckCircle size={18} className="text-green-400" />
-          <p className="text-sm text-green-400">Notifications are enabled!</p>
+        <div className="glass-card p-4 flex items-center gap-3"
+          style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
+          <CheckCircle size={18} style={{ color: 'var(--green-500)' }} />
+          <p className="text-sm font-semibold" style={{ color: 'var(--green-700)' }}>Notifications are enabled!</p>
         </div>
       )}
 
       {/* Next Cutoff */}
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            <Calendar size={18} className="text-blue-400" />
+          <h2 className="font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Calendar size={18} style={{ color: '#3b82f6' }} />
             Next Cutoff Alert
           </h2>
-          <span className="text-xs px-2 py-1 rounded-full" style={{ background: daysUntil <= 3 ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', color: daysUntil <= 3 ? '#f87171' : '#93c5fd' }}>
+          <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+            style={{
+              background: daysUntil <= 3 ? '#fee2e2' : '#dbeafe',
+              color: daysUntil <= 3 ? '#b91c1c' : '#1d4ed8',
+              border: '1px solid ' + (daysUntil <= 3 ? '#fca5a5' : '#93c5fd'),
+            }}>
             {daysUntil} days away
           </span>
         </div>
-        <p className="text-slate-400 text-sm mb-4">
-          {nextCutoff.getDate() === 15 ? '1st' : '2nd'} Cutoff on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
+        <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+          {nextCutoff.getDate() === 15 ? '1st' : '2nd'} Cutoff on{' '}
+          {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
         <div className="flex gap-3">
-          <button onClick={() => generateCutoffNotif('1st')} className="flex-1 py-2 rounded-xl text-sm text-white" style={{ background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.3)' }}>
-            + Create 1st Cutoff Alert
+          <button
+            onClick={() => generateCutoffNotif('1st')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: '#dbeafe', color: '#1d4ed8', border: '1.5px solid #93c5fd' }}>
+            + 1st Cutoff Alert
           </button>
-          <button onClick={() => generateCutoffNotif('2nd')} className="flex-1 py-2 rounded-xl text-sm text-white" style={{ background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.3)' }}>
-            + Create 2nd Cutoff Alert
+          <button
+            onClick={() => generateCutoffNotif('2nd')}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{ background: '#ede9fe', color: '#6d28d9', border: '1.5px solid #c4b5fd' }}>
+            + 2nd Cutoff Alert
           </button>
         </div>
       </div>
 
       {/* Custom Notification */}
       <div className="glass-card p-5">
-        <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-          <Plus size={18} className="text-purple-400" />
+        <h2 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Plus size={18} style={{ color: '#7c3aed' }} />
           Custom Notification
         </h2>
         <div className="space-y-3">
-          <input value={customTitle} onChange={e => setCustomTitle(e.target.value)} placeholder="Notification title..." className="w-full px-3 py-2.5 text-sm" />
-          <textarea value={customBody} onChange={e => setCustomBody(e.target.value)} rows={3} placeholder="Write your notification message here..." className="w-full px-3 py-2.5 text-sm resize-none" />
+          <input
+            value={customTitle}
+            onChange={e => setCustomTitle(e.target.value)}
+            placeholder="Notification title..."
+            className="w-full px-3 py-2.5 text-sm"
+          />
+          <textarea
+            value={customBody}
+            onChange={e => setCustomBody(e.target.value)}
+            rows={3}
+            placeholder="Write your notification message here..."
+            className="w-full px-3 py-2.5 text-sm resize-none"
+          />
           <div className="flex gap-3">
             <select value={customCutoff} onChange={e => setCustomCutoff(e.target.value as any)} className="flex-1 px-3 py-2 text-sm">
               <option value="general">General</option>
               <option value="1st">1st Cutoff</option>
               <option value="2nd">2nd Cutoff</option>
             </select>
-            <button onClick={sendCustom} disabled={!permGranted || !customTitle || !customBody || sending === 'custom'} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm text-white font-medium disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+            <button
+              onClick={sendCustom}
+              disabled={!permGranted || !customTitle || !customBody || sending === 'custom'}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm text-white font-semibold disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
               <Send size={14} />
               {sending === 'custom' ? 'Sending...' : 'Send Now'}
             </button>
@@ -188,37 +219,66 @@ export default function NotificationsPage() {
 
       {/* Notification History */}
       <div className="glass-card overflow-hidden">
-        <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
-          <h2 className="font-semibold text-white">Notification History</h2>
+        <div className="p-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+          <h2 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Notification History</h2>
         </div>
         <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-          {notifs.length === 0 && <p className="text-center py-10 text-slate-500 text-sm">No notifications yet.</p>}
+          {notifs.length === 0 && (
+            <p className="text-center py-10 text-sm" style={{ color: 'var(--text-faint)' }}>No notifications yet.</p>
+          )}
           {notifs.map(n => (
             <div key={n.id} className="p-4 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: n.cutoff === '1st' ? 'rgba(59,130,246,0.2)' : n.cutoff === '2nd' ? 'rgba(139,92,246,0.2)' : 'rgba(16,185,129,0.2)' }}>
-                <Bell size={14} style={{ color: n.cutoff === '1st' ? '#60a5fa' : n.cutoff === '2nd' ? '#a78bfa' : '#34d399' }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  background: n.cutoff === '1st' ? '#dbeafe' : n.cutoff === '2nd' ? '#ede9fe' : 'var(--green-50)',
+                  border: '1px solid ' + (n.cutoff === '1st' ? '#93c5fd' : n.cutoff === '2nd' ? '#c4b5fd' : 'var(--green-200)'),
+                }}>
+                <Bell size={15} style={{ color: n.cutoff === '1st' ? '#2563eb' : n.cutoff === '2nd' ? '#7c3aed' : 'var(--green-600)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">{n.title}</p>
-                <p className="text-xs text-slate-400 mt-0.5 whitespace-pre-line">{n.body}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{n.title}</p>
+                <p className="text-xs mt-0.5 whitespace-pre-line" style={{ color: 'var(--text-muted)' }}>{n.body}</p>
                 <div className="flex items-center gap-3 mt-2">
                   {n.sent ? (
-                    <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle size={10} /> Sent</span>
+                    <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
+                      <CheckCircle size={10} /> Sent
+                    </span>
                   ) : (
-                    <button onClick={() => sendNotif(n.id, n.title, n.body)} disabled={!permGranted || sending === n.id} className="text-xs text-blue-400 flex items-center gap-1 hover:text-blue-300 disabled:opacity-50">
+                    <button
+                      onClick={() => sendNotif(n.id, n.title, n.body)}
+                      disabled={!permGranted || sending === n.id}
+                      className="text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                      style={{ color: '#2563eb' }}>
                       <Send size={10} /> {sending === n.id ? 'Sending...' : 'Send Now'}
                     </button>
                   )}
                   {n.scheduled_for && (
-                    <span className="text-xs text-slate-500 flex items-center gap-1"><Clock size={10} /> {n.scheduled_for}</span>
+                    <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-faint)' }}>
+                      <Clock size={10} /> {n.scheduled_for}
+                    </span>
                   )}
                 </div>
               </div>
-              <button onClick={() => deleteNotif(n.id)} className="p-1.5 text-slate-600 hover:text-red-400 transition shrink-0"><Trash2 size={14} /></button>
+              <button
+                onClick={() => setDeleteId(n.id)}
+                className="p-1.5 rounded-lg transition-all"
+                style={{ color: 'var(--text-faint)', background: 'var(--bg-subtle)' }}>
+                <Trash2 size={14} />
+              </button>
             </div>
           ))}
         </div>
       </div>
+
+      {deleteId && (
+        <ConfirmDialog
+          title="Delete Notification"
+          message="Remove this notification from your history? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => deleteNotif(deleteId)}
+          onCancel={() => setDeleteId(null)}
+        />
+      )}
     </div>
   )
 }
