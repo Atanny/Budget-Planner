@@ -441,120 +441,370 @@ export default function BudgetPage() {
         </span>
       </div>
 
-      {/* ═══ Unified Expenses + Loans Table ═══ */}
-      <div className="glass-card overflow-hidden">
-        <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2"
-          style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
-              Expenses
-              <span className="ml-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
-                {expenseItems.length}
-              </span>
+ {/* ═══ Unified Expenses + Loans Table ═══ */}
+<div className="glass-card overflow-hidden">
+
+  {/* Header */}
+  <div
+    className="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+    style={{
+      background: 'var(--bg-subtle)',
+      borderBottom: '1px solid var(--border)',
+    }}
+  >
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span
+          className="font-bold text-sm sm:text-base"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          Expenses
+        </span>
+
+        <span
+          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+          style={{
+            background: 'var(--green-100)',
+            color: 'var(--green-700)',
+          }}
+        >
+          {expenseItems.length}
+        </span>
+      </div>
+
+      {loanItems.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span
+            className="font-bold text-sm sm:text-base"
+            style={{ color: '#5b21b6' }}
+          >
+            + Loans
+          </span>
+
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{
+              background: '#ede9fe',
+              color: '#6d28d9',
+            }}
+          >
+            {loanItems.length}
+          </span>
+        </div>
+      )}
+    </div>
+
+    <span
+      className="text-xs sm:text-sm text-left sm:text-right"
+      style={{ color: 'var(--text-faint)' }}
+    >
+      ☑ = paid this month
+    </span>
+  </div>
+
+  {/* Content */}
+  {cutoffItems.length === 0 ? (
+    <p
+      className="text-center py-10 text-sm"
+      style={{ color: 'var(--text-faint)' }}
+    >
+      No items yet. Tap "Add".
+    </p>
+  ) : (
+    <div>
+
+      {/* Expenses */}
+      {expenseItems.length > 0 && (
+        <div
+          className="px-4 py-3"
+          style={{
+            background: 'var(--green-50)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <span
+            className="text-xs font-bold tracking-wide"
+            style={{ color: 'var(--green-700)' }}
+          >
+            EXPENSES
+          </span>
+        </div>
+      )}
+
+      {/* Expense Items */}
+      <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+        {expenseItems.map((item) => (
+          <div key={item.id} className="px-3 sm:px-4 py-4">
+            <ItemRow item={item} />
+          </div>
+        ))}
+      </div>
+
+      {/* Loans */}
+      {loanItems.length > 0 && (
+        <>
+          <div
+            className="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+            style={{
+              background: '#f5f3ff',
+              borderTop: '2px solid var(--border)',
+              borderBottom: '1px solid var(--border)',
+            }}
+          >
+            <span
+              className="text-xs font-bold tracking-wide"
+              style={{ color: '#5b21b6' }}
+            >
+              LOANS
             </span>
-            {loanItems.length > 0 && (
-              <span className="font-bold text-sm" style={{ color: '#5b21b6' }}>
-                + Loans
-                <span className="ml-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#ede9fe', color: '#6d28d9' }}>
-                  {loanItems.length}
-                </span>
-              </span>
-            )}
-          </div>
-          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>☑ = paid this month</span>
-        </div>
 
-        {cutoffItems.length === 0 ? (
-          <p className="text-center py-10 text-sm" style={{ color: 'var(--text-faint)' }}>No items yet. Tap &quot;Add&quot;.</p>
-        ) : (
-          <div>
-            {expenseItems.length > 0 && (
-              <div className="px-3 py-1.5" style={{ background: 'var(--green-50)', borderBottom: '1px solid var(--border)' }}>
-                <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--green-700)' }}>EXPENSES</span>
+            <a
+              href="/loans"
+              className="text-xs sm:text-sm font-semibold self-start sm:self-auto"
+              style={{ color: '#7c3aed' }}
+            >
+              Manage →
+            </a>
+          </div>
+
+          {/* Loan Items */}
+          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+            {loanItems.map((item) => (
+              <div key={item.id} className="px-3 sm:px-4 py-4">
+                <ItemRow item={item} />
               </div>
-            )}
-            {expenseItems.map(item => <ItemRow key={item.id} item={item} />)}
-            {loanItems.length > 0 && (
-              <div className="px-3 py-1.5 flex items-center justify-between" style={{ background: '#f5f3ff', borderBottom: '1px solid var(--border)', borderTop: '2px solid var(--border)' }}>
-                <span className="text-xs font-bold tracking-wide" style={{ color: '#5b21b6' }}>LOANS</span>
-                <a href="/loans" className="text-xs font-semibold" style={{ color: '#7c3aed' }}>Manage →</a>
-              </div>
-            )}
-            {loanItems.map(item => <ItemRow key={item.id} item={item} />)}
+            ))}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {/* Totals */}
-      <div className="glass-card p-4 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span style={{ color: 'var(--text-muted)' }}>Total Expenses + Loans</span>
-          <span className="font-bold" style={{ color: 'var(--red-500)' }}>{formatCurrency(totalExpenses)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span style={{ color: 'var(--text-muted)' }}>Savings Goal</span>
-          <span className="font-semibold" style={{ color: 'var(--amber-500)' }}>− {formatCurrency(savingsGoal)}</span>
-        </div>
-        <div className="flex justify-between text-sm font-bold pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
-          <span style={{ color: 'var(--green-800)' }}>Remaining Budget</span>
-          <span style={{ color: afterSavings >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>{formatCurrency(afterSavings)}</span>
-        </div>
-      </div>
+    </div>
+  )}
+</div>
 
-      {/* ═══ Payment History (yearly) ═══ */}
-      <div className="glass-card overflow-hidden">
-        <button onClick={() => setShowYearly(!showYearly)}
-          className="w-full flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: showYearly ? '1.5px solid var(--border)' : 'none', background: showYearly ? 'var(--green-50)' : 'var(--bg-surface)' }}>
-          <div className="flex items-center gap-2">
-            <Calendar size={14} style={{ color: 'var(--green-500)' }} />
-            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Payment History — {CURRENT_YEAR}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>{items.length}</span>
-          </div>
-          {showYearly ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
-        </button>
-        {showYearly && (
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table className="w-full" style={{ fontSize: 12, minWidth: 340 }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-                  <th className="text-left px-3 py-2 font-semibold sticky left-0 z-10"
-                    style={{ color: 'var(--text-muted)', minWidth: 100, background: 'var(--bg-subtle)' }}>Item</th>
-                  {MONTHS_SHORT.map((m, i) => (
-                    <th key={m} className="text-center py-2 font-semibold"
-                      style={{ color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)', fontWeight: i === CURRENT_MONTH ? 800 : 600, width: 30, minWidth: 30 }}>
-                      {m.slice(0,1)}
-                    </th>
+{/* ═══ Totals ═══ */}
+<div className="glass-card p-4 space-y-2">
+
+  <div className="flex justify-between text-sm">
+    <span style={{ color: 'var(--text-muted)' }}>
+      Total Expenses + Loans
+    </span>
+    <span className="font-bold" style={{ color: 'var(--red-500)' }}>
+      {formatCurrency(totalExpenses)}
+    </span>
+  </div>
+
+  <div className="flex justify-between text-sm">
+    <span style={{ color: 'var(--text-muted)' }}>
+      Savings Goal
+    </span>
+    <span className="font-semibold" style={{ color: 'var(--amber-500)' }}>
+      − {formatCurrency(savingsGoal)}
+    </span>
+  </div>
+
+  <div
+    className="flex justify-between text-sm font-bold pt-2 border-t"
+    style={{ borderColor: 'var(--border)' }}
+  >
+    <span style={{ color: 'var(--green-800)' }}>
+      Remaining Budget
+    </span>
+    <span
+      style={{
+        color: afterSavings >= 0
+          ? 'var(--green-600)'
+          : 'var(--red-500)'
+      }}
+    >
+      {formatCurrency(afterSavings)}
+    </span>
+  </div>
+
+</div>
+
+
+{/* ═══ Payment History (RESPONSIVE FIX) ═══ */}
+<div className="glass-card overflow-hidden">
+
+  {/* Toggle Header */}
+  <button
+    onClick={() => setShowYearly(!showYearly)}
+    className="w-full flex items-center justify-between px-4 py-3 gap-2"
+    style={{
+      borderBottom: showYearly ? '1.5px solid var(--border)' : 'none',
+      background: showYearly ? 'var(--green-50)' : 'var(--bg-surface)'
+    }}
+  >
+    <div className="flex items-center gap-2 flex-wrap">
+
+      <Calendar size={14} style={{ color: 'var(--green-500)' }} />
+
+      <span
+        className="font-bold text-sm"
+        style={{ color: 'var(--text-primary)' }}
+      >
+        Payment History — {CURRENT_YEAR}
+      </span>
+
+      <span
+        className="text-xs px-2 py-0.5 rounded-full font-semibold"
+        style={{
+          background: 'var(--green-100)',
+          color: 'var(--green-700)'
+        }}
+      >
+        {items.length}
+      </span>
+
+    </div>
+
+    {showYearly ? (
+      <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} />
+    ) : (
+      <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
+    )}
+  </button>
+
+  {/* Table Wrapper (FIXED RESPONSIVE SCROLL) */}
+  {showYearly && (
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-[700px]">
+
+        <table className="w-full text-xs">
+
+          {/* Header */}
+          <thead>
+            <tr
+              style={{
+                background: 'var(--bg-subtle)',
+                borderBottom: '1px solid var(--border)'
+              }}
+            >
+              <th
+                className="text-left px-3 py-2 font-semibold sticky left-0 z-10"
+                style={{
+                  color: 'var(--text-muted)',
+                  minWidth: 120,
+                  background: 'var(--bg-subtle)'
+                }}
+              >
+                Item
+              </th>
+
+              {MONTHS_SHORT.map((m, i) => (
+                <th
+                  key={m}
+                  className="text-center py-2 font-semibold"
+                  style={{
+                    color:
+                      i === CURRENT_MONTH
+                        ? 'var(--green-600)'
+                        : i > CURRENT_MONTH
+                        ? 'var(--border-strong)'
+                        : 'var(--text-faint)',
+                    fontWeight: i === CURRENT_MONTH ? 800 : 600,
+                    minWidth: 35
+                  }}
+                >
+                  {m.slice(0, 1)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          {/* Body */}
+          <tbody>
+            {items.length === 0 && (
+              <tr>
+                <td
+                  colSpan={14}
+                  className="text-center py-8"
+                  style={{ color: 'var(--text-faint)' }}
+                >
+                  No items.
+                </td>
+              </tr>
+            )}
+
+            {items.map((item, idx) => {
+              const monthPaid = Array.from(
+                { length: 12 },
+                (_, i) => payments[item.id]?.[i + 1] ?? false
+              )
+
+              const rowBg =
+                idx % 2 === 0
+                  ? 'var(--bg-surface)'
+                  : 'var(--bg-subtle)'
+
+              return (
+                <tr
+                  key={item.id}
+                  style={{
+                    borderBottom: '1px solid var(--border)',
+                    background: rowBg
+                  }}
+                >
+
+                  {/* Sticky first column */}
+                  <td
+                    className="px-3 py-2 sticky left-0 z-10"
+                    style={{ background: rowBg, minWidth: 120 }}
+                  >
+                    <div className="flex items-center gap-1">
+                      {item.is_loan && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: '#7c3aed',
+                            background: '#ede9fe',
+                            padding: '1px 4px',
+                            borderRadius: 4
+                          }}
+                        >
+                          LOAN
+                        </span>
+                      )}
+
+                      <span
+                        className="font-semibold truncate"
+                        style={{
+                          color: 'var(--text-primary)',
+                          maxWidth: 90
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                    </div>
+
+                    <p
+                      className="text-xs"
+                      style={{ color: 'var(--text-faint)' }}
+                    >
+                      {item.cutoff}
+                    </p>
+                  </td>
+
+                  {monthPaid.map((paid, i) => (
+                    <YearlyCell
+                      key={i}
+                      item={item}
+                      monthIdx={i}
+                      paid={paid}
+                    />
                   ))}
                 </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 && (
-                  <tr><td colSpan={14} className="text-center py-8" style={{ color: 'var(--text-faint)' }}>No items.</td></tr>
-                )}
-                {items.map((item, idx) => {
-                  const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
-                  const rowBg = idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)'
-                  return (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
-                      <td className="px-3 py-2 sticky left-0 z-10" style={{ background: rowBg }}>
-                        <div className="flex items-center gap-1">
-                          {item.is_loan && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 4px', borderRadius: 4 }}>LOAN</span>}
-                          <span className="font-semibold truncate" style={{ color: 'var(--text-primary)', maxWidth: 75 }}>{item.name}</span>
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{item.cutoff}</p>
-                      </td>
-                      {monthPaid.map((paid, i) => (
-                        <YearlyCell key={i} item={item} monthIdx={i} paid={paid} />
-                      ))}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+              )
+            })}
+          </tbody>
+        </table>
+
       </div>
+    </div>
+  )}
+</div>
 
       {/* ═══ History Log ═══ */}
       <div className="glass-card overflow-hidden">

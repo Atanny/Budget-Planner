@@ -183,159 +183,345 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ═══ Main Bank + May Sahod Na ═══ */}
-      <div className="glass-card overflow-hidden">
-        <div className="px-5 py-4 border-b flex items-center justify-between"
-          style={{ borderColor: 'var(--border)', background: '#eff6ff' }}>
+     {/* ═══ Main Bank + May Sahod Na ═══ */}
+<div className="glass-card overflow-hidden">
+
+  {/* Header */}
+  <div
+    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+    style={{ borderColor: 'var(--border)', background: '#eff6ff' }}
+  >
+    {/* Left */}
+    <div>
+      <h2 className="font-bold text-base sm:text-lg" style={{ color: '#1e3a5f' }}>
+        {mainBank ? `🏦 ${mainBank.name}` : '🏦 Main Bank Account'}
+      </h2>
+      <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#3b82f6' }}>
+        {mainBank ? 'Your primary salary account' : 'Set a main bank in Accounts below'}
+      </p>
+    </div>
+
+    {/* Right */}
+    {mainBank ? (
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+
+        {/* Balance */}
+        <div className="text-left sm:text-right">
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#2563eb' }}>
+            {formatCurrency(mainBank.balance)}
+          </p>
+          <p className="text-xs" style={{ color: '#60a5fa' }}>current balance</p>
+        </div>
+
+        {/* Button */}
+        <button
+          onClick={() => {
+            setSahodAmount((settings?.first_cutoff_salary || 0).toString());
+            setShowSahod(true);
+          }}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition"
+          style={{
+            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            boxShadow: '0 2px 8px #2563eb40'
+          }}
+        >
+          <Banknote size={16} />
+          May sahod na!
+        </button>
+
+      </div>
+    ) : (
+      <button
+        onClick={() => {
+          setEditBank(null);
+          setShowBankForm(true);
+        }}
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold"
+        style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}
+      >
+        <Plus size={14} /> Set Main Bank
+      </button>
+    )}
+  </div>
+</div>
+
+
+{/* ═══ Net Worth (Salary Only) ═══ */}
+<div className="glass-card overflow-hidden">
+
+  {/* Header */}
+  <div
+    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+    style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}
+  >
+    <div>
+      <h2 className="font-bold text-base sm:text-lg" style={{ color: 'var(--green-900)' }}>
+        Net Worth
+      </h2>
+      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+        Total salary received
+      </p>
+    </div>
+
+    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+
+      {/* Amount */}
+      {!netHidden ? (
+        <span
+          className="text-xl sm:text-2xl font-bold"
+          style={{ color: netWorth >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}
+        >
+          {formatCurrency(netWorth)}
+        </span>
+      ) : (
+        <span
+          className="text-xl sm:text-2xl font-bold tracking-widest"
+          style={{ color: 'var(--text-faint)' }}
+        >
+          ₱ •••••
+        </span>
+      )}
+
+      {/* Toggle */}
+      <button
+        onClick={() => setNetHidden(!netHidden)}
+        className="p-2 rounded-xl transition"
+        style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
+      >
+        {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+      </button>
+    </div>
+  </div>
+
+  {/* Content */}
+  {!netHidden && (
+    <div className="p-4 sm:p-5 space-y-3 fade-in">
+
+      <div
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
+        style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}
+      >
+        <div className="flex items-start sm:items-center gap-2">
+          <span className="text-base">💸</span>
           <div>
-            <h2 className="font-bold" style={{ color: '#1e3a5f' }}>
-              {mainBank ? `🏦 ${mainBank.name}` : '🏦 Main Bank Account'}
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#3b82f6' }}>
-              {mainBank ? 'Your primary salary account' : 'Set a main bank in Accounts below'}
+            <p className="font-semibold text-sm" style={{ color: '#1d4ed8' }}>
+              Total Salary Received
+            </p>
+            <p className="text-xs" style={{ color: '#60a5fa' }}>
+              All sahod accumulated
             </p>
           </div>
-          {mainBank && (
-            <div className="flex items-center gap-3 flex-wrap justify-end">
-              <div className="text-right">
-                <p className="text-2xl font-bold font-mono" style={{ color: '#2563eb' }}>
-                  {formatCurrency(mainBank.balance)}
+        </div>
+
+        <span className="font-bold font-mono text-right" style={{ color: '#2563eb' }}>
+          {formatCurrency(netWorth)}
+        </span>
+      </div>
+
+      <div
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
+        style={{ background: 'var(--green-50)', border: '1.5px solid var(--green-300)' }}
+      >
+        <p className="font-bold" style={{ color: 'var(--green-800)' }}>
+          Net Worth Total
+        </p>
+        <span className="font-bold text-lg font-mono" style={{ color: 'var(--green-600)' }}>
+          {formatCurrency(netWorth)}
+        </span>
+      </div>
+
+    </div>
+  )}
+</div>
+
+   {/* ═══ Bank Accounts & Wallets (separate from net worth) ═══ */}
+<div className="glass-card overflow-hidden">
+
+  {/* Header */}
+  <div
+    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+    style={{ borderColor: 'var(--border)', background: '#faf5ff' }}
+  >
+    <div>
+      <h2 className="font-bold text-base sm:text-lg" style={{ color: '#4c1d95' }}>
+        Accounts & Wallets
+      </h2>
+      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+        Not counted in net worth
+      </p>
+    </div>
+
+    <span
+      className="text-lg sm:text-xl font-bold font-mono text-left sm:text-right"
+      style={{ color: '#7c3aed' }}
+    >
+      {formatCurrency(totalBankBalance)}
+    </span>
+  </div>
+
+  {/* Content */}
+  <div className="p-4 sm:p-5 space-y-3">
+
+    {/* Empty state */}
+    {banks.length === 0 && (
+      <p
+        className="text-sm text-center py-6"
+        style={{ color: 'var(--text-faint)' }}
+      >
+        No accounts yet. Add one below.
+      </p>
+    )}
+
+    {/* Bank list */}
+    {banks.map((bank) => {
+      const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
+
+      return (
+        <div
+          key={bank.id}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl"
+          style={{
+            background: 'var(--bg-subtle)',
+            border: `1.5px solid ${bank.is_main_bank ? '#93c5fd' : 'var(--border)'}`
+          }}
+        >
+
+          {/* Left side */}
+          <div className="flex items-center gap-3 min-w-0">
+
+            {/* Icon */}
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+              style={{
+                background: `${bank.color}20`,
+                border: `1.5px solid ${bank.color}40`
+              }}
+            >
+              {typeInfo?.label.split(' ')[0]}
+            </div>
+
+            {/* Info */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p
+                  className="font-semibold text-sm truncate"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  {bank.name}
                 </p>
-                <p className="text-xs" style={{ color: '#60a5fa' }}>current balance</p>
-              </div>
-              <button
-                onClick={() => { setSahodAmount((settings?.first_cutoff_salary || 0).toString()); setShowSahod(true) }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition w-full sm:w-auto justify-center"
-                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 2px 8px #2563eb40' }}>
-                <Banknote size={16} />
-                May sahod na!
-              </button>
-            </div>
-          )}
-          {!mainBank && (
-            <button
-              onClick={() => { setEditBank(null); setShowBankForm(true) }}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
-              <Plus size={14} /> Set Main Bank
-            </button>
-          )}
-        </div>
-      </div>
 
-      {/* ═══ Net Worth (Salary Only) ═══ */}
-      <div className="glass-card overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
-          <div>
-            <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>Net Worth</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Total salary received</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {!netHidden && (
-              <span className="text-2xl font-bold" style={{ color: netWorth >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
-                {formatCurrency(netWorth)}
-              </span>
-            )}
-            {netHidden && <span className="text-2xl font-bold tracking-widest" style={{ color: 'var(--text-faint)' }}>₱ •••••</span>}
-            <button onClick={() => setNetHidden(!netHidden)}
-              className="p-2 rounded-xl transition" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
-              {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
-          </div>
-        </div>
-
-        {!netHidden && (
-          <div className="p-5 space-y-3 fade-in">
-            <div className="flex items-center justify-between p-3 rounded-xl"
-              style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-              <div className="flex items-center gap-2">
-                <span className="text-base">💸</span>
-                <div>
-                  <p className="font-semibold text-sm" style={{ color: '#1d4ed8' }}>Total Salary Received</p>
-                  <p className="text-xs" style={{ color: '#60a5fa' }}>All sahod accumulated</p>
-                </div>
-              </div>
-              <span className="font-bold font-mono" style={{ color: '#2563eb' }}>{formatCurrency(netWorth)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl"
-              style={{ background: 'var(--green-50)', border: '1.5px solid var(--green-300)' }}>
-              <p className="font-bold" style={{ color: 'var(--green-800)' }}>Net Worth Total</p>
-              <span className="font-bold text-lg font-mono" style={{ color: 'var(--green-600)' }}>{formatCurrency(netWorth)}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ Bank Accounts & Wallets (separate from net worth) ═══ */}
-      <div className="glass-card overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: 'var(--border)', background: '#faf5ff' }}>
-          <div>
-            <h2 className="font-bold" style={{ color: '#4c1d95' }}>Accounts & Wallets</h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Not counted in net worth</p>
-          </div>
-          <span className="text-lg font-bold font-mono" style={{ color: '#7c3aed' }}>
-            {formatCurrency(totalBankBalance)}
-          </span>
-        </div>
-
-        <div className="p-5 space-y-3">
-          {banks.length === 0 && (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No accounts yet. Add one below.</p>
-          )}
-          {banks.map(bank => {
-            const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
-            return (
-              <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl"
-                style={{ background: 'var(--bg-subtle)', border: `1.5px solid ${bank.is_main_bank ? '#93c5fd' : 'var(--border)'}` }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
-                    style={{ background: `${bank.color}20`, border: `1.5px solid ${bank.color}40` }}>
-                    {typeInfo?.label.split(' ')[0]}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{bank.name}</p>
-                      {bank.is_main_bank && (
-                        <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full font-bold"
-                          style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
-                          <Star size={9} fill="currentColor" /> Main
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{typeInfo?.label.split(' ').slice(1).join(' ')}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-bold font-mono" style={{ color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
-                    {formatCurrency(bank.balance)}
+                {bank.is_main_bank && (
+                  <span
+                    className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold"
+                    style={{
+                      background: '#dbeafe',
+                      color: '#1d4ed8',
+                      border: '1px solid #93c5fd'
+                    }}
+                  >
+                    <Star size={10} fill="currentColor" />
+                    Main
                   </span>
-                  <div className="flex gap-1">
-                    <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
-                      className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}><Edit2 size={12} /></button>
-                    <button onClick={() => askDeleteBank(bank.id, bank.name)}
-                      className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}><Trash2 size={12} /></button>
-                  </div>
-                </div>
+                )}
               </div>
-            )
-          })}
 
-          {/* Total row */}
-          <div className="flex items-center justify-between p-3 rounded-xl"
-            style={{ background: '#faf5ff', border: '1.5px solid #c4b5fd' }}>
-            <p className="font-bold" style={{ color: '#6d28d9' }}>Total Balance</p>
-            <span className="font-bold text-lg font-mono" style={{ color: '#7c3aed' }}>{formatCurrency(totalBankBalance)}</span>
+              <p
+                className="text-xs truncate"
+                style={{ color: 'var(--text-faint)' }}
+              >
+                {typeInfo?.label.split(' ').slice(1).join(' ')}
+              </p>
+            </div>
           </div>
 
-          <button onClick={() => { setEditBank(null); setShowBankForm(true) }}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition"
-            style={{ background: '#ede9fe', color: '#7c3aed', border: '1.5px dashed #c4b5fd' }}>
-            <Plus size={15} /> Add Account / Wallet
-          </button>
+          {/* Right side */}
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+
+            {/* Balance */}
+            <span
+              className="font-bold font-mono text-sm sm:text-base"
+              style={{
+                color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)'
+              }}
+            >
+              {formatCurrency(bank.balance)}
+            </span>
+
+            {/* Actions */}
+            <div className="flex gap-1">
+
+              <button
+                onClick={() => {
+                  setEditBank(bank);
+                  setShowBankForm(true);
+                }}
+                className="p-2 rounded-lg"
+                style={{
+                  background: '#dbeafe',
+                  color: '#1d4ed8',
+                  border: '1px solid #93c5fd'
+                }}
+              >
+                <Edit2 size={12} />
+              </button>
+
+              <button
+                onClick={() => askDeleteBank(bank.id, bank.name)}
+                className="p-2 rounded-lg"
+                style={{
+                  background: '#fee2e2',
+                  color: '#b91c1c',
+                  border: '1px solid #fca5a5'
+                }}
+              >
+                <Trash2 size={12} />
+              </button>
+
+            </div>
+          </div>
         </div>
-      </div>
+      )
+    })}
+
+    {/* Total row */}
+    <div
+      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
+      style={{
+        background: '#faf5ff',
+        border: '1.5px solid #c4b5fd'
+      }}
+    >
+      <p className="font-bold" style={{ color: '#6d28d9' }}>
+        Total Balance
+      </p>
+
+      <span
+        className="font-bold text-lg font-mono"
+        style={{ color: '#7c3aed' }}
+      >
+        {formatCurrency(totalBankBalance)}
+      </span>
+    </div>
+
+    {/* Add button */}
+    <button
+      onClick={() => {
+        setEditBank(null);
+        setShowBankForm(true);
+      }}
+      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
+      style={{
+        background: '#ede9fe',
+        color: '#7c3aed',
+        border: '1.5px dashed #c4b5fd'
+      }}
+    >
+      <Plus size={15} />
+      Add Account / Wallet
+    </button>
+
+  </div>
+</div>
 
       {/* Sahod modal */}
       {showSahod && (
