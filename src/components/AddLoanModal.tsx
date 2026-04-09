@@ -53,13 +53,15 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [cutoff,        setCutoff]        = useState<Cutoff>(editItem?.cutoff || '1st')
   const [category,      setCategory]      = useState(editItem?.category || 'Loan')
   const [bankId,        setBankId]        = useState<string>(editItem?.bank_account_id || '')
-  const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>(
-    editItem?.status === 'Optional' ? 'Optional' : 'Required'
-  )
+  const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>('Required')
   const [totalMonths,   setTotalMonths]   = useState(existingLD?.total_months?.toString() || '12')
   const [startDate,     setStartDate]     = useState(existingLD?.start_date || new Date().toISOString().split('T')[0])
   const [notes,         setNotes]         = useState(existingLD?.notes || '')
-  const [computeMode,   setComputeMode]   = useState<'none' | 'flat' | 'reducing'>('none')
+  const [computeMode,   setComputeMode]   = useState<'none' | 'flat' | 'reducing'>(() => {
+    if (Object.keys(existingMA).length === 0) return 'none'
+    const vals = Object.values(existingMA)
+    return vals.some(v => v !== vals[0]) ? 'reducing' : 'none'
+  })
   const [totalLoan,     setTotalLoan]     = useState('')
   const [showSched,     setShowSched]     = useState(Object.keys(existingMA).length > 0)
   const [saving,        setSaving]        = useState(false)
@@ -120,7 +122,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     if (!user) { setSaving(false); return }
 
     let maObj: Record<string, number> | null = null
-    if ((computeMode === 'flat' || computeMode === 'reducing') && allFilled) {
+    if (computeMode === 'reducing' && allFilled) {
       maObj = {}
       monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
     }
@@ -207,7 +209,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                   { key: 'flat',     label: 'Equal',    desc: 'Same each month' },
                   { key: 'reducing', label: 'Reducing', desc: 'Diff. amounts' },
                 ].map(m => (
-                  <button key={m.key} onClick={() => {
+                  <button type="button" key={m.key} onClick={() => {
                     setComputeMode(m.key as any)
                     if (m.key === 'none') setMonthlyAmounts(Array(numMonths).fill(''))
                   }}
@@ -342,21 +344,16 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             </p>
           </div>
 
-          {/* Priority */}
+          {/* Priority — always Required */}
           <div>
             <label style={labelStyle}>Priority</label>
-            <div className="flex gap-2 mb-3">
-              {(['Required', 'Optional'] as const).map(s => (
-                <button key={s} onClick={() => setBaseStatus(s)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                  style={{
-                    background: baseStatus === s ? (s === 'Required' ? '#fee2e2' : '#fef3c7') : 'var(--bg-subtle)',
-                    border: `1.5px solid ${baseStatus === s ? (s === 'Required' ? '#fca5a5' : '#fde68a') : 'var(--border)'}`,
-                    color: baseStatus === s ? (s === 'Required' ? '#b91c1c' : '#92400e') : 'var(--text-muted)',
-                  }}>
-                  {s}
-                </button>
-              ))}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 14px', borderRadius: 10,
+              background: '#FEE2E2', border: '1.5px solid #FCA5A5', marginBottom: 10,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>🔴 Required</span>
+              <span style={{ fontSize: 11, color: '#EF4444' }}>· All loans are required payments</span>
             </div>
             {/* Auto status display */}
             <div className="flex flex-wrap gap-2">

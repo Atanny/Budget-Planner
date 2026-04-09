@@ -4,30 +4,26 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
-import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown, Check } from 'lucide-react'
+import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import AddLoanModal from '@/components/AddLoanModal'
 import ConfirmModal from '@/components/ConfirmModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const CURRENT_YEAR  = new Date().getFullYear()
-const CURRENT_MONTH = new Date().getMonth() // 0-indexed
+const CURRENT_MONTH = new Date().getMonth()
 
 function monthsBetween(startDateStr: string): number {
   const start = new Date(startDateStr)
-  const now = new Date()
+  const now   = new Date()
   return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
 }
-
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
-
-function addMonths(dateStr: string, n: number): string {
-  const d = new Date(dateStr)
-  d.setMonth(d.getMonth() + n)
+function addMonths(dateStr: string, n: number) {
+  const d = new Date(dateStr); d.setMonth(d.getMonth() + n)
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
-
 function getAutoStatus(totalMonths: number, startDate: string): string | null {
   if (totalMonths === 1) return 'Once'
   const elapsed = monthsBetween(startDate)
@@ -35,39 +31,35 @@ function getAutoStatus(totalMonths: number, startDate: string): string | null {
   if (elapsed >= totalMonths - 1) return 'Last Payment'
   return null
 }
-
 function getAmountForMonth(monthIndex: number, baseAmount: number, monthlyAmounts: Record<string, number> | null): number {
   if (!monthlyAmounts) return baseAmount
-  const key = String(monthIndex + 1)
-  return monthlyAmounts[key] ?? baseAmount
+  return monthlyAmounts[String(monthIndex + 1)] ?? baseAmount
 }
-
 function getMonthLabel(startDate: string, loanMonthIndex: number): string {
-  const d = new Date(startDate)
-  d.setMonth(d.getMonth() + loanMonthIndex)
+  const d = new Date(startDate); d.setMonth(d.getMonth() + loanMonthIndex)
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
-// Light-theme status badges
 const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }> = {
-  Required:        { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
-  Optional:        { bg: '#fef3c7', text: '#92400e', border: '#fde68a' },
-  'First Payment': { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-  'Last Payment':  { bg: '#ede9fe', text: '#6d28d9', border: '#c4b5fd' },
-  Once:            { bg: '#ffedd5', text: '#c2410c', border: '#fdba74' },
-  Suspended:       { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' },
-  Paid:            { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  Required:        { bg: '#FEE2E2', text: '#B91C1C', border: '#FCA5A5' },
+  Optional:        { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
+  'First Payment': { bg: '#DBEAFE', text: '#1D4ED8', border: '#93C5FD' },
+  'Last Payment':  { bg: '#EDE9FE', text: '#6D28D9', border: '#C4B5FD' },
+  Once:            { bg: '#FFEDD5', text: '#C2410C', border: '#FDBA74' },
+  Suspended:       { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' },
+  Paid:            { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
 }
 
 export default function LoansPage() {
-  const [loans,        setLoans]        = useState<BudgetItem[]>([])
-  const [payments,     setPayments]     = useState<Record<string, Record<number, boolean>>>({})
-  const [showAdd,      setShowAdd]      = useState(false)
-  const [editLoan,     setEditLoan]     = useState<BudgetItem | null>(null)
-  const [loading,      setLoading]      = useState(true)
-  const [userId,       setUserId]       = useState<string | null>(null)
-  const [confirmOpen,  setConfirmOpen]  = useState(false)
-  const [confirmLoan,  setConfirmLoan]  = useState<BudgetItem | null>(null)
+  const [loans,       setLoans]       = useState<BudgetItem[]>([])
+  const [payments,    setPayments]    = useState<Record<string, Record<number, boolean>>>({})
+  const [showAdd,     setShowAdd]     = useState(false)
+  const [editLoan,    setEditLoan]    = useState<BudgetItem | null>(null)
+  const [loading,     setLoading]     = useState(true)
+  const [userId,      setUserId]      = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmLoan, setConfirmLoan] = useState<BudgetItem | null>(null)
+  const [expandedId,  setExpandedId]  = useState<string | null>(null)
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -92,7 +84,7 @@ export default function LoansPage() {
   async function toggleMonth(itemId: string, month: number) {
     if (!userId) return
     const current = payments[itemId]?.[month] ?? false
-    const newVal = !current
+    const newVal  = !current
     setPayments(prev => ({ ...prev, [itemId]: { ...(prev[itemId] || {}), [month]: newVal } }))
     await supabase.from('monthly_payments').upsert({
       budget_item_id: itemId, user_id: userId,
@@ -103,25 +95,19 @@ export default function LoansPage() {
 
   async function toggleSuspend(loan: BudgetItem) {
     const isSuspended = loan.status === 'Suspended'
-    const loanDetail = loan.loan_details as any
+    const loanDetail  = loan.loan_details as any
     const totalMonths = loanDetail?.total_months || 12
-    const startDate = loanDetail?.start_date || new Date().toISOString().split('T')[0]
-    const autoStatus = getAutoStatus(totalMonths, startDate)
-    const newStatus = isSuspended ? (autoStatus || 'Required') : 'Suspended'
+    const startDate   = loanDetail?.start_date || new Date().toISOString().split('T')[0]
+    const autoStatus  = getAutoStatus(totalMonths, startDate)
+    const newStatus   = isSuspended ? (autoStatus || 'Required') : 'Suspended'
     await supabase.from('budget_items').update({ status: newStatus }).eq('id', loan.id)
     setLoans(prev => prev.map(l => l.id === loan.id ? { ...l, status: newStatus as any } : l))
-  }
-
-  function askDeleteLoan(loan: BudgetItem) {
-    setConfirmLoan(loan)
-    setConfirmOpen(true)
   }
 
   async function doDeleteLoan() {
     if (!confirmLoan) return
     const id = confirmLoan.id
-    setConfirmOpen(false)
-    setConfirmLoan(null)
+    setConfirmOpen(false); setConfirmLoan(null)
     await supabase.from('budget_items').update({ is_active: false }).eq('id', id)
     setLoans(prev => prev.filter(l => l.id !== id))
   }
@@ -130,462 +116,387 @@ export default function LoansPage() {
     .filter(l => l.status !== 'Suspended')
     .reduce((s, l) => {
       const detail = l.loan_details as any
-      const monthlyAmounts: Record<string, number> | null = detail?.monthly_amounts || null
       const elapsed = detail?.start_date ? monthsBetween(detail.start_date) : 0
       const totalM  = detail?.total_months || 12
-      const currentIdx = Math.min(elapsed, totalM - 1)
-      return s + getAmountForMonth(currentIdx, l.amount, monthlyAmounts)
+      const curIdx  = Math.min(elapsed, totalM - 1)
+      return s + getAmountForMonth(curIdx, l.amount, detail?.monthly_amounts || null)
     }, 0)
 
   const paidOffCount = loans.filter(l => {
     const detail = l.loan_details as any
-    const total  = detail?.total_months || 12
-    const start  = detail?.start_date
-    return start ? monthsBetween(start) >= total : false
+    return detail?.start_date ? monthsBetween(detail.start_date) >= (detail?.total_months || 12) : false
   }).length
 
   if (loading) return (
-    <div className="w-full flex items-center justify-center h-64">
-      <div className="spinner" />
-    </div>
+    <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
   )
 
   return (
-    <div className="w-full space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full" style={{ paddingBottom: 8 }}>
+
+      {/* ── Page Header ── */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Loan Tracker</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            {loans.length} active loan{loans.length !== 1 ? 's' : ''} · {formatCurrency(totalMonthlyLoan)}/month
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+            Loans
+          </h1>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+            {loans.length} active · {formatCurrency(totalMonthlyLoan)}/mo
           </p>
         </div>
         <button
           onClick={() => { setEditLoan(null); setShowAdd(true) }}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white transition"
-          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 16px', borderRadius: 12,
+            background: 'var(--brand)', color: 'white',
+            fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(255,139,0,0.35)',
+          }}>
           <Plus size={15} /> Add Loan
         </button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* ── Summary Tiles ── */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: 'This Month Due', value: formatCurrency(totalMonthlyLoan), color: '#dc2626', icon: CreditCard },
-          { label: 'Active Loans',   value: String(loans.length),             color: '#d97706', icon: Clock },
-          { label: 'Paid Off',       value: String(paidOffCount),             color: '#16a34a', icon: CheckCircle2 },
+          { label: 'Monthly Due',   value: formatCurrency(totalMonthlyLoan), color: '#EF4444', bg: '#FEE2E2', icon: CreditCard },
+          { label: 'Active',        value: String(loans.length),             color: '#F59E0B', bg: '#FEF3C7', icon: Clock },
+          { label: 'Paid Off',      value: String(paidOffCount),             color: '#10B981', bg: '#D1FAE5', icon: CheckCircle2 },
         ].map(s => (
-          <div key={s.label} className="glass-card p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: `${s.color}18` }}>
+          <div key={s.label} className="glass-card" style={{ padding: '16px 12px', textAlign: 'center' }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 8px',
+            }}>
               <s.icon size={18} style={{ color: s.color }} />
             </div>
-            <div>
-              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
-            </div>
+            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, fontWeight: 600 }}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Loan Cards */}
-      <div className="space-y-4">
-        {loans.length === 0 && (
-          <div className="glass-card p-12 text-center">
-            <CreditCard size={40} className="mx-auto mb-3" style={{ color: 'var(--text-faint)' }} />
-            <p style={{ color: 'var(--text-muted)' }}>No loans tracked yet.</p>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-faint)' }}>Add a loan to track its duration and monthly payments.</p>
-            <button onClick={() => setShowAdd(true)}
-              className="mt-4 px-5 py-2 rounded-xl text-sm text-white"
-              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
-              + Add First Loan
-            </button>
+      {/* ── Empty State ── */}
+      {loans.length === 0 && (
+        <div className="glass-card" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'var(--brand-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}>
+            <CreditCard size={28} style={{ color: 'var(--brand)' }} />
           </div>
-        )}
+          <p style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 16 }}>No loans yet</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 6 }}>Track your monthly loan payments here</p>
+          <button onClick={() => setShowAdd(true)} style={{
+            marginTop: 20, padding: '10px 24px', borderRadius: 12,
+            background: 'var(--brand)', color: 'white',
+            fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+          }}>+ Add First Loan</button>
+        </div>
+      )}
 
+      {/* ── Loan Cards ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {loans.map(loan => {
           const loanDetail    = loan.loan_details as any
           const totalMonths   = loanDetail?.total_months || 12
           const startDate     = loanDetail?.start_date || new Date().toISOString().split('T')[0]
           const monthlyAmounts: Record<string, number> | null = loanDetail?.monthly_amounts || null
-          const isReducing    = !!monthlyAmounts && Object.keys(monthlyAmounts).length > 0
+          const isReducing    = !!monthlyAmounts && (() => {
+            const vals = Object.values(monthlyAmounts)
+            return vals.length > 0 && vals.some(v => v !== vals[0])
+          })()
 
-          const estimatedPaid  = Math.min(monthsBetween(startDate), totalMonths)
-          const currentMonthIdx = estimatedPaid
-          const currentDue    = getAmountForMonth(currentMonthIdx, loan.amount, monthlyAmounts)
-          const nextDue       = currentMonthIdx + 1 < totalMonths
-            ? getAmountForMonth(currentMonthIdx + 1, loan.amount, monthlyAmounts)
-            : null
+          const estimatedPaid   = Math.min(monthsBetween(startDate), totalMonths)
+          const currentDue      = getAmountForMonth(estimatedPaid, loan.amount, monthlyAmounts)
+          const nextDue         = estimatedPaid + 1 < totalMonths
+            ? getAmountForMonth(estimatedPaid + 1, loan.amount, monthlyAmounts) : null
 
           const monthsPaidThisYear = Object.values(payments[loan.id] || {}).filter(Boolean).length
           const { pct, remaining } = getLoanProgress(estimatedPaid, totalMonths)
-          const isFullyPaid   = estimatedPaid >= totalMonths
-          const isSuspended   = loan.status === 'Suspended'
+          const isFullyPaid    = estimatedPaid >= totalMonths
+          const isSuspended    = loan.status === 'Suspended'
+          const autoStatus     = getAutoStatus(totalMonths, startDate)
+          const displayStatus  = isSuspended ? 'Suspended' : (autoStatus || loan.status)
+          const badge          = STATUS_BADGE[displayStatus] || STATUS_BADGE['Required']
+          const isExpanded     = expandedId === loan.id
 
-          const autoStatus    = getAutoStatus(totalMonths, startDate)
-          const displayStatus = isSuspended ? 'Suspended' : (autoStatus || loan.status)
-          const badge         = STATUS_BADGE[displayStatus] || STATUS_BADGE['Required']
-
-          const totalRemainingAmount = isReducing
-            ? Array.from({ length: totalMonths - estimatedPaid }, (_, i) =>
-                getAmountForMonth(estimatedPaid + i, loan.amount, monthlyAmounts)
-              ).reduce((s, v) => s + v, 0)
-            : remaining * loan.amount
-
-          // Progress bar colors
-          const progressColor = isSuspended
-            ? 'linear-gradient(90deg, #94a3b8, #cbd5e1)'
+          const progressColor  = isSuspended
+            ? 'linear-gradient(90deg, #94A3B8, #CBD5E1)'
             : isFullyPaid
-            ? 'linear-gradient(90deg, var(--green-500), var(--green-300))'
-            : 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
+            ? 'linear-gradient(90deg, #10B981, #34D399)'
+            : 'linear-gradient(90deg, var(--brand), var(--brand-light))'
 
           return (
-            <div key={loan.id} className="glass-card overflow-hidden"
-              style={{ opacity: isSuspended ? 0.8 : 1 }}>
+            <div key={loan.id} className="glass-card" style={{ overflow: 'hidden', opacity: isSuspended ? 0.85 : 1 }}>
 
-              {/* ── Card Header ── */}
-              <div className="p-5" style={{
-                borderBottom: '1.5px solid var(--border)',
-                background: isSuspended ? 'var(--bg-subtle)' : isFullyPaid ? '#f0fdf4' : '#eff6ff',
-              }}>
-                {/* Name + actions */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{loan.name}</h3>
+              {/* ── Card Main Row ── */}
+              <div style={{ padding: '18px 18px 14px' }}>
+
+                {/* Row 1: icon + name + badge */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                    background: isSuspended ? '#F1F5F9' : isFullyPaid ? '#D1FAE5' : 'var(--brand-pale)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <CreditCard size={20} style={{ color: isSuspended ? '#94A3B8' : isFullyPaid ? '#10B981' : 'var(--brand)' }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                        {loan.name}
+                      </span>
                       {isReducing && (
-                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold"
-                          style={{ background: '#ffedd5', color: '#c2410c', border: '1px solid #fdba74' }}>
-                          <TrendingDown size={10} /> Reducing
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                          background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          <TrendingDown size={9} /> Reducing
                         </span>
                       )}
-                      <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-                        style={{ background: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                        background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
+                        whiteSpace: 'nowrap',
+                      }}>
                         {displayStatus}
                       </span>
                     </div>
-                    <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                      {loan.cutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                      {loan.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => toggleSuspend(loan)} title={isSuspended ? 'Resume' : 'Suspend'}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      style={isSuspended
-                        ? { background: '#dcfce7', border: '1px solid #86efac', color: '#15803d' }
-                        : { background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                      {isSuspended ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
-                      {isSuspended ? 'Resume' : 'Suspend'}
-                    </button>
-                    <button onClick={() => { setEditLoan(loan); setShowAdd(true) }}
-                      className="p-1.5 rounded-lg transition"
-                      style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-                      <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => askDeleteLoan(loan)}
-                      className="p-1.5 rounded-lg transition"
-                      style={{ background: '#fee2e2', color: '#b91c1c' }}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
                 </div>
 
-                {/* Amounts */}
-                <div className="flex items-end gap-5 mb-4">
-                  <div>
-                    <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>This month's due</p>
-                    <p className="text-2xl font-bold" style={{ color: '#2563eb' }}>{formatCurrency(currentDue)}</p>
-                  </div>
-                  {nextDue !== null && nextDue !== currentDue && (
-                    <div className="pb-0.5">
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Next month</p>
-                      <p className="text-base font-bold" style={{ color: nextDue < currentDue ? '#16a34a' : '#dc2626' }}>
-                        {formatCurrency(nextDue)}
-                        <span className="text-xs ml-1">{nextDue < currentDue ? '↓' : '↑'}</span>
+                {/* Row 2: Amount + progress */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>This Month</p>
+                      <p style={{ fontSize: 24, fontWeight: 800, color: '#2563EB', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                        {formatCurrency(currentDue)}
                       </p>
                     </div>
-                  )}
-                  {isReducing && (
-                    <div className="pb-0.5 ml-auto text-right">
-                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Balance remaining</p>
-                      <p className="text-sm font-bold" style={{ color: '#d97706' }}>{formatCurrency(totalRemainingAmount)}</p>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
+                        {estimatedPaid}/{totalMonths} mo
+                      </p>
+                      <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
+                        {Math.round(pct)}%
+                      </p>
                     </div>
-                  )}
-                </div>
-
-                {/* Duration progress */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: 'var(--text-muted)' }}>{estimatedPaid} of {totalMonths} months</span>
-                    <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{Math.round(pct)}%</span>
                   </div>
-                  <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, background: progressColor }} />
+                  <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: progressColor, transition: 'width 0.7s ease' }} />
                   </div>
-                  <div className="flex justify-between text-xs" style={{ color: 'var(--text-faint)' }}>
-                    <span>Started {formatDate(startDate)}</span>
-                    <span>{remaining > 0 ? `${remaining} months left` : 'Complete!'} · Ends {addMonths(startDate, totalMonths)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>Since {formatDate(startDate)}</span>
+                    <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>
+                      {remaining > 0 ? `${remaining} left` : '✓ Complete'} · {addMonths(startDate, totalMonths)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Reducing schedule preview */}
-                {isReducing && !isFullyPaid && (
-                  <div className="mt-3 p-3 rounded-xl space-y-1.5"
-                    style={{ background: '#fff7ed', border: '1px solid #fed7aa' }}>
-                    <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#c2410c' }}>Upcoming Payments</p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {Array.from({ length: Math.min(6, totalMonths - estimatedPaid) }, (_, i) => {
-                        const mIdx  = estimatedPaid + i
-                        const amt   = getAmountForMonth(mIdx, loan.amount, monthlyAmounts)
-                        const label = getMonthLabel(startDate, mIdx)
-                        const isCurr = i === 0
+                {/* Row 3: Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={() => toggleSuspend(loan)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      border: `1px solid ${isSuspended ? '#6EE7B7' : 'var(--border)'}`,
+                      background: isSuspended ? '#D1FAE5' : 'var(--bg-subtle)',
+                      color: isSuspended ? '#065F46' : 'var(--text-muted)',
+                    }}>
+                    {isSuspended ? <PlayCircle size={13} /> : <PauseCircle size={13} />}
+                    {isSuspended ? 'Resume' : 'Suspend'}
+                  </button>
+                  <button
+                    onClick={() => { setEditLoan(loan); setShowAdd(true) }}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    <Edit2 size={14} style={{ color: '#2563EB' }} />
+                  </button>
+                  <button
+                    onClick={() => { setConfirmLoan(loan); setConfirmOpen(true) }}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    <Trash2 size={14} style={{ color: '#EF4444' }} />
+                  </button>
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : loan.id)}
+                    style={{
+                      width: 36, height: 36, borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer',
+                      background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                    {isExpanded ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Expanded: Monthly Grid ── */}
+              {isExpanded && (
+                <div style={{ borderTop: '1px solid var(--border)', padding: '16px 18px', background: 'var(--bg-subtle)' }}>
+
+                  {/* Month payment bar */}
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {CURRENT_YEAR} Payments · {monthsPaidThisYear}/{CURRENT_MONTH + 1} paid
+                    </p>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {MONTHS_SHORT.map((m, i) => {
+                        const paid       = payments[loan.id]?.[i + 1] ?? false
+                        const isCurrent  = i === CURRENT_MONTH
+                        const isFuture   = i > CURRENT_MONTH
+                        const loanStart  = new Date(startDate)
+                        const calDate    = new Date(CURRENT_YEAR, i, 1)
+                        const loanEnd    = new Date(loanStart); loanEnd.setMonth(loanEnd.getMonth() + totalMonths - 1)
+                        const isBeforeL  = calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1)
+                        const isAfterL   = loanEnd.getFullYear() <= CURRENT_YEAR && calDate > new Date(loanEnd.getFullYear(), loanEnd.getMonth(), 1)
+                        const outScope   = isBeforeL || isAfterL
+                        const isOverdue  = !isFuture && !outScope && !paid && !isCurrent
+
                         return (
-                          <div key={i} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg"
-                            style={{
-                              background: isCurr ? '#dbeafe' : 'white',
-                              border: `1px solid ${isCurr ? '#93c5fd' : '#e2e8f0'}`,
+                          <div key={m} style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              height: 32, borderRadius: 6, display: 'flex', flexDirection: 'column',
+                              alignItems: 'center', justifyContent: 'center', gap: 1,
+                              background: paid
+                                ? 'var(--brand)'
+                                : isOverdue ? '#FEE2E2'
+                                : isCurrent ? 'var(--brand-pale)'
+                                : 'white',
+                              border: `1px solid ${paid ? 'var(--brand-dark)' : isOverdue ? '#FCA5A5' : isCurrent ? 'var(--brand-muted)' : 'var(--border)'}`,
+                              opacity: (isFuture || outScope) ? 0.3 : 1,
                             }}>
-                            <span className="text-xs" style={{ color: isCurr ? '#1d4ed8' : '#64748b' }}>
-                              {label}{isCurr ? ' ←' : ''}
-                            </span>
-                            <span className="text-xs font-bold" style={{ color: isCurr ? '#2563eb' : '#475569' }}>
-                              {formatCurrency(amt)}
-                            </span>
+                              <span style={{ fontSize: 8, fontWeight: 700, color: paid ? 'white' : isOverdue ? '#B91C1C' : isCurrent ? 'var(--brand)' : 'var(--text-faint)', lineHeight: 1 }}>
+                                {m.slice(0, 1)}
+                              </span>
+                              {paid && <Check size={7} color="white" />}
+                              {isOverdue && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#EF4444', display: 'block' }} />}
+                            </div>
                           </div>
                         )
                       })}
                     </div>
-                    {totalMonths - estimatedPaid > 6 && (
-                      <p className="text-xs text-center" style={{ color: 'var(--text-faint)' }}>
-                        +{totalMonths - estimatedPaid - 6} more months
+                  </div>
+
+                  {/* Upcoming payments (reducing) */}
+                  {isReducing && !isFullyPaid && (
+                    <div style={{ background: '#FFF8F0', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--brand-muted)' }}>
+                      <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--brand-dark)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                        Upcoming Payments
                       </p>
-                    )}
-                  </div>
-                )}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        {Array.from({ length: Math.min(6, totalMonths - estimatedPaid) }, (_, i) => {
+                          const mIdx  = estimatedPaid + i
+                          const amt   = getAmountForMonth(mIdx, loan.amount, monthlyAmounts)
+                          const label = getMonthLabel(startDate, mIdx)
+                          return (
+                            <div key={i} style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '8px 10px', borderRadius: 8,
+                              background: i === 0 ? '#DBEAFE' : 'white',
+                              border: `1px solid ${i === 0 ? '#93C5FD' : 'var(--border)'}`,
+                            }}>
+                              <span style={{ fontSize: 11, color: i === 0 ? '#1D4ED8' : 'var(--text-muted)' }}>{label.split(' ')[0]}{i === 0 ? ' ←' : ''}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? '#2563EB' : 'var(--text-secondary)' }}>{formatCurrency(amt)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-                {loanDetail?.notes && (
-                  <p className="text-xs mt-3 italic" style={{ color: 'var(--text-muted)' }}>{loanDetail.notes}</p>
-                )}
-                {isSuspended && (
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-faint)' }}>⏸ Loan suspended — payments paused.</p>
-                )}
-              </div>
-
-              {/* ── Monthly Payments {YEAR} — Progress Bar ── */}
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                    Monthly Payments {CURRENT_YEAR}
-                  </p>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                    {monthsPaidThisYear} / {CURRENT_MONTH + 1} paid
-                  </span>
+                  {/* Notes */}
+                  {loanDetail?.notes && (
+                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10, fontStyle: 'italic' }}>{loanDetail.notes}</p>
+                  )}
+                  {isSuspended && (
+                    <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>⏸ Payments paused</p>
+                  )}
                 </div>
-
-                {/* Monthly payment status bar — display only, manually checked via budget page */}
-                <div className="relative">
-                  <div className="flex gap-0.5 h-9 rounded-xl overflow-hidden"
-                    style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}>
-                    {MONTHS_SHORT.map((m, i) => {
-                      const paid      = payments[loan.id]?.[i + 1] ?? false
-                      const isCurrent = i === CURRENT_MONTH
-                      const isFuture  = i > CURRENT_MONTH
-                      const isBeforeLoan = (() => {
-                        const loanStart = new Date(startDate)
-                        const calDate   = new Date(CURRENT_YEAR, i, 1)
-                        return calDate < loanStart
-                      })()
-                      const isAfterLoan = (() => {
-                        const loanStart   = new Date(startDate)
-                        const loanEndDate = new Date(loanStart)
-                        loanEndDate.setMonth(loanEndDate.getMonth() + totalMonths - 1)
-                        const calDate = new Date(CURRENT_YEAR, i, 1)
-                        // Only applies if loan ends this year
-                        if (loanEndDate.getFullYear() > CURRENT_YEAR) return false
-                        return calDate > loanEndDate
-                      })()
-                      const isOutOfScope = isBeforeLoan || isAfterLoan
-                      // Overdue = past month, in scope, not paid
-                      const isOverdue = !isFuture && !isOutOfScope && !paid && !isCurrent
-
-                      return (
-                        <div key={m}
-                          title={`${m} ${CURRENT_YEAR} — ${paid ? 'Paid ✓' : isFuture ? 'Not yet' : isOverdue ? 'NOT PAID ⚠' : 'Unpaid'}`}
-                          className="flex-1 flex flex-col items-center justify-center gap-0.5"
-                          style={{
-                            background: paid
-                              ? 'var(--green-400)'
-                              : isOverdue
-                              ? '#fee2e2'
-                              : isCurrent
-                              ? 'var(--green-50)'
-                              : 'transparent',
-                            opacity: (isFuture || isOutOfScope) ? 0.25 : 1,
-                            borderRight: i < 11 ? '1px solid var(--border)' : 'none',
-                          }}>
-                          <span style={{
-                            fontSize: 9,
-                            fontWeight: isCurrent ? 800 : 600,
-                            color: paid ? 'white' : isOverdue ? '#b91c1c' : isCurrent ? 'var(--green-700)' : 'var(--text-faint)',
-                            lineHeight: 1,
-                          }}>{m.slice(0, 1)}</span>
-                          {paid && <Check size={8} color="white" />}
-                          {isOverdue && <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />}
-                          {isCurrent && !paid && (
-                            <span className="w-1 h-1 rounded-full" style={{ background: 'var(--green-400)' }} />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {/* Month labels below */}
-                  <div className="flex mt-1">
-                    {MONTHS_SHORT.map((m, i) => (
-                      <div key={m} className="flex-1 text-center" style={{
-                        fontSize: 8,
-                        color: i === CURRENT_MONTH ? 'var(--green-600)' : 'var(--text-faint)',
-                        fontWeight: i === CURRENT_MONTH ? 800 : 500,
-                      }}>{m.slice(0,1)}</div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Summary row */}
-                <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                  <span>{monthsPaidThisYear} paid this year</span>
-                  <span>
-                    {isReducing
-                      ? `Total paid: ${formatCurrency(
-                          Object.entries(payments[loan.id] || {})
-                            .filter(([, paid]) => paid)
-                            .reduce((s, [month]) => {
-                              const loanStart = new Date(startDate)
-                              const calDate   = new Date(CURRENT_YEAR, parseInt(month) - 1, 1)
-                              const idx = (calDate.getFullYear() - loanStart.getFullYear()) * 12 + (calDate.getMonth() - loanStart.getMonth())
-                              return s + (idx >= 0 ? getAmountForMonth(idx, loan.amount, monthlyAmounts) : 0)
-                            }, 0)
-                        )}`
-                      : `Total this year: ${formatCurrency(monthsPaidThisYear * loan.amount)}`
-                    }
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {/* ═══ Yearly Payment Table ═══ */}
+      {/* ── Yearly Table ── */}
       {loans.length > 0 && (
-        <div className="glass-card overflow-hidden">
-          <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
-            <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
-              All Loan Payments — {CURRENT_YEAR}
-            </h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              Full-year payment status for all tracked loans
-            </p>
+        <div className="glass-card" style={{ overflow: 'hidden', marginTop: 20 }}>
+          <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--border)' }}>
+            <p style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Year {CURRENT_YEAR} Overview</p>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Full-year payment status</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full" style={{ fontSize: 12 }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-                  <th className="text-left px-4 py-2.5 font-semibold sticky left-0 z-10"
-                    style={{ color: 'var(--text-muted)', minWidth: 160, background: 'var(--bg-subtle)' }}>Loan</th>
+                <tr style={{ background: 'var(--bg-subtle)' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 16px', color: 'var(--text-muted)', fontWeight: 700, minWidth: 140, position: 'sticky', left: 0, background: 'var(--bg-subtle)' }}>Loan</th>
                   {MONTHS_SHORT.map((m, i) => (
-                    <th key={m} className="text-center py-2.5 font-semibold"
-                      style={{
-                        color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)',
-                        fontWeight: i === CURRENT_MONTH ? 800 : 600,
-                        width: 38,
-                        minWidth: 38,
-                      }}>{m}</th>
+                    <th key={m} style={{ textAlign: 'center', padding: '10px 2px', width: 36, fontWeight: i === CURRENT_MONTH ? 800 : 600, color: i === CURRENT_MONTH ? 'var(--brand)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)' }}>{m}</th>
                   ))}
-                  <th className="text-center px-3 py-2.5 font-semibold" style={{ color: 'var(--text-muted)', minWidth: 80 }}>Progress</th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', color: 'var(--text-muted)', fontWeight: 700, minWidth: 70 }}>%</th>
                 </tr>
               </thead>
               <tbody>
                 {loans.map((loan, idx) => {
-                  const loanDetail    = loan.loan_details as any
-                  const totalMonths   = loanDetail?.total_months || 12
-                  const startDate     = loanDetail?.start_date || new Date().toISOString().split('T')[0]
-                  const monthlyAmounts: Record<string, number> | null = loanDetail?.monthly_amounts || null
-                  const monthPaid     = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1] ?? false)
-                  const paidCount     = monthPaid.filter(Boolean).length
-                  const totalPayable  = CURRENT_MONTH + 1
-                  const pct           = totalPayable > 0 ? Math.round((paidCount / totalPayable) * 100) : 0
-                  const rowBg         = idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)'
-
+                  const ld          = loan.loan_details as any
+                  const totalM      = ld?.total_months || 12
+                  const startD      = ld?.start_date || ''
+                  const monthPaid   = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1] ?? false)
+                  const paidCount   = monthPaid.filter(Boolean).length
+                  const pct         = CURRENT_MONTH > 0 ? Math.round((paidCount / (CURRENT_MONTH + 1)) * 100) : 0
+                  const rowBg       = idx % 2 === 0 ? '#FFFFFF' : 'var(--bg-subtle)'
                   return (
-                    <tr key={loan.id} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
-                      <td className="px-4 py-3 sticky left-0 z-10" style={{ background: rowBg }}>
-                        <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{loan.name}</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {formatCurrency(loan.amount)}/mo · {totalMonths}mo
-                        </p>
+                    <tr key={loan.id} style={{ borderTop: '1px solid var(--border)', background: rowBg }}>
+                      <td style={{ padding: '10px 16px', position: 'sticky', left: 0, background: rowBg }}>
+                        <p style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{loan.name}</p>
+                        <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatCurrency(loan.amount)}/mo</p>
                       </td>
                       {monthPaid.map((paid, i) => {
-                        const isCurrent    = i === CURRENT_MONTH
-                        const isFuture     = i > CURRENT_MONTH
-                        const loanStart    = new Date(startDate)
-                        const calDate      = new Date(CURRENT_YEAR, i, 1)
-                        const loanEndDate  = new Date(loanStart)
-                        loanEndDate.setMonth(loanEndDate.getMonth() + totalMonths - 1)
-                        const loanMonthIdx = (calDate.getFullYear() - loanStart.getFullYear()) * 12 + (calDate.getMonth() - loanStart.getMonth())
-                        const isBeforeLoan = calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1)
-                        const isAfterLoan  = loanEndDate.getFullYear() <= CURRENT_YEAR
-                          && calDate > new Date(loanEndDate.getFullYear(), loanEndDate.getMonth(), 1)
-                        const isOutOfScope = isBeforeLoan || isAfterLoan
-                        const monthAmt     = loanMonthIdx >= 0 && loanMonthIdx < totalMonths && monthlyAmounts
-                          ? getAmountForMonth(loanMonthIdx, loan.amount, monthlyAmounts)
-                          : null
-
+                        const isCurrent   = i === CURRENT_MONTH
+                        const isFuture    = i > CURRENT_MONTH
+                        const loanStart   = startD ? new Date(startD) : null
+                        const calDate     = new Date(CURRENT_YEAR, i, 1)
+                        const loanEndD    = loanStart ? new Date(loanStart) : null
+                        if (loanEndD) loanEndD.setMonth(loanEndD.getMonth() + totalM - 1)
+                        const isBeforeL   = loanStart ? calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1) : false
+                        const isAfterL    = loanEndD && loanEndD.getFullYear() <= CURRENT_YEAR ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
+                        const outScope    = isBeforeL || isAfterL
                         return (
-                          <td key={i} className="text-center" style={{ padding: '6px 2px' }}>
-                            {isOutOfScope ? (
-                              <div className="w-7 h-7 mx-auto rounded-lg"
-                                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.2 }} />
+                          <td key={i} style={{ textAlign: 'center', padding: '6px 2px' }}>
+                            {outScope ? (
+                              <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-subtle)', margin: '0 auto', opacity: 0.3 }} />
                             ) : (
-                              <div className="w-7 h-7 mx-auto flex items-center justify-center rounded-lg"
-                                style={{
-                                  background: paid ? 'var(--green-100)' : isCurrent ? 'var(--green-50)' : 'transparent',
-                                  border: `1.5px solid ${paid ? 'var(--green-300)' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
-                                  opacity: isFuture ? 0.25 : 1,
-                                }}>
-                                {paid
-                                  ? <Check size={10} style={{ color: 'var(--green-600)' }} />
-                                  : <span className="w-1.5 h-1.5 rounded-full"
-                                      style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
-                                }
-                              </div>
-                            )}
-                            {monthAmt !== null && !isOutOfScope && (
-                              <div style={{ fontSize: 8, color: paid ? 'var(--green-600)' : 'var(--text-faint)', lineHeight: 1, marginTop: 1 }}>
-                                ₱{monthAmt >= 1000 ? (monthAmt / 1000).toFixed(1) + 'k' : monthAmt.toString()}
+                              <div style={{
+                                width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto',
+                                background: paid ? 'var(--brand-pale)' : isCurrent ? '#FFF8F0' : 'transparent',
+                                border: `1.5px solid ${paid ? 'var(--brand-muted)' : isCurrent ? 'var(--brand-muted)' : 'var(--border)'}`,
+                                opacity: isFuture ? 0.3 : 1,
+                              }}>
+                                {paid ? <Check size={10} style={{ color: 'var(--brand)' }} /> : <span style={{ width: 5, height: 5, borderRadius: '50%', background: isCurrent ? 'var(--brand)' : 'var(--border-strong)', display: 'block' }} />}
                               </div>
                             )}
                           </td>
                         )
                       })}
-                      <td className="px-3 py-3">
-                        <div className="space-y-1">
-                          <div className="flex justify-between" style={{ fontSize: 10 }}>
-                            <span style={{ color: 'var(--text-muted)' }}>{paidCount}/{totalPayable}</span>
-                            <span style={{ fontWeight: 700, color: pct >= 80 ? 'var(--green-600)' : pct >= 50 ? 'var(--amber-500)' : 'var(--red-500)' }}>
-                              {pct}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                            <div className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${pct}%`,
-                                background: pct >= 80
-                                  ? 'linear-gradient(90deg, var(--green-500), var(--green-300))'
-                                  : pct >= 50
-                                  ? 'linear-gradient(90deg, var(--amber-500), var(--amber-300))'
-                                  : 'linear-gradient(90deg, var(--red-500), var(--red-400))',
-                              }} />
+                      <td style={{ padding: '6px 12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+                          <span style={{ fontWeight: 800, fontSize: 12, color: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444' }}>{pct}%</span>
+                          <div style={{ width: 48, height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444' }} />
                           </div>
                         </div>
                       </td>

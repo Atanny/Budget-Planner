@@ -16,13 +16,13 @@ const navItems = [
 ]
 
 export default function Navbar() {
-  const path = usePathname()
+  const path   = usePathname()
   const router = useRouter()
   const [authed, setAuthed] = useState<boolean | null>(null)
-  const days = getDaysUntilCutoff()
-  const next = getNextCutoffDate()
-  const cutoffLabel = next.getDate() === 15 ? '1st (15th)' : '2nd (30th)'
-  const urgent = days <= 3
+  const days        = getDaysUntilCutoff()
+  const next        = getNextCutoffDate()
+  const cutoffLabel = next.getDate() === 15 ? '15th' : '30th'
+  const urgent      = days <= 3
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -41,92 +41,75 @@ export default function Navbar() {
   return (
     <>
       {/* Top header */}
-      <header
-        className="sticky top-0 z-50 w-full"
-        style={{
-          background: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border)',
-          boxShadow: '0 1px 3px rgba(13,40,24,0.06)',
-        }}
-      >
-        <div className="w-full px-4 h-14 flex items-center justify-between max-w-2xl mx-auto">
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 50, width: '100%',
+        background: '#FFFFFF',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: '0 1px 0 var(--border)',
+      }}>
+        <div className="flex items-center justify-between"
+          style={{ maxWidth: 1024, margin: '0 auto', padding: '0 20px', height: 56 }}>
+
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-              style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-300))' }}
-            >₱</div>
-            <span className="font-bold text-base" style={{ color: 'var(--green-800)' }}>BudgetPH</span>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10,
+              background: 'var(--brand)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', fontWeight: 800, fontSize: 16,
+              boxShadow: '0 2px 8px rgba(255,139,0,0.35)',
+            }}>₱</div>
+            <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              BudgetPH
+            </span>
           </div>
-          <div
-            className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full font-semibold"
-            style={{
-              background: urgent ? '#fee2e2' : 'var(--green-50)',
-              color: urgent ? '#b91c1c' : 'var(--green-600)',
-              border: `1px solid ${urgent ? '#fca5a5' : 'var(--green-200)'}`,
-            }}
-          >
-            <span className="pulse-dot" style={{ background: urgent ? '#ef4444' : 'var(--green-400)' }} />
+
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            fontSize: 12, fontWeight: 700,
+            padding: '5px 12px', borderRadius: 20,
+            background: urgent ? '#FEE2E2' : 'var(--brand-pale)',
+            color: urgent ? '#B91C1C' : 'var(--brand-dark)',
+            border: `1px solid ${urgent ? '#FCA5A5' : 'var(--brand-muted)'}`,
+          }}>
+            <span className="pulse-dot" style={{ background: urgent ? '#EF4444' : 'var(--brand)', width: 6, height: 6 }} />
             <span className="hidden sm:inline">{days}d until {cutoffLabel}</span>
             <span className="sm:hidden">{days}d</span>
           </div>
         </div>
       </header>
 
-      {/* Floating bottom nav — all screen sizes */}
-      <nav
-        className="fixed z-50"
-        style={{
-          bottom: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)',
-          maxWidth: 520,
-        }}
-      >
-        <div
-          className="flex items-center justify-around"
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1.5px solid var(--border)',
-            borderRadius: 24,
-            boxShadow: '0 8px 32px rgba(13,40,24,0.14), 0 2px 8px rgba(13,40,24,0.08)',
-            padding: '6px 8px',
-            backdropFilter: 'blur(12px)',
-          }}
-        >
+      {/* Bottom nav */}
+      <nav style={{
+        position: 'fixed', bottom: 14, zIndex: 50,
+        left: '50%', transform: 'translateX(-50%)',
+        width: 'calc(100% - 28px)', maxWidth: 460,
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+          background: '#FFFFFF',
+          border: '1px solid var(--border)',
+          borderRadius: 26,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)',
+          padding: '6px 6px',
+        }}>
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = path === href
             return (
-              <Link
-                key={href}
-                href={href}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 rounded-xl transition-all"
-                style={{
-                  color: active ? 'var(--green-600)' : 'var(--text-faint)',
-                  background: active ? 'var(--green-50)' : 'transparent',
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  className="flex items-center justify-center"
-                  style={{
-                    width: 28, height: 28, borderRadius: 10,
-                    background: active ? 'var(--green-100)' : 'transparent',
-                    transition: 'background 0.18s',
-                  }}
-                >
-                  <Icon size={17} strokeWidth={active ? 2.5 : 1.8} />
-                </div>
-                <span
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: active ? 800 : 600,
-                    lineHeight: 1,
-                    letterSpacing: active ? '0.01em' : 0,
-                  }}
-                >
-                  {label}
-                </span>
+              <Link key={href} href={href} style={{
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 2, flex: 1, padding: '6px 4px',
+                borderRadius: 18, textDecoration: 'none',
+                color: active ? 'var(--brand)' : 'var(--text-faint)',
+                background: active ? 'var(--brand-pale)' : 'transparent',
+                minWidth: 0,
+              }}>
+                <Icon size={18} strokeWidth={active ? 2.5 : 1.8}
+                  style={{ color: active ? 'var(--brand)' : 'var(--text-faint)' }} />
+                <span style={{
+                  fontSize: 9, fontWeight: active ? 800 : 600, lineHeight: 1,
+                  color: active ? 'var(--brand)' : 'var(--text-faint)',
+                }}>{label}</span>
               </Link>
             )
           })}
