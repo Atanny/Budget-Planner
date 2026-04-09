@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
 import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X, Star, Banknote } from 'lucide-react'
-import ConfirmDialog from '@/components/ConfirmDialog'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import ConfirmModal from '@/components/ConfirmModal'
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -25,7 +25,9 @@ export default function DashboardPage() {
   const [showSahod,     setShowSahod]     = useState(false)
   const [sahodAmount,   setSahodAmount]   = useState('')
   const [sahodSaving,   setSahodSaving]   = useState(false)
-  const [deleteBankId,  setDeleteBankId]  = useState<string | null>(null)
+  const [confirmBankOpen, setConfirmBankOpen] = useState(false)
+  const [confirmBankId,   setConfirmBankId]   = useState<string | null>(null)
+  const [confirmBankName, setConfirmBankName] = useState('')
 
   const year  = new Date().getFullYear()
   const month = new Date().getMonth() + 1
@@ -99,14 +101,19 @@ export default function DashboardPage() {
     setShowBankForm(false); setEditBank(null)
   }
 
-  async function deleteBank(id: string) {
-    setDeleteBankId(id)
+  function askDeleteBank(id: string, name: string) {
+    setConfirmBankId(id)
+    setConfirmBankName(name)
+    setConfirmBankOpen(true)
   }
 
-  async function doDeleteBank(id: string) {
+  async function doDeleteBank() {
+    if (!confirmBankId) return
+    const id = confirmBankId
+    setConfirmBankOpen(false)
+    setConfirmBankId(null)
     await supabase.from('bank_accounts').update({ is_active: false }).eq('id', id)
     setBanks(prev => prev.filter(b => b.id !== id))
-    setDeleteBankId(null)
   }
 
   const firstTotal  = items.filter(i => i.cutoff === '1st').reduce((s, i) => s + i.amount, 0)
@@ -307,7 +314,7 @@ export default function DashboardPage() {
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
                       className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}><Edit2 size={12} /></button>
-                    <button onClick={() => deleteBank(bank.id)}
+                    <button onClick={() => askDeleteBank(bank.id, bank.name)}
                       className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><Trash2 size={12} /></button>
                   </div>
                 </div>
@@ -410,16 +417,6 @@ export default function DashboardPage() {
         />
       )}
 
-      {deleteBankId && (
-        <ConfirmDialog
-          title="Remove Account"
-          message="Remove this bank account from your tracker? This will not affect your actual bank account."
-          confirmLabel="Remove"
-          onConfirm={() => doDeleteBank(deleteBankId)}
-          onCancel={() => setDeleteBankId(null)}
-        />
-      )}
-
       {/* Chart + Loans */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-5">
@@ -494,11 +491,17 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmBankOpen}
+        title="Remove Account"
+        message={`Remove "${confirmBankName}" from your accounts? This cannot be undone.`}
+        confirmLabel="Remove"
+        onConfirm={doDeleteBank}
+        onCancel={() => { setConfirmBankOpen(false); setConfirmBankId(null) }}
+      />
     </div>
   )
-}
-
-function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
+}({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
   const [name,      setName]      = useState(bank?.name      || '')
   const [type,      setType]      = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type || 'bank')
   const [balance,   setBalance]   = useState(bank?.balance?.toString() || '')

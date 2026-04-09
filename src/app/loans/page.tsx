@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
-import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown, Check, CalendarRange, X } from 'lucide-react'
+import { Plus, CreditCard, CheckCircle2, Clock, PauseCircle, PlayCircle, Edit2, Trash2, TrendingDown, Check } from 'lucide-react'
 import AddLoanModal from '@/components/AddLoanModal'
-import ConfirmDialog from '@/components/ConfirmDialog'
+import ConfirmModal from '@/components/ConfirmModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const CURRENT_YEAR  = new Date().getFullYear()
@@ -48,20 +48,7 @@ function getMonthLabel(startDate: string, loanMonthIndex: number): string {
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 
-// Compute which calendar month indices (0-based in current year) are IN scope for this loan
-function getLoanCalendarScope(startDate: string, totalMonths: number): { start: number; end: number } {
-  const loanStart = new Date(startDate)
-  const loanEnd   = new Date(startDate)
-  loanEnd.setMonth(loanEnd.getMonth() + totalMonths - 1)
-
-  if (loanStart.getFullYear() > CURRENT_YEAR) return { start: -1, end: -1 }
-  if (loanEnd.getFullYear()   < CURRENT_YEAR) return { start: -1, end: -1 }
-
-  const startM = loanStart.getFullYear() < CURRENT_YEAR ? 0 : loanStart.getMonth()
-  const endM   = loanEnd.getFullYear()   > CURRENT_YEAR ? 11 : loanEnd.getMonth()
-  return { start: startM, end: endM }
-}
-
+// Light-theme status badges
 const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }> = {
   Required:        { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
   Optional:        { bg: '#fef3c7', text: '#92400e', border: '#fde68a' },
@@ -72,102 +59,15 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }>
   Paid:            { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
 }
 
-interface ExtendModalProps {
-  loan: BudgetItem
-  onClose: () => void
-  onSave: () => void
-}
-
-function ExtendLoanModal({ loan, onClose, onSave }: ExtendModalProps) {
-  const existingLD   = (loan.loan_details as any)?.[0] ?? (loan.loan_details as any)
-  const [startDate,  setStartDate]  = useState(existingLD?.start_date || new Date().toISOString().split('T')[0])
-  const [totalMonths,setTotalMonths]= useState(existingLD?.total_months?.toString() || '12')
-  const [saving,     setSaving]     = useState(false)
-
-  const endDate = (() => {
-    if (!startDate || !totalMonths) return ''
-    const d = new Date(startDate)
-    d.setMonth(d.getMonth() + parseInt(totalMonths) - 1)
-    return d.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
-  })()
-
-  async function handleSave() {
-    if (!startDate || !totalMonths) return
-    setSaving(true)
-    await supabase.from('loan_details').update({
-      start_date: startDate,
-      total_months: parseInt(totalMonths),
-    }).eq('budget_item_id', loan.id)
-    setSaving(false)
-    onSave()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
-      <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: '#c4b5fd', background: '#faf5ff' }}>
-          <div>
-            <h2 className="font-bold" style={{ color: '#4c1d95' }}>
-              <CalendarRange size={15} className="inline mr-1.5 mb-0.5" />
-              Extend / Adjust Loan
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#7c3aed' }}>{loan.name}</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)', background: 'var(--bg-subtle)' }}>
-            <X size={15} />
-          </button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="text-xs font-bold block mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              New Start Date
-            </label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-3 py-2.5 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Total Months
-            </label>
-            <input type="number" min={1} max={120} value={totalMonths} onChange={e => setTotalMonths(e.target.value)} className="w-full px-3 py-2.5 text-sm" placeholder="e.g. 12" />
-          </div>
-          {endDate && (
-            <div className="p-3 rounded-xl" style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
-              <p className="text-xs font-semibold" style={{ color: '#6d28d9' }}>
-                New end date: <strong>{endDate}</strong>
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: '#7c3aed' }}>
-                {totalMonths} monthly payments starting {new Date(startDate).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={saving || !startDate || !totalMonths}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export default function LoansPage() {
-  const [loans,       setLoans]       = useState<BudgetItem[]>([])
-  const [payments,    setPayments]    = useState<Record<string, Record<number, boolean>>>({})
-  const [showAdd,     setShowAdd]     = useState(false)
-  const [editLoan,    setEditLoan]    = useState<BudgetItem | null>(null)
-  const [loading,     setLoading]     = useState(true)
-  const [userId,      setUserId]      = useState<string | null>(null)
-  const [extendLoan,  setExtendLoan]  = useState<BudgetItem | null>(null)
-  const [deleteLoan,  setDeleteLoan]  = useState<BudgetItem | null>(null)
+  const [loans,        setLoans]        = useState<BudgetItem[]>([])
+  const [payments,     setPayments]     = useState<Record<string, Record<number, boolean>>>({})
+  const [showAdd,      setShowAdd]      = useState(false)
+  const [editLoan,     setEditLoan]     = useState<BudgetItem | null>(null)
+  const [loading,      setLoading]      = useState(true)
+  const [userId,       setUserId]       = useState<string | null>(null)
+  const [confirmOpen,  setConfirmOpen]  = useState(false)
+  const [confirmLoan,  setConfirmLoan]  = useState<BudgetItem | null>(null)
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -212,10 +112,18 @@ export default function LoansPage() {
     setLoans(prev => prev.map(l => l.id === loan.id ? { ...l, status: newStatus as any } : l))
   }
 
-  async function doDeleteLoan(id: string) {
+  function askDeleteLoan(loan: BudgetItem) {
+    setConfirmLoan(loan)
+    setConfirmOpen(true)
+  }
+
+  async function doDeleteLoan() {
+    if (!confirmLoan) return
+    const id = confirmLoan.id
+    setConfirmOpen(false)
+    setConfirmLoan(null)
     await supabase.from('budget_items').update({ is_active: false }).eq('id', id)
     setLoans(prev => prev.filter(l => l.id !== id))
-    setDeleteLoan(null)
   }
 
   const totalMonthlyLoan = loans
@@ -267,12 +175,13 @@ export default function LoansPage() {
           { label: 'Active Loans',   value: String(loans.length),             color: '#d97706', icon: Clock },
           { label: 'Paid Off',       value: String(paidOffCount),             color: '#16a34a', icon: CheckCircle2 },
         ].map(s => (
-          <div key={s.label} className="glass-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${s.color}18` }}>
-              <s.icon size={17} style={{ color: s.color }} />
+          <div key={s.label} className="glass-card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: `${s.color}18` }}>
+              <s.icon size={18} style={{ color: s.color }} />
             </div>
-            <div className="min-w-0">
-              <p className="text-lg font-bold truncate" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
+            <div>
+              <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{s.value}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
             </div>
           </div>
@@ -323,18 +232,16 @@ export default function LoansPage() {
               ).reduce((s, v) => s + v, 0)
             : remaining * loan.amount
 
+          // Progress bar colors
           const progressColor = isSuspended
             ? 'linear-gradient(90deg, #94a3b8, #cbd5e1)'
             : isFullyPaid
             ? 'linear-gradient(90deg, var(--green-500), var(--green-300))'
             : 'linear-gradient(90deg, #3b82f6, #8b5cf6)'
 
-          // Calendar scope for current year
-          const scope = getLoanCalendarScope(startDate, totalMonths)
-
           return (
             <div key={loan.id} className="glass-card overflow-hidden"
-              style={{ opacity: isSuspended ? 0.85 : 1 }}>
+              style={{ opacity: isSuspended ? 0.8 : 1 }}>
 
               {/* ── Card Header ── */}
               <div className="p-5" style={{
@@ -361,29 +268,21 @@ export default function LoansPage() {
                       {loan.cutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => toggleSuspend(loan)} title={isSuspended ? 'Resume' : 'Suspend'}
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
                       style={isSuspended
                         ? { background: '#dcfce7', border: '1px solid #86efac', color: '#15803d' }
                         : { background: 'var(--bg-subtle)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                       {isSuspended ? <PlayCircle size={12} /> : <PauseCircle size={12} />}
                       {isSuspended ? 'Resume' : 'Suspend'}
                     </button>
-                    {/* Extend/Adjust button */}
-                    <button onClick={() => setExtendLoan(loan)}
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      style={{ background: '#ede9fe', border: '1px solid #c4b5fd', color: '#6d28d9' }}
-                      title="Adjust loan start/end dates">
-                      <CalendarRange size={12} />
-                      Extend
-                    </button>
                     <button onClick={() => { setEditLoan(loan); setShowAdd(true) }}
                       className="p-1.5 rounded-lg transition"
                       style={{ background: '#dbeafe', color: '#1d4ed8' }}>
                       <Edit2 size={14} />
                     </button>
-                    <button onClick={() => setDeleteLoan(loan)}
+                    <button onClick={() => askDeleteLoan(loan)}
                       className="p-1.5 rounded-lg transition"
                       style={{ background: '#fee2e2', color: '#b91c1c' }}>
                       <Trash2 size={14} />
@@ -473,7 +372,7 @@ export default function LoansPage() {
                 )}
               </div>
 
-              {/* ── Monthly Payments {YEAR} ── */}
+              {/* ── Monthly Payments {YEAR} — Progress Bar ── */}
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
@@ -484,59 +383,63 @@ export default function LoansPage() {
                   </span>
                 </div>
 
+                {/* Monthly payment status bar — display only, manually checked via budget page */}
                 <div className="relative">
                   <div className="flex gap-0.5 h-9 rounded-xl overflow-hidden"
                     style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}>
                     {MONTHS_SHORT.map((m, i) => {
-                      const paid        = payments[loan.id]?.[i + 1] ?? false
-                      const isCurrent   = i === CURRENT_MONTH
-                      const isFuture    = i > CURRENT_MONTH
-                      // A month is in-scope if within the loan's active date range
-                      const inScope     = scope.start !== -1 && i >= scope.start && i <= scope.end
-                      const isDisabled  = !inScope
-                      const isOverdue   = inScope && !isFuture && !paid && !isCurrent
+                      const paid      = payments[loan.id]?.[i + 1] ?? false
+                      const isCurrent = i === CURRENT_MONTH
+                      const isFuture  = i > CURRENT_MONTH
+                      const isBeforeLoan = (() => {
+                        const loanStart = new Date(startDate)
+                        const calDate   = new Date(CURRENT_YEAR, i, 1)
+                        return calDate < loanStart
+                      })()
+                      const isAfterLoan = (() => {
+                        const loanStart   = new Date(startDate)
+                        const loanEndDate = new Date(loanStart)
+                        loanEndDate.setMonth(loanEndDate.getMonth() + totalMonths - 1)
+                        const calDate = new Date(CURRENT_YEAR, i, 1)
+                        // Only applies if loan ends this year
+                        if (loanEndDate.getFullYear() > CURRENT_YEAR) return false
+                        return calDate > loanEndDate
+                      })()
+                      const isOutOfScope = isBeforeLoan || isAfterLoan
+                      // Overdue = past month, in scope, not paid
+                      const isOverdue = !isFuture && !isOutOfScope && !paid && !isCurrent
 
                       return (
                         <div key={m}
-                          title={
-                            isDisabled
-                              ? `${m} — Outside loan period`
-                              : paid ? `${m} ✓ Paid`
-                              : isFuture ? `${m} — Not yet`
-                              : isOverdue ? `${m} ⚠ NOT PAID`
-                              : `${m} — Unpaid`
-                          }
+                          title={`${m} ${CURRENT_YEAR} — ${paid ? 'Paid ✓' : isFuture ? 'Not yet' : isOverdue ? 'NOT PAID ⚠' : 'Unpaid'}`}
                           className="flex-1 flex flex-col items-center justify-center gap-0.5"
                           style={{
-                            background: isDisabled
-                              ? 'var(--bg-subtle)'
-                              : paid ? 'var(--green-400)'
-                              : isOverdue ? '#fee2e2'
-                              : isCurrent ? 'var(--green-50)'
+                            background: paid
+                              ? 'var(--green-400)'
+                              : isOverdue
+                              ? '#fee2e2'
+                              : isCurrent
+                              ? 'var(--green-50)'
                               : 'transparent',
-                            opacity: isDisabled ? 0.2 : isFuture ? 0.35 : 1,
+                            opacity: (isFuture || isOutOfScope) ? 0.25 : 1,
                             borderRight: i < 11 ? '1px solid var(--border)' : 'none',
                           }}>
                           <span style={{
                             fontSize: 9,
                             fontWeight: isCurrent ? 800 : 600,
-                            color: isDisabled ? 'var(--text-faint)'
-                              : paid ? 'white'
-                              : isOverdue ? '#b91c1c'
-                              : isCurrent ? 'var(--green-700)'
-                              : 'var(--text-faint)',
+                            color: paid ? 'white' : isOverdue ? '#b91c1c' : isCurrent ? 'var(--green-700)' : 'var(--text-faint)',
                             lineHeight: 1,
                           }}>{m.slice(0, 1)}</span>
                           {paid && <Check size={8} color="white" />}
                           {isOverdue && <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />}
-                          {isCurrent && !paid && !isDisabled && (
+                          {isCurrent && !paid && (
                             <span className="w-1 h-1 rounded-full" style={{ background: 'var(--green-400)' }} />
                           )}
                         </div>
                       )
                     })}
                   </div>
-                  {/* Month labels */}
+                  {/* Month labels below */}
                   <div className="flex mt-1">
                     {MONTHS_SHORT.map((m, i) => (
                       <div key={m} className="flex-1 text-center" style={{
@@ -595,7 +498,8 @@ export default function LoansPage() {
                       style={{
                         color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)',
                         fontWeight: i === CURRENT_MONTH ? 800 : 600,
-                        width: 38, minWidth: 38,
+                        width: 38,
+                        minWidth: 38,
                       }}>{m}</th>
                   ))}
                   <th className="text-center px-3 py-2.5 font-semibold" style={{ color: 'var(--text-muted)', minWidth: 80 }}>Progress</th>
@@ -604,11 +508,10 @@ export default function LoansPage() {
               <tbody>
                 {loans.map((loan, idx) => {
                   const loanDetail    = loan.loan_details as any
-                  const totalM        = loanDetail?.total_months || 12
+                  const totalMonths   = loanDetail?.total_months || 12
                   const startDate     = loanDetail?.start_date || new Date().toISOString().split('T')[0]
                   const monthlyAmounts: Record<string, number> | null = loanDetail?.monthly_amounts || null
                   const monthPaid     = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1] ?? false)
-                  const scope         = getLoanCalendarScope(startDate, totalM)
                   const paidCount     = monthPaid.filter(Boolean).length
                   const totalPayable  = CURRENT_MONTH + 1
                   const pct           = totalPayable > 0 ? Math.round((paidCount / totalPayable) * 100) : 0
@@ -619,25 +522,30 @@ export default function LoansPage() {
                       <td className="px-4 py-3 sticky left-0 z-10" style={{ background: rowBg }}>
                         <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{loan.name}</p>
                         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {formatCurrency(loan.amount)}/mo · {totalM}mo
+                          {formatCurrency(loan.amount)}/mo · {totalMonths}mo
                         </p>
                       </td>
                       {monthPaid.map((paid, i) => {
                         const isCurrent    = i === CURRENT_MONTH
                         const isFuture     = i > CURRENT_MONTH
-                        const inScope      = scope.start !== -1 && i >= scope.start && i <= scope.end
-                        const isDisabled   = !inScope
                         const loanStart    = new Date(startDate)
                         const calDate      = new Date(CURRENT_YEAR, i, 1)
+                        const loanEndDate  = new Date(loanStart)
+                        loanEndDate.setMonth(loanEndDate.getMonth() + totalMonths - 1)
                         const loanMonthIdx = (calDate.getFullYear() - loanStart.getFullYear()) * 12 + (calDate.getMonth() - loanStart.getMonth())
-                        const monthAmt     = loanMonthIdx >= 0 && loanMonthIdx < totalM && monthlyAmounts
+                        const isBeforeLoan = calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1)
+                        const isAfterLoan  = loanEndDate.getFullYear() <= CURRENT_YEAR
+                          && calDate > new Date(loanEndDate.getFullYear(), loanEndDate.getMonth(), 1)
+                        const isOutOfScope = isBeforeLoan || isAfterLoan
+                        const monthAmt     = loanMonthIdx >= 0 && loanMonthIdx < totalMonths && monthlyAmounts
                           ? getAmountForMonth(loanMonthIdx, loan.amount, monthlyAmounts)
                           : null
 
                         return (
                           <td key={i} className="text-center" style={{ padding: '6px 2px' }}>
-                            {isDisabled ? (
-                              <div className="w-7 h-7 mx-auto rounded-lg" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.2 }} />
+                            {isOutOfScope ? (
+                              <div className="w-7 h-7 mx-auto rounded-lg"
+                                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.2 }} />
                             ) : (
                               <div className="w-7 h-7 mx-auto flex items-center justify-center rounded-lg"
                                 style={{
@@ -652,7 +560,7 @@ export default function LoansPage() {
                                 }
                               </div>
                             )}
-                            {monthAmt !== null && !isDisabled && (
+                            {monthAmt !== null && !isOutOfScope && (
                               <div style={{ fontSize: 8, color: paid ? 'var(--green-600)' : 'var(--text-faint)', lineHeight: 1, marginTop: 1 }}>
                                 ₱{monthAmt >= 1000 ? (monthAmt / 1000).toFixed(1) + 'k' : monthAmt.toString()}
                               </div>
@@ -697,24 +605,14 @@ export default function LoansPage() {
           onSave={() => { setShowAdd(false); setEditLoan(null); load() }}
         />
       )}
-
-      {extendLoan && (
-        <ExtendLoanModal
-          loan={extendLoan}
-          onClose={() => setExtendLoan(null)}
-          onSave={() => { setExtendLoan(null); load() }}
-        />
-      )}
-
-      {deleteLoan && (
-        <ConfirmDialog
-          title="Delete Loan"
-          message={`Remove "${deleteLoan.name}" (${formatCurrency(deleteLoan.amount)}/mo) from your loan tracker? All payment history will be lost.`}
-          confirmLabel="Delete Loan"
-          onConfirm={() => doDeleteLoan(deleteLoan.id)}
-          onCancel={() => setDeleteLoan(null)}
-        />
-      )}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete Loan"
+        message={`Remove "${confirmLoan?.name}" from your loans? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={doDeleteLoan}
+        onCancel={() => { setConfirmOpen(false); setConfirmLoan(null) }}
+      />
     </div>
   )
 }

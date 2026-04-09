@@ -2,27 +2,18 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, Cutoff, PaymentStatus, UserSettings, TransactionLog, EXPENSE_CATEGORIES, MonthlySavings } from '@/lib/types'
+import { BudgetItem, Cutoff, UserSettings, TransactionLog, EXPENSE_CATEGORIES } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, Edit2, Trash2, Settings, Check, PiggyBank, ChevronDown, ChevronUp, Calendar, History, Clock, CreditCard } from 'lucide-react'
+import { Plus, Edit2, Trash2, Settings, Check, PiggyBank, ChevronDown, ChevronUp, Calendar, History, Clock, CreditCard, RefreshCw } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
 import EditSalaryModal from '@/components/EditSalaryModal'
-import ConfirmDialog from '@/components/ConfirmDialog'
+import ExtendLoanModal from '@/components/ExtendLoanModal'
+import ConfirmModal from '@/components/ConfirmModal'
 
 const MONTHS_SHORT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const CURRENT_YEAR    = new Date().getFullYear()
-const CURRENT_MONTH   = new Date().getMonth()     // 0-indexed
-const CURRENT_MONTH_1 = CURRENT_MONTH + 1         // 1-indexed
-
-const BADGE: Record<PaymentStatus, { bg: string; color: string; border: string }> = {
-  Required:        { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
-  Optional:        { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
-  'First Payment': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
-  'Last Payment':  { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
-  Once:            { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
-  Suspended:       { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-  Paid:            { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
-}
+const CURRENT_MONTH   = new Date().getMonth()       // 0-indexed
+const CURRENT_MONTH_1 = CURRENT_MONTH + 1           // 1-indexed
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -43,33 +34,49 @@ const ACTION_META: Record<string, { icon: string; color: string; label: string }
   unpaid: { icon: '↩', color: '#d97706', label: 'Unpaid'  },
 }
 
-// Returns { start: 0-based, end: 0-based inclusive } for months that are IN-scope for this item
-function getItemScope(item: BudgetItem): { start: number; end: number } {
+// Returns exact 0-based month range the loan is active in CURRENT_YEAR
+// Months outside this range (both before start AND after end) are disabled
+function getLoanMonthScope(item: BudgetItem): { start: number; end: number } | null {
+  if (!item.is_loan) return null
+  const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details
+  if (!ld?.start_date || !ld?.total_months) return null
+
+  const loanStart   = new Date(ld.start_date)
+  const totalM      = parseInt(ld.total_months)
+  const loanEndDate = new Date(loanStart)
+  loanEndDate.setMonth(loanEndDate.getMonth() + totalM - 1)
+
+  // If entire loan is outside current year → all months disabled
+  if (loanStart.getFullYear() > CURRENT_YEAR) return null
+  if (loanEndDate.getFullYear() < CURRENT_YEAR) return null
+
+  // Clamp to this year's bounds
+  const startM = loanStart.getFullYear() < CURRENT_YEAR ? 0 : loanStart.getMonth()
+  const endM   = loanEndDate.getFullYear() > CURRENT_YEAR ? 11 : loanEndDate.getMonth()
+
+  return { start: startM, end: endM }
+}
+
+// Can the current month's checkbox be toggled?
+function canToggleMonth(item: BudgetItem): { ok: boolean; reason: string } {
+  if (item.status === 'Suspended') return { ok: false, reason: 'Suspended' }
+
   if (item.is_loan) {
-    const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details
-    if (ld?.start_date && ld?.total_months) {
-      const loanStart = new Date(ld.start_date)
-      const totalM = parseInt(ld.total_months)
-      const loanEnd = new Date(loanStart)
-      loanEnd.setMonth(loanEnd.getMonth() + totalM - 1)
-
-      // If entire loan is outside current year, out of scope
-      if (loanStart.getFullYear() > CURRENT_YEAR) return { start: -1, end: -1 }
-      if (loanEnd.getFullYear() < CURRENT_YEAR) return { start: -1, end: -1 }
-
-      // Clamp to current year
-      const startM = loanStart.getFullYear() < CURRENT_YEAR ? 0 : loanStart.getMonth()
-      const endM   = loanEnd.getFullYear()   > CURRENT_YEAR ? 11 : loanEnd.getMonth()
-      return { start: startM, end: endM }
-    }
+    const scope = getLoanMonthScope(item)
+    if (!scope) return { ok: false, reason: 'Loan outside this year' }
+    if (CURRENT_MONTH < scope.start) return { ok: false, reason: 'Payment period not started yet' }
+    if (CURRENT_MONTH > scope.end)   return { ok: false, reason: 'Loan completed — tap 🔄 to extend' }
+    return { ok: true, reason: '' }
   }
-  // Regular expense — scope starts from creation month
+
+  // Regular expense — scope from creation month
   if (item.created_at) {
     const created = new Date(item.created_at)
-    if (created.getFullYear() === CURRENT_YEAR) return { start: created.getMonth(), end: CURRENT_MONTH }
-    if (created.getFullYear() < CURRENT_YEAR)   return { start: 0, end: CURRENT_MONTH }
+    if (created.getFullYear() === CURRENT_YEAR && created.getMonth() > CURRENT_MONTH) {
+      return { ok: false, reason: 'Added in a future month' }
+    }
   }
-  return { start: CURRENT_MONTH, end: CURRENT_MONTH }
+  return { ok: true, reason: '' }
 }
 
 export default function BudgetPage() {
@@ -87,28 +94,27 @@ export default function BudgetPage() {
   const [showHistory,    setShowHistory]    = useState(true)
   const [logs,           setLogs]           = useState<TransactionLog[]>([])
   const [banks,          setBanks]          = useState<Record<string, string>>({})
-  const [deleteItem,     setDeleteItem]     = useState<BudgetItem | null>(null)
-  // Savings checkbox state
-  const [savingsChecked, setSavingsChecked] = useState<Record<string, boolean>>({})
-  const [savingsSaving,  setSavingsSaving]  = useState<string | null>(null)
-  const [currentSavings, setCurrentSavings] = useState<MonthlySavings | null>(null)
+  const [extendLoan,     setExtendLoan]     = useState<BudgetItem | null>(null)
+  const [savingsCheck,   setSavingsCheck]   = useState(false)
+  const [savingsSaving,  setSavingsSaving]  = useState(false)
+  // Confirm modal state
+  const [confirmOpen,    setConfirmOpen]    = useState(false)
+  const [confirmItem,    setConfirmItem]    = useState<BudgetItem | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     setUserId(user.id)
-    const [itemRes, payRes, settRes, logRes, bankRes, savRes] = await Promise.all([
+    const [itemRes, payRes, settRes, logRes, bankRes] = await Promise.all([
       supabase.from('budget_items').select('*, loan_details(*)').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
       supabase.from('monthly_payments').select('*').eq('user_id', user.id).eq('year', CURRENT_YEAR),
       supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
       supabase.from('transaction_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
       supabase.from('bank_accounts').select('id, name').eq('user_id', user.id).eq('is_active', true),
-      supabase.from('monthly_savings').select('*').eq('user_id', user.id).eq('year', CURRENT_YEAR).eq('month', CURRENT_MONTH_1).single(),
     ])
     setItems(itemRes.data || [])
     setSettings(settRes.data)
     setLogs(logRes.data || [])
-    setCurrentSavings(savRes.data || null)
     const bmap: Record<string, string> = {}
     for (const b of (bankRes.data || [])) bmap[b.id] = b.name
     setBanks(bmap)
@@ -118,14 +124,18 @@ export default function BudgetPage() {
       map[p.budget_item_id][p.month] = p.paid
     }
     setPayments(map)
-
-    // Init savings checkboxes based on existing savings data
-    const sc: Record<string, boolean> = {}
-    if (savRes.data) {
-      sc['kinsenas'] = savRes.data.kinsenas > 0
-      sc['atrenta']  = savRes.data.atrenta > 0
+    // Savings check state
+    const savGoal = settRes.data?.savings_goal || 0
+    if (savGoal) {
+      const { data: savData } = await supabase
+        .from('monthly_savings').select('*')
+        .eq('user_id', user.id).eq('year', CURRENT_YEAR).eq('month', CURRENT_MONTH_1)
+        .maybeSingle()
+      if (savData) {
+        const isCutoff1st = new Date().getDate() <= 15
+        setSavingsCheck(isCutoff1st ? (savData.kinsenas || 0) >= savGoal : (savData.atrenta || 0) >= savGoal)
+      } else { setSavingsCheck(false) }
     }
-    setSavingsChecked(sc)
     setLoading(false)
   }, [])
 
@@ -162,42 +172,41 @@ export default function BudgetPage() {
     setLogs(data || [])
   }
 
-  async function toggleSavings(which: 'kinsenas' | 'atrenta') {
-    if (!userId) return
-    setSavingsSaving(which)
-    const goal = settings?.savings_goal || 0
-    const newVal = !savingsChecked[which]
-    setSavingsChecked(prev => ({ ...prev, [which]: newVal }))
-
-    const existing = currentSavings
-    const kinsenas = which === 'kinsenas' ? (newVal ? goal : 0) : (currentSavings?.kinsenas ?? 0)
-    const atrenta  = which === 'atrenta'  ? (newVal ? goal : 0) : (currentSavings?.atrenta  ?? 0)
-
-    const payload = { user_id: userId, year: CURRENT_YEAR, month: CURRENT_MONTH_1, kinsenas, atrenta, notes: currentSavings?.notes || '' }
-
-    if (!existing || existing.id?.startsWith('temp')) {
-      const { data } = await supabase.from('monthly_savings').insert(payload).select().single()
-      if (data) setCurrentSavings(data)
-    } else {
-      await supabase.from('monthly_savings').update({ kinsenas, atrenta }).eq('id', existing.id)
-      setCurrentSavings(prev => prev ? { ...prev, kinsenas, atrenta } : prev)
-    }
-    setSavingsSaving(null)
+  function askDeleteItem(item: BudgetItem) {
+    setConfirmItem(item)
+    setConfirmOpen(true)
   }
 
-  async function doDeleteItem(id: string) {
-    const item = items.find(i => i.id === id)
-    await supabase.from('budget_items').update({ is_active: false }).eq('id', id)
-    setItems(prev => prev.filter(i => i.id !== id))
-    if (item) await logAction('delete', item)
-    setDeleteItem(null)
+  async function doDeleteItem() {
+    if (!confirmItem) return
+    const item = confirmItem
+    setConfirmOpen(false)
+    setConfirmItem(null)
+    await supabase.from('budget_items').update({ is_active: false }).eq('id', item.id)
+    setItems(prev => prev.filter(i => i.id !== item.id))
+    await logAction('delete', item)
+  }
+
+  async function toggleSavingsGoal() {
+    if (!userId || savingsSaving) return
+    const goal = settings?.savings_goal || 0
+    if (!goal) return
+    setSavingsSaving(true)
+    const isCutoff1st = new Date().getDate() <= 15
+    const newCheck = !savingsCheck
+    setSavingsCheck(newCheck)
+    const fieldKey = isCutoff1st ? 'kinsenas' : 'atrenta'
+    const payload: any = {
+      user_id: userId, year: CURRENT_YEAR, month: CURRENT_MONTH_1,
+      [fieldKey]: newCheck ? goal : 0,
+    }
+    await supabase.from('monthly_savings').upsert(payload, { onConflict: 'user_id,year,month' })
+    setSavingsSaving(false)
   }
 
   const cutoffItems   = items.filter(i => i.cutoff === activeTab)
   const expenseItems  = cutoffItems.filter(i => !i.is_loan)
   const loanItems     = cutoffItems.filter(i => i.is_loan)
-  const allItems      = [...expenseItems, ...loanItems]
-
   const salary        = activeTab === '1st' ? (settings?.first_cutoff_salary || 0) : (settings?.second_cutoff_salary || 0)
   const extraIncome   = activeTab === '1st' ? (settings?.extra_income_1st || 0) : (settings?.extra_income_2nd || 0)
   const totalIncome   = salary + extraIncome
@@ -211,45 +220,51 @@ export default function BudgetPage() {
   )
 
   function ItemRow({ item }: { item: BudgetItem }) {
-    const isPaidThisMonth = payments[item.id]?.[CURRENT_MONTH_1] ?? false
-    const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category)
+    const isPaid      = payments[item.id]?.[CURRENT_MONTH_1] ?? false
+    const catInfo     = EXPENSE_CATEGORIES.find(c => c.value === item.category)
+    const { ok: canToggle, reason: disabledReason } = canToggleMonth(item)
+
+    // Determine display status label
+    const loanScope  = getLoanMonthScope(item)
+    const loanDone   = item.is_loan && loanScope !== null && CURRENT_MONTH > loanScope.end
+    const loanNotYet = item.is_loan && loanScope !== null && CURRENT_MONTH < loanScope.start
     const isSuspended = item.status === 'Suspended'
-    const scope = getItemScope(item)
-    const isCurrentMonthInScope = CURRENT_MONTH >= scope.start && CURRENT_MONTH <= scope.end
-    const canToggle = !isSuspended && isCurrentMonthInScope
 
     return (
-      <tr style={{ borderBottom: '1px solid var(--border)', background: isPaidThisMonth ? 'var(--green-50)' : 'transparent' }}>
+      <tr style={{ borderBottom: '1px solid var(--border)', background: isPaid ? 'var(--green-50)' : 'transparent' }}>
         {/* Checkbox */}
-        <td className="pl-4 pr-2 py-3" style={{ width: 40 }}>
+        <td className="px-3 py-2.5" style={{ width: 44 }}>
           <button
             onClick={() => canToggle && toggleCurrentMonth(item)}
             disabled={!canToggle}
-            title={!canToggle ? (isSuspended ? 'Suspended' : 'Outside payment period') : isPaidThisMonth ? 'Mark unpaid' : 'Mark paid'}
-            className="w-6 h-6 rounded-md flex items-center justify-center transition-all"
+            title={!canToggle ? disabledReason : isPaid ? 'Mark unpaid' : 'Mark paid'}
+            className="w-6 h-6 rounded-md flex items-center justify-center mx-auto transition-all"
             style={{
-              background: isPaidThisMonth ? 'var(--green-400)' : 'white',
-              border: `2px solid ${isPaidThisMonth ? 'var(--green-400)' : canToggle ? 'var(--border-strong)' : 'var(--border)'}`,
+              background: isPaid ? 'var(--green-400)' : 'white',
+              border: `2px solid ${isPaid ? 'var(--green-400)' : canToggle ? 'var(--border-strong)' : 'var(--border)'}`,
               cursor: canToggle ? 'pointer' : 'not-allowed',
-              opacity: canToggle ? 1 : 0.3,
+              opacity: canToggle ? 1 : 0.28,
             }}>
-            {isPaidThisMonth && <Check size={11} className="text-white" />}
+            {isPaid && <Check size={11} className="text-white" />}
           </button>
         </td>
 
-        {/* Name + bank */}
-        <td className="px-2 py-3">
-          <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Name */}
+        <td className="px-2 py-2.5" style={{ minWidth: 100 }}>
+          <div className="flex items-center gap-1 flex-wrap">
             {item.is_loan && (
-              <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded font-bold shrink-0"
-                style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', fontSize: 9 }}>
-                <CreditCard size={8} /> LOAN
-              </span>
+              <span style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4 }}>LOAN</span>
             )}
-            <span className="font-semibold text-sm"
-              style={{ color: isPaidThisMonth ? 'var(--text-muted)' : 'var(--text-primary)', textDecoration: isPaidThisMonth ? 'line-through' : 'none' }}>
-              {item.name}
-            </span>
+            {loanDone && (
+              <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4 }}>DONE</span>
+            )}
+            {loanNotYet && (
+              <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4 }}>PENDING</span>
+            )}
+            <p className="font-semibold text-sm" style={{
+              color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)',
+              textDecoration: isPaid ? 'line-through' : 'none',
+            }}>{item.name}</p>
           </div>
           {item.bank_account_id && banks[item.bank_account_id] && (
             <p className="text-xs" style={{ color: 'var(--text-faint)' }}>via {banks[item.bank_account_id]}</p>
@@ -257,35 +272,53 @@ export default function BudgetPage() {
         </td>
 
         {/* Amount */}
-        <td className="px-2 py-3 text-right">
-          <span className="font-mono font-bold text-sm" style={{ color: isPaidThisMonth ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+        <td className="px-2 py-2.5 text-right whitespace-nowrap">
+          <p className="font-mono font-bold text-sm" style={{ color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)' }}>
             {formatCurrency(item.amount)}
-          </span>
+          </p>
         </td>
 
-        {/* Status badge */}
-        <td className="px-2 py-3 hidden sm:table-cell">
-          {isPaidThisMonth ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>Paid ✓</span>
+        {/* Category — hidden on mobile */}
+        <td className="px-2 py-2.5 hidden sm:table-cell">
+          {catInfo && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+              style={{ background: `${catInfo.color}18`, color: catInfo.color, border: `1px solid ${catInfo.color}40` }}>
+              {catInfo.label.split(' ')[0]}
+            </span>
+          )}
+        </td>
+
+        {/* Status */}
+        <td className="px-2 py-2.5">
+          {isPaid ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>Paid ✓</span>
+          ) : loanDone ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Done</span>
+          ) : loanNotYet ? (
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Pending</span>
           ) : isSuspended ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Suspended</span>
-          ) : !isCurrentMonthInScope && scope.start !== -1 ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Inactive</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Suspended</span>
           ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>Unpaid</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>Unpaid</span>
           )}
         </td>
 
         {/* Actions */}
-        <td className="px-2 pr-4 py-3">
-          <div className="flex gap-1.5 justify-end">
+        <td className="px-2 py-2.5">
+          <div className="flex gap-1 justify-end flex-wrap">
+            {item.is_loan && (
+              <button onClick={() => setExtendLoan(item)} title="Extend loan"
+                className="p-1.5 rounded-lg" style={{ background: '#dcfce7', color: '#15803d' }}>
+                <RefreshCw size={12} />
+              </button>
+            )}
             <button onClick={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }}
               className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-              <Edit2 size={13} />
+              <Edit2 size={12} />
             </button>
-            <button onClick={() => setDeleteItem(item)}
+            <button onClick={() => askDeleteItem(item)}
               className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}>
-              <Trash2 size={13} />
+              <Trash2 size={12} />
             </button>
           </div>
         </td>
@@ -293,24 +326,64 @@ export default function BudgetPage() {
     )
   }
 
+  // Yearly payment history — per-month cell disabled state using exact loan scope
+  function YearlyCell({ item, monthIdx, paid }: { item: BudgetItem; monthIdx: number; paid: boolean }) {
+    const isCurrent = monthIdx === CURRENT_MONTH
+    const isFuture  = monthIdx > CURRENT_MONTH
+
+    if (item.is_loan) {
+      const scope = getLoanMonthScope(item)
+      // Month outside loan range → disabled (grey, faded)
+      const outsideScope = !scope || monthIdx < scope.start || monthIdx > scope.end
+      if (outsideScope) {
+        return (
+          <td className="text-center" style={{ padding: '3px 1px' }}>
+            <div className="w-5 h-5 mx-auto rounded"
+              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.18 }} />
+          </td>
+        )
+      }
+    }
+
+    const isOverdue = !isFuture && !paid && monthIdx < CURRENT_MONTH
+
+    return (
+      <td className="text-center" style={{ padding: '3px 1px' }}>
+        <div className="w-5 h-5 mx-auto flex items-center justify-center rounded"
+          style={{
+            background: paid ? 'var(--green-100)' : isOverdue ? '#fee2e2' : isCurrent ? 'var(--green-50)' : 'transparent',
+            border: `1.5px solid ${paid ? 'var(--green-300)' : isOverdue ? '#fca5a5' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
+            opacity: isFuture ? 0.3 : 1,
+          }}>
+          {paid
+            ? <Check size={8} style={{ color: 'var(--green-600)' }} />
+            : isOverdue
+            ? <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />
+            : <span className="w-1 h-1 rounded-full" style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
+          }
+        </div>
+      </td>
+    )
+  }
+
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Budget Tracker</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{CURRENT_YEAR}</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Budget Tracker</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{CURRENT_YEAR}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowSalary(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
             style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid var(--border)' }}>
-            <Settings size={15} /> Salary
+            <Settings size={14} /> Salary
           </button>
           <button onClick={() => { setEditCutoff(activeTab); setEditItem(null); setShowAdd(true) }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-white transition"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold text-white"
             style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
-            <Plus size={15} /> Add Expense
+            <Plus size={14} /> Add
           </button>
         </div>
       </div>
@@ -326,107 +399,115 @@ export default function BudgetPage() {
               border: activeTab === c ? '1.5px solid var(--green-300)' : '1.5px solid transparent',
               boxShadow: activeTab === c ? '0 1px 4px rgba(13,40,24,0.08)' : 'none',
             }}>
-            {c === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'}
+            {c === '1st' ? '1st (15th)' : '2nd (30th)'}
           </button>
         ))}
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: 'Total Income',  value: totalIncome,   color: 'var(--green-600)', sub: extraIncome > 0 ? `+${formatCurrency(extraIncome)} extra` : '' },
+          { label: 'Income',        value: totalIncome,   color: 'var(--green-600)', sub: extraIncome > 0 ? `+${formatCurrency(extraIncome)} extra` : '' },
           { label: 'Expenses',      value: totalExpenses, color: 'var(--red-500)',   sub: `${cutoffItems.length} items` },
           { label: 'Remaining',     value: remaining,     color: remaining   >= 0 ? 'var(--amber-500)' : 'var(--red-500)', sub: 'before savings' },
           { label: 'After Savings', value: afterSavings,  color: afterSavings >= 0 ? 'var(--green-500)' : 'var(--red-500)', sub: `goal: ${formatCurrency(savingsGoal)}` },
         ].map(s => (
-          <div key={s.label} className="glass-card p-4">
+          <div key={s.label} className="glass-card p-3">
             <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
-            <p className="text-lg font-bold mt-1 font-mono" style={{ color: s.color }}>{formatCurrency(s.value)}</p>
+            <p className="text-base font-bold mt-1 font-mono" style={{ color: s.color }}>{formatCurrency(s.value)}</p>
             {s.sub && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{s.sub}</p>}
           </div>
         ))}
       </div>
 
-      {/* Savings checkbox card */}
-      <div className="glass-card p-4" style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <PiggyBank size={16} style={{ color: 'var(--green-500)' }} />
-          <p className="font-bold text-sm" style={{ color: 'var(--green-800)' }}>
-            Savings Goal — {formatCurrency(savingsGoal)} per cutoff
+      {/* Savings Goal Row with Checkbox */}
+      <div className="glass-card p-3 flex items-center gap-3" style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
+        <button
+          onClick={toggleSavingsGoal}
+          disabled={savingsSaving || !savingsGoal}
+          title={savingsGoal ? (savingsCheck ? 'Unmark savings' : 'Mark savings as added') : 'Set savings goal first'}
+          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all"
+          style={{
+            background: savingsCheck ? 'var(--green-400)' : 'white',
+            border: `2px solid ${savingsCheck ? 'var(--green-400)' : savingsGoal ? 'var(--border-strong)' : 'var(--border)'}`,
+            cursor: savingsGoal ? 'pointer' : 'not-allowed',
+            opacity: savingsGoal ? 1 : 0.4,
+          }}>
+          {savingsCheck && <Check size={11} className="text-white" />}
+        </button>
+        <PiggyBank size={15} style={{ color: 'var(--green-500)' }} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+            Savings Goal: {formatCurrency(savingsGoal)}/cutoff
           </p>
-          <a href="/savings" className="ml-auto text-xs font-semibold underline" style={{ color: 'var(--green-600)' }}>
-            View Savings →
-          </a>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {savingsCheck ? '✓ Saved — reflected in ' : 'Check to log to '}
+            <a href="/savings" className="underline font-semibold" style={{ color: 'var(--green-600)' }}>Savings</a>
+          </p>
         </div>
-        <div className="flex gap-3">
-          {[
-            { key: 'kinsenas', label: '1st Cutoff (15th)' },
-            { key: 'atrenta',  label: '2nd Cutoff (30th)' },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => toggleSavings(key as 'kinsenas' | 'atrenta')}
-              disabled={savingsSaving === key}
-              className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl transition-all"
-              style={{
-                background: savingsChecked[key] ? 'var(--green-400)' : 'white',
-                border: `1.5px solid ${savingsChecked[key] ? 'var(--green-400)' : 'var(--border-strong)'}`,
-                cursor: 'pointer',
-              }}>
-              <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-                style={{ background: savingsChecked[key] ? 'white' : 'var(--bg-subtle)', border: `1.5px solid ${savingsChecked[key] ? 'var(--green-300)' : 'var(--border)'}` }}>
-                {savingsChecked[key] && <Check size={11} style={{ color: 'var(--green-500)' }} />}
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold" style={{ color: savingsChecked[key] ? 'white' : 'var(--text-primary)' }}>
-                  {savingsChecked[key] ? 'Saved!' : 'Mark Saved'}
-                </p>
-                <p className="text-xs" style={{ color: savingsChecked[key] ? 'rgba(255,255,255,0.8)' : 'var(--text-faint)', fontSize: 10 }}>
-                  {label}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-          Checking these will record {formatCurrency(savingsGoal)} in your Savings page for this month.
-        </p>
+        <span className="font-bold font-mono text-sm shrink-0" style={{ color: afterSavings >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
+          {formatCurrency(afterSavings)}
+        </span>
       </div>
 
-      {/* ═══ Combined Expenses + Loans Table ═══ */}
+      {/* ═══ Unified Expenses + Loans Table ═══ */}
       <div className="glass-card overflow-hidden">
-        <div className="px-4 py-3 border-b flex items-center justify-between"
-          style={{ background: 'var(--bg-subtle)', borderColor: 'var(--border)' }}>
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
-              Expenses & Loans
-            </p>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
-              {allItems.length}
+        <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2"
+          style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+              Expenses
+              <span className="ml-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
+                {expenseItems.length}
+              </span>
             </span>
+            {loanItems.length > 0 && (
+              <span className="font-bold text-sm" style={{ color: '#5b21b6' }}>
+                + Loans
+                <span className="ml-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                  {loanItems.length}
+                </span>
+              </span>
+            )}
           </div>
-          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>☑ = paid this month</p>
+          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>☑ = paid this month</span>
         </div>
 
-        {allItems.length === 0 ? (
-          <p className="text-center py-10 text-sm" style={{ color: 'var(--text-faint)' }}>
-            No items yet. Tap "Add Expense".
-          </p>
+        {cutoffItems.length === 0 ? (
+          <p className="text-center py-10 text-sm" style={{ color: 'var(--text-faint)' }}>No items yet. Tap &quot;Add&quot;.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" style={{ minWidth: 360 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
-                  <th style={{ width: 40 }} />
-                  <th className="px-2 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Name</th>
-                  <th className="px-2 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Amount</th>
-                  <th className="px-2 py-2 text-left text-xs font-semibold hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Status</th>
-                  <th className="px-2 py-2 text-right text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Actions</th>
+                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ width: 44 }} />
+                  <th className="text-left px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Item</th>
+                  <th className="text-right px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Amount</th>
+                  <th className="text-left px-2 py-2 text-xs font-semibold hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Category</th>
+                  <th className="text-left px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Status</th>
+                  <th className="text-right px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {allItems.map(item => <ItemRow key={item.id} item={item} />)}
+                {expenseItems.length > 0 && (
+                  <tr style={{ background: 'var(--green-50)' }}>
+                    <td colSpan={6} className="px-3 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
+                      <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--green-700)' }}>EXPENSES</span>
+                    </td>
+                  </tr>
+                )}
+                {expenseItems.map(item => <ItemRow key={item.id} item={item} />)}
+                {loanItems.length > 0 && (
+                  <tr style={{ background: '#f5f3ff' }}>
+                    <td colSpan={6} className="px-3 py-1" style={{ borderBottom: '1px solid var(--border)', borderTop: '2px solid var(--border)' }}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold tracking-wide" style={{ color: '#5b21b6' }}>LOANS</span>
+                        <a href="/loans" className="text-xs font-semibold" style={{ color: '#7c3aed' }}>Manage →</a>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {loanItems.map(item => <ItemRow key={item.id} item={item} />)}
               </tbody>
             </table>
           </div>
@@ -452,37 +533,25 @@ export default function BudgetPage() {
       {/* ═══ Payment History (yearly) ═══ */}
       <div className="glass-card overflow-hidden">
         <button onClick={() => setShowYearly(!showYearly)}
-          className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3"
           style={{ borderBottom: showYearly ? '1.5px solid var(--border)' : 'none', background: showYearly ? 'var(--green-50)' : 'var(--bg-surface)' }}>
-          <div className="flex items-center gap-2.5">
-            <Calendar size={16} style={{ color: 'var(--green-500)' }} />
-            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
-              Payment History — {CURRENT_YEAR}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-              style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
-              {items.length} items
-            </span>
+          <div className="flex items-center gap-2">
+            <Calendar size={14} style={{ color: 'var(--green-500)' }} />
+            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Payment History — {CURRENT_YEAR}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>{items.length}</span>
           </div>
-          {showYearly ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+          {showYearly ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
         </button>
-
         {showYearly && (
           <div className="overflow-x-auto">
             <table className="w-full" style={{ fontSize: 12 }}>
               <thead>
                 <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-                  <th className="text-left px-4 py-2.5 font-semibold sticky left-0 z-10"
-                    style={{ color: 'var(--text-muted)', minWidth: 130, background: 'var(--bg-subtle)' }}>
-                    Payment
-                  </th>
+                  <th className="text-left px-3 py-2 font-semibold sticky left-0 z-10"
+                    style={{ color: 'var(--text-muted)', minWidth: 100, background: 'var(--bg-subtle)' }}>Item</th>
                   {MONTHS_SHORT.map((m, i) => (
-                    <th key={m} className="text-center py-2.5 font-semibold"
-                      style={{
-                        color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)',
-                        fontWeight: i === CURRENT_MONTH ? 800 : 600,
-                        width: 34, minWidth: 34,
-                      }}>
+                    <th key={m} className="text-center py-2 font-semibold"
+                      style={{ color: i === CURRENT_MONTH ? 'var(--green-600)' : i > CURRENT_MONTH ? 'var(--border-strong)' : 'var(--text-faint)', fontWeight: i === CURRENT_MONTH ? 800 : 600, width: 30, minWidth: 30 }}>
                       {m.slice(0,1)}
                     </th>
                   ))}
@@ -494,53 +563,19 @@ export default function BudgetPage() {
                 )}
                 {items.map((item, idx) => {
                   const monthPaid = Array.from({ length: 12 }, (_, i) => payments[item.id]?.[i + 1] ?? false)
-                  const scope = getItemScope(item)
                   const rowBg = idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-subtle)'
-
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
-                      <td className="px-4 py-2 sticky left-0 z-10" style={{ background: rowBg }}>
+                      <td className="px-3 py-2 sticky left-0 z-10" style={{ background: rowBg }}>
                         <div className="flex items-center gap-1">
-                          {item.is_loan && (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 4px', borderRadius: 4 }}>
-                              LOAN
-                            </span>
-                          )}
-                          <span className="font-semibold truncate" style={{ color: 'var(--text-primary)', maxWidth: 90 }}>
-                            {item.name}
-                          </span>
+                          {item.is_loan && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 4px', borderRadius: 4 }}>LOAN</span>}
+                          <span className="font-semibold truncate" style={{ color: 'var(--text-primary)', maxWidth: 75 }}>{item.name}</span>
                         </div>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{item.cutoff}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-faint)' }}>{item.cutoff}</p>
                       </td>
-                      {monthPaid.map((paid, i) => {
-                        // Months outside the loan's scope are disabled
-                        const inScope    = scope.start !== -1 && i >= scope.start && i <= scope.end
-                        const isFuture   = i > CURRENT_MONTH
-                        const isDisabled = !inScope
-                        const isOverdue  = inScope && !paid && i < CURRENT_MONTH
-
-                        return (
-                          <td key={i} className="text-center" style={{ padding: '5px 2px' }}>
-                            {isDisabled ? (
-                              <div className="w-6 h-6 mx-auto rounded" style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.2 }} />
-                            ) : (
-                              <div className="w-6 h-6 mx-auto flex items-center justify-center rounded"
-                                style={{
-                                  background: paid ? 'var(--green-100)' : isOverdue ? '#fee2e2' : i === CURRENT_MONTH ? 'var(--green-50)' : 'transparent',
-                                  border: `1.5px solid ${paid ? 'var(--green-300)' : isOverdue ? '#fca5a5' : i === CURRENT_MONTH ? 'var(--green-200)' : 'var(--border)'}`,
-                                  opacity: isFuture ? 0.3 : 1,
-                                }}>
-                                {paid
-                                  ? <Check size={9} style={{ color: 'var(--green-600)' }} />
-                                  : isOverdue
-                                  ? <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />
-                                  : <span className="w-1 h-1 rounded-full" style={{ background: i === CURRENT_MONTH ? 'var(--green-400)' : 'var(--border-strong)' }} />
-                                }
-                              </div>
-                            )}
-                          </td>
-                        )
-                      })}
+                      {monthPaid.map((paid, i) => (
+                        <YearlyCell key={i} item={item} monthIdx={i} paid={paid} />
+                      ))}
                     </tr>
                   )
                 })}
@@ -553,26 +588,22 @@ export default function BudgetPage() {
       {/* ═══ History Log ═══ */}
       <div className="glass-card overflow-hidden">
         <button onClick={() => setShowHistory(!showHistory)}
-          className="w-full flex items-center justify-between px-5 py-4 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3"
           style={{ borderBottom: showHistory ? '1.5px solid var(--border)' : 'none', background: showHistory ? 'var(--green-50)' : 'var(--bg-surface)' }}>
-          <div className="flex items-center gap-2.5">
-            <History size={16} style={{ color: 'var(--green-500)' }} />
+          <div className="flex items-center gap-2">
+            <History size={14} style={{ color: 'var(--green-500)' }} />
             <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Transaction History</span>
             {logs.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
-                {logs.length}
-              </span>
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>{logs.length}</span>
             )}
           </div>
-          {showHistory ? <ChevronUp size={15} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={15} style={{ color: 'var(--text-muted)' }} />}
+          {showHistory ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
         </button>
-
         {showHistory && (
           <div>
             {logs.length === 0 ? (
-              <div className="py-12 text-center" style={{ color: 'var(--text-faint)' }}>
-                <Clock size={28} className="mx-auto mb-2 opacity-30" />
+              <div className="py-10 text-center" style={{ color: 'var(--text-faint)' }}>
+                <Clock size={22} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No activity yet.</p>
               </div>
             ) : (
@@ -582,7 +613,7 @@ export default function BudgetPage() {
                   const catInfo = EXPENSE_CATEGORIES.find(c => c.value === log.category)
                   return (
                     <div key={log.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
                         style={{ background: meta.color + '18', color: meta.color, border: `1.5px solid ${meta.color}30` }}>
                         {meta.icon}
                       </div>
@@ -591,14 +622,8 @@ export default function BudgetPage() {
                           <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{log.item_name}</span>
                           {catInfo && (
                             <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0"
-                              style={{ background: `${catInfo.color}18`, color: catInfo.color, fontSize: 10, fontWeight: 700 }}>
+                              style={{ background: `${catInfo.color}18`, color: catInfo.color, fontSize: 9, fontWeight: 700 }}>
                               {catInfo.label.split(' ')[0]}
-                            </span>
-                          )}
-                          {log.payment_method && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0"
-                              style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 10, fontWeight: 700 }}>
-                              {log.payment_method}
                             </span>
                           )}
                         </div>
@@ -633,8 +658,7 @@ export default function BudgetPage() {
           editItem={editItem}
           onClose={() => { setShowAdd(false); setEditItem(null) }}
           onSave={async (savedItem?: BudgetItem) => {
-            setShowAdd(false)
-            setEditItem(null)
+            setShowAdd(false); setEditItem(null)
             await load()
             if (savedItem && userId) {
               const action = editItem ? 'edit' : 'add'
@@ -647,16 +671,21 @@ export default function BudgetPage() {
         />
       )}
       {showSalary && <EditSalaryModal settings={settings} onClose={() => setShowSalary(false)} onSave={s => { setSettings(s); setShowSalary(false) }} />}
-
-      {deleteItem && (
-        <ConfirmDialog
-          title="Delete Item"
-          message={`Remove "${deleteItem.name}" (${formatCurrency(deleteItem.amount)}/mo) from your budget? This cannot be undone.`}
-          confirmLabel="Delete"
-          onConfirm={() => doDeleteItem(deleteItem.id)}
-          onCancel={() => setDeleteItem(null)}
+      {extendLoan && (
+        <ExtendLoanModal
+          loan={extendLoan}
+          onClose={() => setExtendLoan(null)}
+          onSave={async () => { setExtendLoan(null); await load() }}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete Item"
+        message={`Remove "${confirmItem?.name}" from your budget? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={doDeleteItem}
+        onCancel={() => { setConfirmOpen(false); setConfirmItem(null) }}
+      />
     </div>
   )
 }
