@@ -411,117 +411,118 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     </div>
 
     {/* ── Previous Months Confirmation Modal ── */}
-    {showPrevMonthConfirm && (() => {
-      const start = new Date(startDate)
-      const now = new Date()
-      const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
-      const monthLabels: string[] = []
-      for (let i = 0; i < elapsed; i++) {
-        const d = new Date(startDate)
-        d.setMonth(d.getMonth() + i)
-        monthLabels.push(d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' }))
-      }
-      return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center modal-overlay p-4">
-          <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
-            style={{ background: 'var(--bg-surface)', border: '1.5px solid #93c5fd', boxShadow: '0 8px 32px rgba(13,40,24,0.20)' }}>
-            {/* Header */}
-            <div className="px-5 py-4 border-b" style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
-              <div className="flex items-center gap-2.5 mb-1">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#dbeafe' }}>
-                  <CreditCard size={16} style={{ color: '#2563eb' }} />
-                </div>
-                <h3 className="font-bold text-sm" style={{ color: '#1e3a5f' }}>Previous Months Passed</h3>
-              </div>
-              <p className="text-xs" style={{ color: '#3b82f6' }}>
-                This loan started <strong>{elapsed} month{elapsed !== 1 ? 's' : ''} ago</strong>. Were those already paid?
-              </p>
-            </div>
-            {/* Body */}
-            <div className="px-5 py-4">
-              <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
-                Is the new loan already paid on the previous months passed?
-              </p>
-              {/* Month list */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {monthLabels.map(m => (
-                  <span key={m} className="text-xs px-2.5 py-1 rounded-full font-semibold"
-                    style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
-                    {m}
-                  </span>
-                ))}
-              </div>
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                Tap <strong>Yes</strong> to automatically mark the {elapsed} past month{elapsed !== 1 ? 's' : ''} as paid.
-                Tap <strong>No</strong> to save the loan without marking them.
-              </p>
-            </div>
-            {/* Actions */}
-            <div className="px-5 pb-5 flex gap-3">
-              <button
-                onClick={async () => {
-                  setShowPrevMonthConfirm(false)
-                  await doSave()
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-                style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
-                No, skip
-              </button>
-              <button
-                onClick={async () => {
-                  setShowPrevMonthConfirm(false)
-                  setSaving(true)
-                  const { data: { user } } = await supabase.auth.getUser()
-                  if (!user) { setSaving(false); return }
+    {showPrevMonthConfirm && <PrevMonthConfirmModal
+      startDate={startDate}
+      onNo={async () => { setShowPrevMonthConfirm(false); await doSave() }}
+      onYes={async () => {
+        setShowPrevMonthConfirm(false)
+        setSaving(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setSaving(false); return }
+        let maObj: Record<string, number> | null = null
+        if (computeMode === 'reducing' && allFilled) {
+          maObj = {}
+          monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
+        }
+        const payload: any = {
+          name, amount: parseFloat(amount), cutoff, status: computedStatus,
+          is_loan: true, category, bank_account_id: bankId || null
+        }
+        const { data: newItem } = await supabase.from('budget_items')
+          .insert({ user_id: user.id, ...payload }).select().single()
+        if (newItem) {
+          await supabase.from('loan_details').insert({
+            budget_item_id: newItem.id, user_id: user.id,
+            total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
+          })
+          const start = new Date(startDate)
+          const now = new Date()
+          const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+          const paymentUpserts: any[] = []
+          for (let i = 0; i < elapsed; i++) {
+            const d = new Date(startDate)
+            d.setMonth(d.getMonth() + i)
+            paymentUpserts.push({
+              budget_item_id: newItem.id,
+              user_id: user.id,
+              year: d.getFullYear(),
+              month: d.getMonth() + 1,
+              paid: true,
+              paid_at: new Date().toISOString(),
+            })
+          }
+          if (paymentUpserts.length > 0) {
+            await supabase.from('monthly_payments').upsert(paymentUpserts, { onConflict: 'budget_item_id,year,month' })
+          }
+        }
+        setSaving(false)
+        onSave()
+      }}
+    />}
+    </>
+  )
+}
 
-                  let maObj: Record<string, number> | null = null
-                  if (computeMode === 'reducing' && allFilled) {
-                    maObj = {}
-                    monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
-                  }
-                  const payload: any = {
-                    name, amount: parseFloat(amount), cutoff, status: computedStatus,
-                    is_loan: true, category, bank_account_id: bankId || null
-                  }
-                  const { data: newItem } = await supabase.from('budget_items')
-                    .insert({ user_id: user.id, ...payload }).select().single()
-                  if (newItem) {
-                    await supabase.from('loan_details').insert({
-                      budget_item_id: newItem.id, user_id: user.id,
-                      total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
-                    })
-                    // Mark past months as paid
-                    const start = new Date(startDate)
-                    const now = new Date()
-                    const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
-                    const paymentUpserts = []
-                    for (let i = 0; i < elapsed; i++) {
-                      const d = new Date(startDate)
-                      d.setMonth(d.getMonth() + i)
-                      paymentUpserts.push({
-                        budget_item_id: newItem.id,
-                        user_id: user.id,
-                        year: d.getFullYear(),
-                        month: d.getMonth() + 1,
-                        paid: true,
-                        paid_at: new Date().toISOString(),
-                      })
-                    }
-                    if (paymentUpserts.length > 0) {
-                      await supabase.from('monthly_payments').upsert(paymentUpserts, { onConflict: 'budget_item_id,year,month' })
-                    }
-                  }
-                  setSaving(false)
-                  onSave()
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition"
-                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
-                Yes, mark paid ✓
-              </button>
+function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; onNo: () => void; onYes: () => void }) {
+  const start = new Date(startDate)
+  const now = new Date()
+  const elapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()))
+  const monthLabels: string[] = []
+  for (let i = 0; i < elapsed; i++) {
+    const d = new Date(startDate)
+    d.setMonth(d.getMonth() + i)
+    monthLabels.push(d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' }))
+  }
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center modal-overlay p-4">
+      <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #93c5fd', boxShadow: '0 8px 32px rgba(13,40,24,0.20)' }}>
+        {/* Header */}
+        <div className="px-5 py-4 border-b" style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#dbeafe' }}>
+              <CreditCard size={16} style={{ color: '#2563eb' }} />
             </div>
+            <h3 className="font-bold text-sm" style={{ color: '#1e3a5f' }}>Previous Months Passed</h3>
           </div>
+          <p className="text-xs" style={{ color: '#3b82f6' }}>
+            This loan started <strong>{elapsed} month{elapsed !== 1 ? 's' : ''} ago</strong>. Were those already paid?
+          </p>
         </div>
-      )
-    })()}
+        {/* Body */}
+        <div className="px-5 py-4">
+          <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+            Is the new loan already paid on the previous months passed?
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {monthLabels.map(m => (
+              <span key={m} className="text-xs px-2.5 py-1 rounded-full font-semibold"
+                style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
+                {m}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
+            Tap <strong>Yes</strong> to automatically mark the {elapsed} past month{elapsed !== 1 ? 's' : ''} as paid.
+            Tap <strong>No</strong> to save the loan without marking them.
+          </p>
+        </div>
+        {/* Actions */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            onClick={onNo}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
+            No, skip
+          </button>
+          <button
+            onClick={onYes}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+            Yes, mark paid ✓
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
