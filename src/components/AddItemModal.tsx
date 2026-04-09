@@ -20,10 +20,18 @@ const labelStyle: React.CSSProperties = {
   fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6,
 }
 
+// Auto-detect which cutoff period we're currently in
+function getAutoCutoff(): Cutoff {
+  const d = new Date().getDate()
+  return d <= 15 ? '1st' : '2nd'
+}
+
 export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave }: Props) {
+  // If editing, keep the original cutoff. If adding new, auto-detect.
+  const autoCutoff = editItem ? editItem.cutoff : getAutoCutoff()
+
   const [name,     setName]     = useState(editItem?.name || '')
   const [amount,   setAmount]   = useState(editItem?.amount?.toString() || '')
-  const [cutoff,   setCutoff]   = useState<Cutoff>(editItem?.cutoff || defaultCutoff)
   const [category, setCategory] = useState(editItem?.category || 'Food')
   const [bankId,   setBankId]   = useState<string>(editItem?.bank_account_id || '')
   const [saving,   setSaving]   = useState(false)
@@ -37,7 +45,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     })
   }, [])
 
-  const selCat = EXPENSE_CATEGORIES.find(c => c.value === category)
+  const selCat  = EXPENSE_CATEGORIES.find(c => c.value === category)
   const selBank = banks.find(b => b.id === bankId)
 
   async function handleSave() {
@@ -49,8 +57,8 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     const payload: any = {
       name,
       amount: parseFloat(amount),
-      cutoff,
-      status: 'Once' as const,   // expenses are always one-time / paid
+      cutoff: autoCutoff,
+      status: 'Once' as const,
       is_loan: false,
       category,
       bank_account_id: bankId || null,
@@ -59,33 +67,32 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
     let savedItem: BudgetItem | undefined
 
     if (editItem) {
-      const { data: updated } = await supabase.from('budget_items').update(payload).eq('id', editItem.id).select().single()
+      const { data: updated } = await supabase.from('budget_items')
+        .update(payload).eq('id', editItem.id).select().single()
       savedItem = updated ?? undefined
     } else {
       const { data: newItem } = await supabase.from('budget_items')
         .insert({ user_id: user.id, ...payload }).select().single()
       savedItem = newItem ?? undefined
 
-      // Immediately deduct from bank when adding a new expense with a bank
+      // Immediately deduct from bank + mark current month paid
       if (newItem && bankId) {
         const amt = parseFloat(amount)
         await supabase.rpc('adjust_bank_balance', { p_id: bankId, p_delta: -amt })
-        // Also mark current month as paid automatically
         const now = new Date()
         await supabase.from('monthly_payments').upsert({
-          budget_item_id: newItem.id,
-          user_id: user.id,
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          paid: true,
-          paid_at: now.toISOString(),
+          budget_item_id: newItem.id, user_id: user.id,
+          year: now.getFullYear(), month: now.getMonth() + 1,
+          paid: true, paid_at: now.toISOString(),
         }, { onConflict: 'budget_item_id,year,month' })
       }
     }
 
     setSaving(false)
-    onSave(savedItem)
+    onSave(savedItem)  // parent will call onClose
   }
+
+  const cutoffLabel = autoCutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
@@ -105,7 +112,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
                 {editItem ? 'Edit Expense' : 'Add Paid Expense'}
               </h2>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Automatically marked as paid
+                Auto-assigned to <strong>{cutoffLabel}</strong>
               </p>
             </div>
           </div>
@@ -124,20 +131,11 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
               style={inputStyle} autoFocus />
           </div>
 
-          {/* Amount & Cutoff */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label style={labelStyle}>Amount *</label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-                placeholder="0.00" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Cutoff</label>
-              <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} style={inputStyle}>
-                <option value="1st">1st Cutoff (15th)</option>
-                <option value="2nd">2nd Cutoff (30th)</option>
-              </select>
-            </div>
+          {/* Amount */}
+          <div>
+            <label style={labelStyle}>Amount *</label>
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+              placeholder="0.00" style={inputStyle} />
           </div>
 
           {/* Category */}
@@ -172,7 +170,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             {bankId && amount && (
               <div className="mt-2 p-3 rounded-xl flex items-center gap-2"
                 style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
-                <span style={{ fontSize: 16 }}>💸</span>
+                <span style={{ fontSize: 15 }}>💸</span>
                 <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
                   ₱{parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })} will be
                   deducted from <strong>{selBank?.name}</strong> immediately
@@ -181,12 +179,12 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             )}
           </div>
 
-          {/* Status badge — display only */}
+          {/* Auto paid badge */}
           <div className="flex items-center gap-2 p-3 rounded-xl"
             style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
             <Check size={14} style={{ color: '#15803d' }} />
             <p className="text-sm font-semibold" style={{ color: '#15803d' }}>
-              Paid Expense — will be recorded as paid this month
+              Paid Expense — recorded as paid for {cutoffLabel}
             </p>
           </div>
 
