@@ -231,26 +231,26 @@ export default function BudgetPage() {
     const isSuspended = item.status === 'Suspended'
 
     return (
-      <tr style={{ borderBottom: '1px solid var(--border)', background: isPaid ? 'var(--green-50)' : 'transparent' }}>
+      <div style={{ borderBottom: '1px solid var(--border)', background: isPaid ? 'var(--green-50)' : 'transparent' }}
+        className="px-3 py-2.5 flex items-start gap-2.5 flex-wrap">
         {/* Checkbox */}
-        <td className="px-3 py-2.5" style={{ width: 44 }}>
-          <button
-            onClick={() => canToggle && toggleCurrentMonth(item)}
-            disabled={!canToggle}
-            title={!canToggle ? disabledReason : isPaid ? 'Mark unpaid' : 'Mark paid'}
-            className="w-6 h-6 rounded-md flex items-center justify-center mx-auto transition-all"
-            style={{
-              background: isPaid ? 'var(--green-400)' : 'white',
-              border: `2px solid ${isPaid ? 'var(--green-400)' : canToggle ? 'var(--border-strong)' : 'var(--border)'}`,
-              cursor: canToggle ? 'pointer' : 'not-allowed',
-              opacity: canToggle ? 1 : 0.28,
-            }}>
-            {isPaid && <Check size={11} className="text-white" />}
-          </button>
-        </td>
+        <button
+          onClick={() => canToggle && toggleCurrentMonth(item)}
+          disabled={!canToggle}
+          title={!canToggle ? disabledReason : isPaid ? 'Mark unpaid' : 'Mark paid'}
+          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 transition-all"
+          style={{
+            background: isPaid ? 'var(--green-400)' : 'white',
+            border: `2px solid ${isPaid ? 'var(--green-400)' : canToggle ? 'var(--border-strong)' : 'var(--border)'}`,
+            cursor: canToggle ? 'pointer' : 'not-allowed',
+            opacity: canToggle ? 1 : 0.28,
+          }}>
+          {isPaid && <Check size={11} className="text-white" />}
+        </button>
 
-        {/* Name */}
-        <td className="px-2 py-2.5" style={{ minWidth: 100 }}>
+        {/* Main content — grows */}
+        <div className="flex-1 min-w-0">
+          {/* Name + badges */}
           <div className="flex items-center gap-1 flex-wrap">
             {item.is_loan && (
               <span style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4 }}>LOAN</span>
@@ -266,63 +266,54 @@ export default function BudgetPage() {
               textDecoration: isPaid ? 'line-through' : 'none',
             }}>{item.name}</p>
           </div>
-          {item.bank_account_id && banks[item.bank_account_id] && (
-            <p className="text-xs" style={{ color: 'var(--text-faint)' }}>via {banks[item.bank_account_id]}</p>
-          )}
-        </td>
+          {/* Sub info row: category + status */}
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            {catInfo && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+                style={{ background: `${catInfo.color}18`, color: catInfo.color, border: `1px solid ${catInfo.color}40` }}>
+                {catInfo.label.split(' ')[0]}
+              </span>
+            )}
+            {isPaid ? (
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>Paid ✓</span>
+            ) : loanDone ? (
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Done</span>
+            ) : loanNotYet ? (
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Pending</span>
+            ) : isSuspended ? (
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Suspended</span>
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>Unpaid</span>
+            )}
+            {item.bank_account_id && banks[item.bank_account_id] && (
+              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>via {banks[item.bank_account_id]}</p>
+            )}
+          </div>
+        </div>
 
-        {/* Amount */}
-        <td className="px-2 py-2.5 text-right whitespace-nowrap">
-          <p className="font-mono font-bold text-sm" style={{ color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+        {/* Right side: amount + actions */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <p className="font-mono font-bold text-sm whitespace-nowrap" style={{ color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)' }}>
             {formatCurrency(item.amount)}
           </p>
-        </td>
-
-        {/* Category — hidden on mobile */}
-        <td className="px-2 py-2.5 hidden sm:table-cell">
-          {catInfo && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
-              style={{ background: `${catInfo.color}18`, color: catInfo.color, border: `1px solid ${catInfo.color}40` }}>
-              {catInfo.label.split(' ')[0]}
-            </span>
-          )}
-        </td>
-
-        {/* Status */}
-        <td className="px-2 py-2.5">
-          {isPaid ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>Paid ✓</span>
-          ) : loanDone ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Done</span>
-          ) : loanNotYet ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}>Pending</span>
-          ) : isSuspended ? (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>Suspended</span>
-          ) : (
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>Unpaid</span>
-          )}
-        </td>
-
-        {/* Actions */}
-        <td className="px-2 py-2.5">
-          <div className="flex gap-1 justify-end flex-wrap">
+          <div className="flex gap-1">
             {item.is_loan && (
               <button onClick={() => setExtendLoan(item)} title="Extend loan"
-                className="p-1.5 rounded-lg" style={{ background: '#dcfce7', color: '#15803d' }}>
+                className="p-1.5 rounded-lg" style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
                 <RefreshCw size={12} />
               </button>
             )}
             <button onClick={() => { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }}
-              className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+              className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
               <Edit2 size={12} />
             </button>
             <button onClick={() => askDeleteItem(item)}
-              className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+              className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>
               <Trash2 size={12} />
             </button>
           </div>
-        </td>
-      </tr>
+        </div>
+      </div>
     )
   }
 
@@ -476,40 +467,20 @@ export default function BudgetPage() {
         {cutoffItems.length === 0 ? (
           <p className="text-center py-10 text-sm" style={{ color: 'var(--text-faint)' }}>No items yet. Tap &quot;Add&quot;.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full" style={{ minWidth: 360 }}>
-              <thead>
-                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ width: 44 }} />
-                  <th className="text-left px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Item</th>
-                  <th className="text-right px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Amount</th>
-                  <th className="text-left px-2 py-2 text-xs font-semibold hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>Category</th>
-                  <th className="text-left px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Status</th>
-                  <th className="text-right px-2 py-2 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenseItems.length > 0 && (
-                  <tr style={{ background: 'var(--green-50)' }}>
-                    <td colSpan={6} className="px-3 py-1" style={{ borderBottom: '1px solid var(--border)' }}>
-                      <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--green-700)' }}>EXPENSES</span>
-                    </td>
-                  </tr>
-                )}
-                {expenseItems.map(item => <ItemRow key={item.id} item={item} />)}
-                {loanItems.length > 0 && (
-                  <tr style={{ background: '#f5f3ff' }}>
-                    <td colSpan={6} className="px-3 py-1" style={{ borderBottom: '1px solid var(--border)', borderTop: '2px solid var(--border)' }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold tracking-wide" style={{ color: '#5b21b6' }}>LOANS</span>
-                        <a href="/loans" className="text-xs font-semibold" style={{ color: '#7c3aed' }}>Manage →</a>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {loanItems.map(item => <ItemRow key={item.id} item={item} />)}
-              </tbody>
-            </table>
+          <div>
+            {expenseItems.length > 0 && (
+              <div className="px-3 py-1.5" style={{ background: 'var(--green-50)', borderBottom: '1px solid var(--border)' }}>
+                <span className="text-xs font-bold tracking-wide" style={{ color: 'var(--green-700)' }}>EXPENSES</span>
+              </div>
+            )}
+            {expenseItems.map(item => <ItemRow key={item.id} item={item} />)}
+            {loanItems.length > 0 && (
+              <div className="px-3 py-1.5 flex items-center justify-between" style={{ background: '#f5f3ff', borderBottom: '1px solid var(--border)', borderTop: '2px solid var(--border)' }}>
+                <span className="text-xs font-bold tracking-wide" style={{ color: '#5b21b6' }}>LOANS</span>
+                <a href="/loans" className="text-xs font-semibold" style={{ color: '#7c3aed' }}>Manage →</a>
+              </div>
+            )}
+            {loanItems.map(item => <ItemRow key={item.id} item={item} />)}
           </div>
         )}
       </div>
@@ -543,8 +514,8 @@ export default function BudgetPage() {
           {showYearly ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
         </button>
         {showYearly && (
-          <div className="overflow-x-auto">
-            <table className="w-full" style={{ fontSize: 12 }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table className="w-full" style={{ fontSize: 12, minWidth: 340 }}>
               <thead>
                 <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)' }}>
                   <th className="text-left px-3 py-2 font-semibold sticky left-0 z-10"

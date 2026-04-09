@@ -196,7 +196,7 @@ export default function DashboardPage() {
             </p>
           </div>
           {mainBank && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
               <div className="text-right">
                 <p className="text-2xl font-bold font-mono" style={{ color: '#2563eb' }}>
                   {formatCurrency(mainBank.balance)}
@@ -205,7 +205,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => { setSahodAmount((settings?.first_cutoff_salary || 0).toString()); setShowSahod(true) }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition w-full sm:w-auto justify-center"
                 style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 2px 8px #2563eb40' }}>
                 <Banknote size={16} />
                 May sahod na!
@@ -287,7 +287,7 @@ export default function DashboardPage() {
           {banks.map(bank => {
             const typeInfo = BANK_TYPES.find(t => t.value === bank.type)
             return (
-              <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl group"
+              <div key={bank.id} className="flex items-center justify-between p-3 rounded-xl"
                 style={{ background: 'var(--bg-subtle)', border: `1.5px solid ${bank.is_main_bank ? '#93c5fd' : 'var(--border)'}` }}>
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base"
@@ -311,11 +311,11 @@ export default function DashboardPage() {
                   <span className="font-bold font-mono" style={{ color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
                     {formatCurrency(bank.balance)}
                   </span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
                     <button onClick={() => { setEditBank(bank); setShowBankForm(true) }}
-                      className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8' }}><Edit2 size={12} /></button>
+                      className="p-1.5 rounded-lg" style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}><Edit2 size={12} /></button>
                     <button onClick={() => askDeleteBank(bank.id, bank.name)}
-                      className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c' }}><Trash2 size={12} /></button>
+                      className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}><Trash2 size={12} /></button>
                   </div>
                 </div>
               </div>

@@ -320,16 +320,16 @@ export default function LoansPage() {
                   <button
                     onClick={() => { setEditLoan(loan); setShowAdd(true) }}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                      background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                      background: '#DBEAFE', border: '1px solid #93C5FD', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     <Edit2 size={14} style={{ color: '#2563EB' }} />
                   </button>
                   <button
                     onClick={() => { setConfirmLoan(loan); setConfirmOpen(true) }}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
-                      background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                      background: '#FEE2E2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     <Trash2 size={14} style={{ color: '#EF4444' }} />
                   </button>
@@ -439,8 +439,8 @@ export default function LoansPage() {
             <p style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Year {CURRENT_YEAR} Overview</p>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Full-year payment status</p>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 340 }}>
               <thead>
                 <tr style={{ background: 'var(--bg-subtle)' }}>
                   <th style={{ textAlign: 'left', padding: '10px 16px', color: 'var(--text-muted)', fontWeight: 700, minWidth: 140, position: 'sticky', left: 0, background: 'var(--bg-subtle)' }}>Loan</th>
