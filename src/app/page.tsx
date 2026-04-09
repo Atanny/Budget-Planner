@@ -501,7 +501,9 @@ export default function DashboardPage() {
       />
     </div>
   )
-}({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
+}
+
+function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; onClose: () => void; onSave: (b: any) => void }) {
   const [name,      setName]      = useState(bank?.name      || '')
   const [type,      setType]      = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type || 'bank')
   const [balance,   setBalance]   = useState(bank?.balance?.toString() || '')
