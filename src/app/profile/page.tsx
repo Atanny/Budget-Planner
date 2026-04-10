@@ -41,20 +41,22 @@ export default function ProfilePage() {
       </div>
 
       {/* Avatar card */}
-      <div className="glass-card p-5 flex items-center gap-4"
-        style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
+      <div className="glass-card overflow-hidden" style={{ borderColor: '#060D38' }}>
+        <div className="p-5 flex items-center gap-4"
+          style={{ background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shrink-0"
-          style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+          style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.3)' }}>
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-base truncate" style={{ color: 'var(--text-primary)' }}>{user?.email || 'Guest User'}</p>
+          <p className="font-bold text-base truncate" style={{ color: 'white' }}>{user?.email || 'Guest User'}</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <CheckCircle2 size={13} style={{ color: 'var(--green-500)' }} />
-            <p className="text-xs font-semibold" style={{ color: 'var(--green-600)' }}>
+            <CheckCircle2 size={13} style={{ color: 'rgba(255,255,255,0.8)' }} />
+            <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>
               {user?.is_anonymous ? 'Anonymous account' : 'Email account — verified'}
             </p>
           </div>
+        </div>
         </div>
       </div>
 
@@ -81,7 +83,7 @@ export default function ProfilePage() {
       {notifStatus !== 'Enabled' && notifStatus !== 'Not supported' && (
         <button onClick={requestNotif}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
-          style={{ background: 'var(--green-50)', color: 'var(--green-700)', border: '1.5px solid var(--green-300)' }}>
+          style={{ background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)', color: 'white', border: '1.5px solid #060D38' }}>
           <Bell size={16} /> Enable Push Notifications
         </button>
       )}

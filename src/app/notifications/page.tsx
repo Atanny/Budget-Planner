@@ -138,28 +138,30 @@ export default function NotificationsPage() {
 
       {permGranted && (
         <div className="glass-card p-4 flex items-center gap-3"
-          style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}>
-          <CheckCircle size={16} style={{ color: 'var(--green-500)' }} />
-          <p className="text-sm font-semibold" style={{ color: 'var(--green-700)' }}>Notifications enabled!</p>
+          style={{ background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)', borderColor: '#060D38' }}>
+          <CheckCircle size={16} style={{ color: 'white' }} />
+          <p className="text-sm font-semibold" style={{ color: 'white' }}>Notifications enabled!</p>
         </div>
       )}
 
       {/* Next Cutoff */}
-      <div className="glass-card p-4">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h2 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <Calendar size={16} style={{ color: 'var(--blue-500)' }} />
+      <div className="glass-card overflow-hidden" style={{ borderColor: '#060D38' }}>
+        <div className="px-4 py-3 border-b flex items-center justify-between flex-wrap gap-2"
+          style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
+          <h2 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'white' }}>
+            <Calendar size={16} style={{ color: 'white' }} />
             Next Cutoff Alert
           </h2>
           <span className="text-xs px-2.5 py-1 rounded-full font-semibold"
             style={{
-              background: daysUntil <= 3 ? '#fee2e2' : '#dbeafe',
-              color: daysUntil <= 3 ? '#b91c1c' : '#1d4ed8',
-              border: `1px solid ${daysUntil <= 3 ? '#fca5a5' : '#93c5fd'}`,
+              background: daysUntil <= 3 ? '#fee2e2' : 'rgba(255,255,255,0.2)',
+              color: daysUntil <= 3 ? '#b91c1c' : 'white',
+              border: `1px solid ${daysUntil <= 3 ? '#fca5a5' : 'rgba(255,255,255,0.4)'}`,
             }}>
             {daysUntil} days away
           </span>
         </div>
+        <div className="p-4">
         <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
           {nextCutoff.getDate() === 15 ? '1st' : '2nd'} Cutoff on{' '}
           {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}
@@ -176,14 +178,18 @@ export default function NotificationsPage() {
             + Create 2nd Cutoff Alert
           </button>
         </div>
+        </div>
       </div>
 
       {/* Custom Notification */}
-      <div className="glass-card p-4">
-        <h2 className="font-semibold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <Plus size={15} style={{ color: '#7c3aed' }} />
-          Custom Notification
-        </h2>
+      <div className="glass-card overflow-hidden" style={{ borderColor: '#060D38' }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
+          <h2 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'white' }}>
+            <Plus size={15} style={{ color: 'white' }} />
+            Custom Notification
+          </h2>
+        </div>
+        <div className="p-4">
         <div className="space-y-3">
           <input
             value={customTitle}
@@ -217,12 +223,13 @@ export default function NotificationsPage() {
             </button>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Notification History */}
       <div className="glass-card overflow-hidden">
-        <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
-          <h2 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>Notification History</h2>
+        <div className="px-4 py-3 border-b" style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
+          <h2 className="font-semibold text-sm" style={{ color: 'white' }}>Notification History</h2>
         </div>
         <div>
           {notifs.length === 0 && (

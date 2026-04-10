@@ -1,6 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
@@ -12,6 +13,8 @@ import ConfirmModal from '@/components/ConfirmModal'
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams()
+  const router       = useRouter()
   const [settings,      setSettings]      = useState<UserSettings | null>(null)
   const [items,         setItems]         = useState<BudgetItem[]>([])
   const [savings,       setSavings]       = useState<MonthlySavings[]>([])
@@ -24,6 +27,8 @@ export default function DashboardPage() {
   const [userId,        setUserId]        = useState<string | null>(null)
   const [showSahod,     setShowSahod]     = useState(false)
   const [sahodAmount,   setSahodAmount]   = useState('')
+  const [sahodCutoff,   setSahodCutoff]   = useState<'1st' | '2nd'>('1st')
+  const [sahodExtra,    setSahodExtra]    = useState('')
   const [sahodSaving,   setSahodSaving]   = useState(false)
   const [confirmBankOpen, setConfirmBankOpen] = useState(false)
   const [confirmBankId,   setConfirmBankId]   = useState<string | null>(null)
@@ -59,29 +64,46 @@ export default function DashboardPage() {
     load()
   }, [year])
 
+  // Open sahod modal when ?action=sahod is in the URL
+  useEffect(() => {
+    if (searchParams.get('action') === 'sahod') {
+      setShowSahod(true)
+      router.replace('/')
+    }
+  }, [searchParams, router])
+
   // Sahod received: add salary to main bank + total_salary_received
   async function handleSahod() {
     if (!userId || !sahodAmount) return
     setSahodSaving(true)
     const amt = parseFloat(sahodAmount)
+    const extra = parseFloat(sahodExtra) || 0
+    const total = amt + extra
     const mainBank = banks.find(b => b.is_main_bank)
 
     // Add to main bank balance
     if (mainBank) {
-      const newBalance = mainBank.balance + amt
+      const newBalance = mainBank.balance + total
       await supabase.from('bank_accounts').update({ balance: newBalance }).eq('id', mainBank.id)
       setBanks(prev => prev.map(b => b.id === mainBank.id ? { ...b, balance: newBalance } : b))
     }
 
-    // Track total salary received in settings
+    // Track total salary received in settings + update cutoff salary + extra income
     const prevTotal = settings?.total_salary_received || 0
-    const newTotal = prevTotal + amt
-    await supabase.from('user_settings').update({ total_salary_received: newTotal }).eq('user_id', userId)
-    setSettings(prev => prev ? { ...prev, total_salary_received: newTotal } : prev)
+    const newTotal = prevTotal + total
+    const salaryField = sahodCutoff === '1st' ? 'first_cutoff_salary' : 'second_cutoff_salary'
+    const extraField  = sahodCutoff === '1st' ? 'extra_income_1st'    : 'extra_income_2nd'
+    await supabase.from('user_settings').update({
+      total_salary_received: newTotal,
+      [salaryField]: amt,
+      [extraField]:  extra,
+    }).eq('user_id', userId)
+    setSettings(prev => prev ? { ...prev, total_salary_received: newTotal, [salaryField]: amt, [extraField]: extra } : prev)
 
     setSahodSaving(false)
     setShowSahod(false)
     setSahodAmount('')
+    setSahodExtra('')
   }
 
   async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string; is_main_bank: boolean }) {
@@ -145,58 +167,87 @@ export default function DashboardPage() {
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Dashboard</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {new Date().toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
+      
 
       {/* Cutoff Alert */}
-      <div className="glass-card p-4 flex items-center justify-between"
-        style={{ background: daysUntil <= 3 ? '#fee2e2' : 'var(--green-50)', borderColor: daysUntil <= 3 ? '#fca5a5' : 'var(--green-200)' }}>
-        <div className="flex items-center gap-3">
-          <AlertCircle size={20} style={{ color: daysUntil <= 3 ? '#b91c1c' : 'var(--green-500)' }} />
-          <div>
-            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{cutoffLabel} in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Due on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })}</p>
-          </div>
-        </div>
-        <Link href="/budget" className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
-          View <ChevronRight size={14} />
-        </Link>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: '1st Cutoff Left',  value: formatCurrency(rem1),        color: rem1  >= 0 ? 'var(--green-600)' : 'var(--red-500)', sub: `of ${formatCurrency(salary1)}` },
-          { label: '2nd Cutoff Left',  value: formatCurrency(rem2),        color: rem2  >= 0 ? 'var(--green-600)' : 'var(--red-500)', sub: `of ${formatCurrency(salary2)}` },
-          { label: 'Total Savings',    value: formatCurrency(totalSavings),color: 'var(--purple-500)', sub: `${year}` },
-          { label: 'Active Loans',     value: `${loans.length}`,           color: 'var(--amber-500)', sub: 'items' },
-        ].map(stat => (
-          <div key={stat.label} className="glass-card p-4">
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{stat.label}</p>
-            <p className="text-xl font-bold mt-1" style={{ color: stat.color }}>{stat.value}</p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{stat.sub}</p>
-          </div>
-        ))}
-      </div>
+      
+ 
 
      {/* ═══ Main Bank + May Sahod Na ═══ */}
 <div className="glass-card overflow-hidden">
 
   {/* Header */}
   <div
-    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-    style={{ borderColor: 'var(--border)', background: '#eff6ff' }}
+    className="px-4 sm:px-5 py-4 border-b flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}
+  >
+    {/* Title */}
+    <div className="min-w-0">
+      <h2
+        className="font-bold text-base sm:text-lg leading-tight"
+        style={{ color: 'white' }}
+      >
+        Net Worth
+      </h2>
+      <p
+        className="text-xs sm:text-sm mt-1"
+        style={{ color: 'white' }}
+      >
+        Total salary received
+      </p>
+    </div>
+
+    {/* Amount + Toggle */}
+    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+      {!netHidden ? (
+        <span
+          className="text-lg sm:text-2xl font-bold break-all sm:break-normal"
+          style={{
+            color:
+              netWorth >= 0
+                ? 'white'
+                : 'white',
+          }}
+        >
+          {formatCurrency(netWorth)}
+        </span>
+      ) : (
+        <span
+          className="text-lg sm:text-2xl font-bold tracking-widest"
+          style={{ color: 'white' }}
+        >
+          ₱ •••••
+        </span>
+      )}
+
+      <button
+        onClick={() => setNetHidden(!netHidden)}
+        className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+        style={{
+          background: 'white',
+          color: 'var(--text-muted)',
+        }}
+      >
+        {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+      </button>
+    </div>
+  </div>
+   {/* Header */}
+  
+
+  {/* Content */}
+  {!netHidden && (
+    <div className="p-4 sm:p-5 space-y-4 fade-in">
+      <div
+    className="px-4 sm:px-5 py-4 border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl shadow-lg"
+    style={{ borderColor: '#060D38', background: 'white' }}
   >
     {/* Left */}
     <div>
-      <h2 className="font-bold text-base sm:text-lg" style={{ color: '#1e3a5f' }}>
+      <h2 className="font-bold text-base sm:text-lg" style={{ color: 'dark' }}>
         {mainBank ? `🏦 ${mainBank.name}` : '🏦 Main Bank Account'}
       </h2>
-      <p className="text-xs sm:text-sm mt-0.5" style={{ color: '#3b82f6' }}>
+      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'dark' }}>
         {mainBank ? 'Your primary salary account' : 'Set a main bank in Accounts below'}
       </p>
     </div>
@@ -207,27 +258,13 @@ export default function DashboardPage() {
 
         {/* Balance */}
         <div className="text-left sm:text-right">
-          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: '#2563eb' }}>
+          <p className="text-xl sm:text-2xl font-bold font-mono" style={{ color: 'dark' }}>
             {formatCurrency(mainBank.balance)}
           </p>
-          <p className="text-xs" style={{ color: '#60a5fa' }}>current balance</p>
+          <p className="text-xs" style={{ color: 'dark' }}>current balance </p>
         </div>
 
-        {/* Button */}
-        <button
-          onClick={() => {
-            setSahodAmount((settings?.first_cutoff_salary || 0).toString());
-            setShowSahod(true);
-          }}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition"
-          style={{
-            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-            boxShadow: '0 2px 8px #2563eb40'
-          }}
-        >
-          <Banknote size={16} />
-          May sahod na!
-        </button>
+
 
       </div>
     ) : (
@@ -243,96 +280,25 @@ export default function DashboardPage() {
       </button>
     )}
   </div>
-</div>
-
-
-{/* ═══ Net Worth (Salary Only) ═══ */}
-<div className="glass-card overflow-hidden">
-
-  {/* Header */}
-  <div
-    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-    style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}
-  >
-    <div>
-      <h2 className="font-bold text-base sm:text-lg" style={{ color: 'var(--green-900)' }}>
-        Net Worth
-      </h2>
-      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
-        Total salary received
-      </p>
-    </div>
-
-    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-
-      {/* Amount */}
-      {!netHidden ? (
-        <span
-          className="text-xl sm:text-2xl font-bold"
-          style={{ color: netWorth >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}
-        >
-          {formatCurrency(netWorth)}
-        </span>
-      ) : (
-        <span
-          className="text-xl sm:text-2xl font-bold tracking-widest"
-          style={{ color: 'var(--text-faint)' }}
-        >
-          ₱ •••••
-        </span>
-      )}
-
-      {/* Toggle */}
-      <button
-        onClick={() => setNetHidden(!netHidden)}
-        className="p-2 rounded-xl transition"
-        style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}
-      >
-        {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-      </button>
-    </div>
-  </div>
-
-  {/* Content */}
-  {!netHidden && (
-    <div className="p-4 sm:p-5 space-y-3 fade-in">
-
-      <div
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
-        style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}
-      >
-        <div className="flex items-start sm:items-center gap-2">
-          <span className="text-base">💸</span>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: '#1d4ed8' }}>
-              Total Salary Received
-            </p>
-            <p className="text-xs" style={{ color: '#60a5fa' }}>
-              All sahod accumulated
-            </p>
-          </div>
-        </div>
-
-        <span className="font-bold font-mono text-right" style={{ color: '#2563eb' }}>
-          {formatCurrency(netWorth)}
-        </span>
-      </div>
-
-      <div
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
-        style={{ background: 'var(--green-50)', border: '1.5px solid var(--green-300)' }}
-      >
-        <p className="font-bold" style={{ color: 'var(--green-800)' }}>
-          Net Worth Total
-        </p>
-        <span className="font-bold text-lg font-mono" style={{ color: 'var(--green-600)' }}>
-          {formatCurrency(netWorth)}
-        </span>
-      </div>
-
     </div>
   )}
+
+   <div className="card p-4 flex items-center justify-between"
+        style={{ background: daysUntil <= 3 ? '#fee2e2' : 'var(--green-50)', borderColor: daysUntil <= 3 ? '#fca5a5' : 'var(--green-200)' }}>
+        <div className="flex items-center gap-3">
+          <AlertCircle size={20} style={{ color: daysUntil <= 3 ? '#b91c1c' : 'var(--green-500)' }} />
+          <div>
+            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{cutoffLabel} in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Due on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })}</p>
+          </div>
+        </div>
+        <Link href="/budget" className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
+          View <ChevronRight size={14} />
+        </Link>
+      </div>
+
 </div>
+
 
    {/* ═══ Bank Accounts & Wallets (separate from net worth) ═══ */}
 <div className="glass-card overflow-hidden">
@@ -340,22 +306,26 @@ export default function DashboardPage() {
   {/* Header */}
   <div
     className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-    style={{ borderColor: 'var(--border)', background: '#faf5ff' }}
+   style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}
   >
     <div>
-      <h2 className="font-bold text-base sm:text-lg" style={{ color: '#4c1d95' }}>
+      <h2 className="font-bold text-base sm:text-lg" style={{ color: 'white' }}>
         Accounts & Wallets
       </h2>
-      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+      <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'white' }}>
         Not counted in net worth
       </p>
     </div>
 
     <span
       className="text-lg sm:text-xl font-bold font-mono text-left sm:text-right"
-      style={{ color: '#7c3aed' }}
+      style={{ color: 'white' }}
     >
       {formatCurrency(totalBankBalance)}
+      <div> 
+           <p className="text-sm font-normal mt-1 " style={{ color: 'white' }}>Total Balance</p>
+      </div>
+  
     </span>
   </div>
 
@@ -379,10 +349,10 @@ export default function DashboardPage() {
       return (
         <div
           key={bank.id}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl"
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl shadow-lg border"
           style={{
-            background: 'var(--bg-subtle)',
-            border: `1.5px solid ${bank.is_main_bank ? '#93c5fd' : 'var(--border)'}`
+            background: 'white',
+            border: `1.5px solid ${bank.is_main_bank ? '#060D38' : 'var(--border)'}`
           }}
         >
 
@@ -483,43 +453,24 @@ export default function DashboardPage() {
       )
     })}
 
-    {/* Total row */}
-    <div
-      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl"
-      style={{
-        background: '#faf5ff',
-        border: '1.5px solid #c4b5fd'
-      }}
-    >
-      <p className="font-bold" style={{ color: '#6d28d9' }}>
-        Total Balance
-      </p>
+  
 
-      <span
-        className="font-bold text-lg font-mono"
-        style={{ color: '#7c3aed' }}
-      >
-        {formatCurrency(totalBankBalance)}
-      </span>
-    </div>
-
-    {/* Add button */}
-    <button
-      onClick={() => {
-        setEditBank(null);
-        setShowBankForm(true);
-      }}
-      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
-      style={{
-        background: '#ede9fe',
-        color: '#7c3aed',
-        border: '1.5px dashed #c4b5fd'
-      }}
-    >
-      <Plus size={15} />
-      Add Account / Wallet
-    </button>
-
+   {/* Add button */}
+<button
+  onClick={() => {
+    setEditBank(null);
+    setShowBankForm(true);
+  }}
+  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-200 hover:opacity-90"
+  style={{
+    background: 'var(--brand)',
+    color: 'white',
+    border: '1.5px dashed var(--brand)',
+  }}
+>
+  <Plus size={15} />
+  Add Account / Wallet
+</button>
   </div>
 </div>
 
@@ -541,6 +492,29 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="p-5 space-y-4">
+              {/* Cutoff selector */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>
+                  Which Cutoff?
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { label: '1st Cutoff (15th)', val: '1st' as const, salary: settings?.first_cutoff_salary || 0 },
+                    { label: '2nd Cutoff (30th)', val: '2nd' as const, salary: settings?.second_cutoff_salary || 0 },
+                  ]).map(opt => (
+                    <button key={opt.val}
+                      onClick={() => { setSahodCutoff(opt.val); setSahodAmount(opt.salary.toString()) }}
+                      className="p-2.5 rounded-xl text-center transition-all"
+                      style={{
+                        background: sahodCutoff === opt.val ? '#dbeafe' : 'var(--bg-subtle)',
+                        border: `1.5px solid ${sahodCutoff === opt.val ? '#93c5fd' : 'var(--border)'}`,
+                      }}>
+                      <p className="text-xs font-bold" style={{ color: '#1d4ed8' }}>{opt.label}</p>
+                      <p className="text-sm font-bold font-mono" style={{ color: '#2563eb' }}>{formatCurrency(opt.salary)}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div>
                 <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>
                   Salary Amount (₱)
@@ -553,28 +527,28 @@ export default function DashboardPage() {
                   className="w-full px-3 py-2.5 text-sm"
                   autoFocus
                 />
-                <p className="text-xs mt-1.5" style={{ color: 'var(--text-faint)' }}>
-                  This will add ₱{formatCurrency(parseFloat(sahodAmount) || 0)} to{' '}
-                  <strong>{mainBank?.name}</strong> balance and record it in Net Worth.
-                </p>
               </div>
-              {/* Quick amount buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: '1st Cutoff', val: settings?.first_cutoff_salary || 0 },
-                  { label: '2nd Cutoff', val: settings?.second_cutoff_salary || 0 },
-                ].map(opt => (
-                  <button key={opt.label} onClick={() => setSahodAmount(opt.val.toString())}
-                    className="p-2.5 rounded-xl text-center transition-all"
-                    style={{
-                      background: sahodAmount === opt.val.toString() ? '#dbeafe' : 'var(--bg-subtle)',
-                      border: `1.5px solid ${sahodAmount === opt.val.toString() ? '#93c5fd' : 'var(--border)'}`,
-                    }}>
-                    <p className="text-xs font-bold" style={{ color: '#1d4ed8' }}>{opt.label}</p>
-                    <p className="text-sm font-bold font-mono" style={{ color: '#2563eb' }}>{formatCurrency(opt.val)}</p>
-                  </button>
-                ))}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>
+                  Extra Income (₱) <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>— optional</span>
+                </label>
+                <input
+                  type="number"
+                  value={sahodExtra}
+                  onChange={e => setSahodExtra(e.target.value)}
+                  placeholder="Bonus, allowance, etc..."
+                  className="w-full px-3 py-2.5 text-sm"
+                />
               </div>
+              {(parseFloat(sahodAmount) > 0 || parseFloat(sahodExtra) > 0) && (
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total adding to <strong>{mainBank?.name}</strong></span>
+                  <span className="font-bold font-mono" style={{ color: '#2563eb' }}>
+                    {formatCurrency((parseFloat(sahodAmount) || 0) + (parseFloat(sahodExtra) || 0))}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="px-5 pb-5 flex gap-3">
               <button onClick={() => setShowSahod(false)}
@@ -602,7 +576,64 @@ export default function DashboardPage() {
           onSave={saveBank}
         />
       )}
+            {/* Stats Grid */}
+<div className="grid grid-cols-2 gap-3">
 
+  {[
+    {
+      label: '1st Cutoff Left',
+      value: formatCurrency(rem1),
+      color: rem1 >= 0 ? 'var(--green-600)' : 'var(--red-500)',
+      sub: `of ${formatCurrency(salary1)}`,
+    },
+    {
+      label: '2nd Cutoff Left',
+      value: formatCurrency(rem2),
+      color: rem2 >= 0 ? 'var(--green-600)' : 'var(--red-500)',
+      sub: `of ${formatCurrency(salary2)}`,
+    },
+    {
+      label: 'Total Savings',
+      value: formatCurrency(totalSavings),
+      color: 'var(--purple-500)',
+      sub: `${year}`,
+    },
+    {
+      label: 'Active Loans',
+      value: `${loans.length}`,
+      color: 'var(--amber-500)',
+      sub: 'items',
+    },
+  ].map((stat) => (
+    <div
+      key={stat.label}
+      className="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between min-h-[130px] min-w-0"
+    >
+      <div className="space-y-1 min-w-0">
+        <p
+          className="text-xs sm:text-sm font-semibold leading-snug break-words"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          {stat.label}
+        </p>
+
+        <p
+          className="text-xl sm:text-2xl font-bold leading-tight break-words"
+          style={{ color: stat.color }}
+        >
+          {stat.value}
+        </p>
+      </div>
+
+      <p
+        className="text-xs sm:text-sm mt-2 break-words leading-snug"
+        style={{ color: 'var(--text-faint)' }}
+      >
+        {stat.sub}
+      </p>
+    </div>
+  ))}
+</div>
       {/* Chart + Loans */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass-card p-5">

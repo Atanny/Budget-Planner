@@ -109,9 +109,9 @@ export default function SavingsPage() {
 
       {/* Monthly table */}
       <div className="glass-card overflow-hidden">
-        <div className="p-4 border-b" style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
-          <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>Monthly Breakdown</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+        <div className="p-4 border-b" style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
+          <h2 className="font-bold" style={{ color: 'white' }}>Monthly Breakdown</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>
             Check the savings box in Budget to auto-fill; or edit manually. AUTO badge = filled from Budget.
           </p>
         </div>

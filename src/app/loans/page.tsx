@@ -1,6 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
@@ -51,6 +52,8 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }>
 }
 
 export default function LoansPage() {
+  const searchParams = useSearchParams()
+  const router       = useRouter()
   const [loans,       setLoans]       = useState<BudgetItem[]>([])
   const [payments,    setPayments]    = useState<Record<string, Record<number, boolean>>>({})
   const [showAdd,     setShowAdd]     = useState(false)
@@ -80,6 +83,15 @@ export default function LoansPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  // Open add loan modal when ?action=add is in the URL (triggered from FAB)
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setEditLoan(null)
+      setShowAdd(true)
+      router.replace('/loans')
+    }
+  }, [searchParams, router])
 
   async function toggleMonth(itemId: string, month: number) {
     if (!userId) return
@@ -144,17 +156,6 @@ export default function LoansPage() {
             {loans.length} active · {formatCurrency(totalMonthlyLoan)}/mo
           </p>
         </div>
-        <button
-          onClick={() => { setEditLoan(null); setShowAdd(true) }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 12,
-            background: 'var(--brand)', color: 'white',
-            fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(255,139,0,0.35)',
-          }}>
-          <Plus size={15} /> Add Loan
-        </button>
       </div>
 
       {/* ── Summary Tiles ── */}
@@ -233,60 +234,71 @@ export default function LoansPage() {
           return (
             <div key={loan.id} className="glass-card" style={{ overflow: 'hidden', opacity: isSuspended ? 0.85 : 1 }}>
 
-              {/* ── Card Main Row ── */}
-              <div style={{ padding: '18px 18px 14px' }}>
-
-                {/* Row 1: icon + name + badge */}
-                <div className="flex items-start gap-3 mb-3">
+              {/* ── Card Header Strip (dashboard style) ── */}
+              <div style={{
+                padding: '14px 18px 12px',
+                background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)',
+                borderBottom: '1px solid #060D38',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   <div style={{
-                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-                    background: isSuspended ? '#F1F5F9' : isFullyPaid ? '#D1FAE5' : 'var(--brand-pale)',
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: isSuspended ? 'rgba(255,255,255,0.15)' : isFullyPaid ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.15)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <CreditCard size={20} style={{ color: isSuspended ? '#94A3B8' : isFullyPaid ? '#10B981' : 'var(--brand)' }} />
+                    <CreditCard size={18} style={{ color: 'white' }} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                        {loan.name}
-                      </span>
-                      {isReducing && (
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 3,
-                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-                          background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          <TrendingDown size={9} /> Reducing
-                        </span>
-                      )}
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-                        background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {displayStatus}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontWeight: 800, fontSize: 14, color: 'white', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {loan.name}
+                    </p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
                       {loan.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'}
                     </p>
                   </div>
                 </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: 'white', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                    {formatCurrency(currentDue)}
+                  </p>
+                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>/mo</p>
+                </div>
+              </div>
 
-                {/* Row 2: Amount + progress */}
+              {/* ── Card Main Row ── */}
+              <div style={{ padding: '14px 18px 14px' }}>
+
+                {/* Row 1: badges */}
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {isReducing && (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                      background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      <TrendingDown size={9} /> Reducing
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                    background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {displayStatus}
+                  </span>
+                </div>
+                
+                {/* Row 2: progress */}
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div>
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>This Month</p>
-                      <p style={{ fontSize: 24, fontWeight: 800, color: '#2563EB', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                        {formatCurrency(currentDue)}
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
+                        {estimatedPaid}/{totalMonths} mo paid
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
-                        {estimatedPaid}/{totalMonths} mo
-                      </p>
                       <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                         {Math.round(pct)}%
                       </p>
@@ -365,6 +377,8 @@ export default function LoansPage() {
                         const isAfterL   = loanEnd.getFullYear() <= CURRENT_YEAR && calDate > new Date(loanEnd.getFullYear(), loanEnd.getMonth(), 1)
                         const outScope   = isBeforeL || isAfterL
                         const isOverdue  = !isFuture && !outScope && !paid && !isCurrent
+                        // inScope = within the loan's active months
+                        const inScope    = !outScope
 
                         return (
                           <div key={m} style={{ flex: 1, minWidth: 0 }}>
@@ -375,19 +389,39 @@ export default function LoansPage() {
                                 ? 'var(--brand)'
                                 : isOverdue ? '#FEE2E2'
                                 : isCurrent ? 'var(--brand-pale)'
+                                : inScope ? '#EEF2FF'
                                 : 'white',
-                              border: `1px solid ${paid ? 'var(--brand-dark)' : isOverdue ? '#FCA5A5' : isCurrent ? 'var(--brand-muted)' : 'var(--border)'}`,
+                              border: `1px solid ${
+                                paid ? 'var(--brand-dark)'
+                                : isOverdue ? '#FCA5A5'
+                                : isCurrent ? 'var(--brand-muted)'
+                                : inScope ? '#A5B4FC'
+                                : 'var(--border)'
+                              }`,
                               opacity: (isFuture || outScope) ? 0.3 : 1,
                             }}>
-                              <span style={{ fontSize: 8, fontWeight: 700, color: paid ? 'white' : isOverdue ? '#B91C1C' : isCurrent ? 'var(--brand)' : 'var(--text-faint)', lineHeight: 1 }}>
+                              <span style={{ fontSize: 8, fontWeight: 700, color: paid ? 'white' : isOverdue ? '#B91C1C' : isCurrent ? 'var(--brand)' : inScope ? '#4F46E5' : 'var(--text-faint)', lineHeight: 1 }}>
                                 {m.slice(0, 1)}
                               </span>
                               {paid && <Check size={7} color="white" />}
                               {isOverdue && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#EF4444', display: 'block' }} />}
+                              {!paid && inScope && !isOverdue && !isCurrent && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#818CF8', display: 'block' }} />}
                             </div>
                           </div>
                         )
                       })}
+                    </div>
+                    {/* Legend */}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#EEF2FF', border: '1px solid #A5B4FC', display: 'inline-block' }} /> Scoped
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--brand)', display: 'inline-block' }} /> Paid
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#FEE2E2', border: '1px solid #FCA5A5', display: 'inline-block' }} /> Overdue
+                      </span>
                     </div>
                   </div>
 
@@ -435,9 +469,9 @@ export default function LoansPage() {
       {/* ── Yearly Table ── */}
       {loans.length > 0 && (
         <div className="glass-card" style={{ overflow: 'hidden', marginTop: 20 }}>
-          <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--border)' }}>
-            <p style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>Year {CURRENT_YEAR} Overview</p>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Full-year payment status</p>
+        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
+            <p style={{ fontWeight: 800, fontSize: 14, color: 'white' }}>Year {CURRENT_YEAR} Overview</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Full-year payment status</p>
           </div>
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 340 }}>
