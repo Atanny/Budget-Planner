@@ -35,7 +35,7 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4"
-            style={{ background: 'linear-gradient(135deg, #22703a, #2d9e50)', boxShadow: '0 8px 24px rgba(34,112,58,0.4)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-light))', boxShadow: '0 8px 24px rgba(255,139,0,0.35)' }}>
             ₱
           </div>
           <h1 className="text-2xl font-bold text-white">BudgetPH</h1>
@@ -86,8 +86,8 @@ export default function AuthPage() {
             <p className="text-xs text-center py-2 px-3 rounded-lg"
               style={{
                 background: msgType === 'success' ? 'rgba(34,112,58,0.3)' : 'rgba(239,68,68,0.2)',
-                color: msgType === 'success' ? '#86d9a0' : '#fca5a5',
-                border: `1px solid ${msgType === 'success' ? 'rgba(34,112,58,0.4)' : 'rgba(239,68,68,0.3)'}`,
+                color: msgType === 'success' ? '#86d9a0' : 'var(--brand-muted)',
+                border: `1px solid ${msgType === 'success' ? 'rgba(255,139,0,0.35)' : 'rgba(239,68,68,0.3)'}`,
               }}>
               {msg}
             </p>
@@ -97,7 +97,7 @@ export default function AuthPage() {
             onClick={handleSubmit}
             disabled={loading || !email || !password}
             className="w-full py-2.5 rounded-xl text-sm text-white font-bold disabled:opacity-50 transition"
-            style={{ background: 'linear-gradient(135deg, #22703a, #2d9e50)', boxShadow: '0 4px 16px rgba(34,112,58,0.35)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-light))', boxShadow: '0 4px 16px rgba(255,139,0,0.35)' }}>
             {loading ? 'Loading...' : isSignup ? 'Create Account' : 'Sign In'}
           </button>
 

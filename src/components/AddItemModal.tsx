@@ -13,7 +13,7 @@ interface Props {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
-  border: '1.5px solid var(--border)', background: 'var(--bg-subtle)',
+  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
 const labelStyle: React.CSSProperties = {
@@ -97,18 +97,18 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0"
-          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+          style={{ borderColor: '#0f172a', background: 'var(--brand-pale)' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: selCat ? `${selCat.color}20` : 'var(--green-100)' }}>
-              <ShoppingBag size={16} style={{ color: selCat?.color || 'var(--green-600)' }} />
+              style={{ background: selCat ? `${selCat.color}20` : 'var(--brand-pale)' }}>
+              <ShoppingBag size={16} style={{ color: selCat?.color || 'var(--brand-dark)' }} />
             </div>
             <div>
-              <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>
+              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>
                 {editItem ? 'Edit Expense' : 'Add Paid Expense'}
               </h2>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -169,9 +169,9 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
             </select>
             {bankId && amount && (
               <div className="mt-2 p-3 rounded-xl flex items-center gap-2"
-                style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
+                style={{ background: 'var(--brand-pale)', border: '1.5px solid var(--brand-muted)' }}>
                 <span style={{ fontSize: 15 }}>💸</span>
-                <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
+                <p className="text-xs font-semibold" style={{ color: 'var(--brand-dark)' }}>
                   ₱{parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })} will be
                   deducted from <strong>{selBank?.name}</strong> immediately
                 </p>
@@ -182,8 +182,8 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           {/* Auto paid badge */}
           <div className="flex items-center gap-2 p-3 rounded-xl"
             style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
-            <Check size={14} style={{ color: '#15803d' }} />
-            <p className="text-sm font-semibold" style={{ color: '#15803d' }}>
+            <Check size={14} style={{ color: 'var(--brand-dark)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>
               Paid Expense — recorded as paid for {cutoffLabel}
             </p>
           </div>
@@ -192,15 +192,15 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
 
         {/* Footer */}
         <div className="px-5 py-4 border-t flex gap-3 shrink-0"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+          style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
+            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-light))' }}>
             {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Expense'}
           </button>
         </div>

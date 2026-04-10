@@ -42,7 +42,7 @@ function getMonthLabel(startDate: string, loanMonthIndex: number): string {
 }
 
 const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }> = {
-  Required:        { bg: '#FEE2E2', text: '#B91C1C', border: '#FCA5A5' },
+  Required:        { bg: 'var(--brand-pale)', text: 'var(--brand-dark)', border: 'var(--brand-muted)' },
   Optional:        { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
   'First Payment': { bg: '#DBEAFE', text: '#1D4ED8', border: '#93C5FD' },
   'Last Payment':  { bg: '#EDE9FE', text: '#6D28D9', border: '#C4B5FD' },
@@ -147,21 +147,11 @@ function LoansPageInner() {
     <div className="w-full" style={{ paddingBottom: 8 }}>
 
       {/* ── Page Header ── */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-            Loans
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            {loans.length} active · {formatCurrency(totalMonthlyLoan)}/mo
-          </p>
-        </div>
-      </div>
-
+      
       {/* ── Summary Tiles ── */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: 'Monthly Due',   value: formatCurrency(totalMonthlyLoan), color: '#EF4444', bg: '#FEE2E2', icon: CreditCard },
+          { label: 'Monthly Due',   value: formatCurrency(totalMonthlyLoan), color: 'var(--brand)', bg: 'var(--brand-pale)', icon: CreditCard },
           { label: 'Active',        value: String(loans.length),             color: '#F59E0B', bg: '#FEF3C7', icon: Clock },
           { label: 'Paid Off',      value: String(paidOffCount),             color: '#10B981', bg: '#D1FAE5', icon: CheckCircle2 },
         ].map(s => (
@@ -341,14 +331,14 @@ function LoansPageInner() {
                     onClick={() => { setConfirmLoan(loan); setConfirmOpen(true) }}
                     style={{
                       width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
-                      background: '#FEE2E2', border: '1px solid #FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                    <Trash2 size={14} style={{ color: '#EF4444' }} />
+                    <Trash2 size={14} style={{ color: 'var(--brand)' }} />
                   </button>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : loan.id)}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, border: '1px solid var(--border)', cursor: 'pointer',
+                      width: 36, height: 36, borderRadius: 10, border: '1.5px solid #0f172a', cursor: 'pointer',
                       background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     {isExpanded ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
@@ -387,24 +377,24 @@ function LoansPageInner() {
                               alignItems: 'center', justifyContent: 'center', gap: 1,
                               background: paid
                                 ? 'var(--brand)'
-                                : isOverdue ? '#FEE2E2'
+                                : isOverdue ? 'var(--brand-pale)'
                                 : isCurrent ? 'var(--brand-pale)'
                                 : inScope ? '#EEF2FF'
                                 : 'white',
                               border: `1px solid ${
                                 paid ? 'var(--brand-dark)'
-                                : isOverdue ? '#FCA5A5'
+                                : isOverdue ? 'var(--brand-muted)'
                                 : isCurrent ? 'var(--brand-muted)'
                                 : inScope ? '#A5B4FC'
                                 : 'var(--border)'
                               }`,
                               opacity: (isFuture || outScope) ? 0.3 : 1,
                             }}>
-                              <span style={{ fontSize: 8, fontWeight: 700, color: paid ? 'white' : isOverdue ? '#B91C1C' : isCurrent ? 'var(--brand)' : inScope ? '#4F46E5' : 'var(--text-faint)', lineHeight: 1 }}>
+                              <span style={{ fontSize: 8, fontWeight: 700, color: paid ? 'white' : isOverdue ? 'var(--brand-dark)' : isCurrent ? 'var(--brand)' : inScope ? '#4F46E5' : 'var(--text-faint)', lineHeight: 1 }}>
                                 {m.slice(0, 1)}
                               </span>
                               {paid && <Check size={7} color="white" />}
-                              {isOverdue && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#EF4444', display: 'block' }} />}
+                              {isOverdue && <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--brand)', display: 'block' }} />}
                               {!paid && inScope && !isOverdue && !isCurrent && <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#818CF8', display: 'block' }} />}
                             </div>
                           </div>
@@ -420,7 +410,7 @@ function LoansPageInner() {
                         <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--brand)', display: 'inline-block' }} /> Paid
                       </span>
                       <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#FEE2E2', border: '1px solid #FCA5A5', display: 'inline-block' }} /> Overdue
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)', display: 'inline-block' }} /> Overdue
                       </span>
                     </div>
                   </div>
@@ -528,9 +518,9 @@ function LoansPageInner() {
                       })}
                       <td style={{ padding: '6px 12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 800, fontSize: 12, color: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444' }}>{pct}%</span>
+                          <span style={{ fontWeight: 800, fontSize: 12, color: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : 'var(--brand)' }}>{pct}%</span>
                           <div style={{ width: 48, height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444' }} />
+                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : 'var(--brand)' }} />
                           </div>
                         </div>
                       </td>

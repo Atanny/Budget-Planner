@@ -85,7 +85,7 @@ export const STATUS_COLORS: Record<PaymentStatus, string> = {
   Required: 'bg-red-500/20 text-red-400 border-red-500/30',
   Optional: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   'First Payment': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'Last Payment': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  'Last Payment': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   Once: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
   Suspended: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   Paid: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -106,21 +106,21 @@ export const EXPENSE_CATEGORIES = [
   { value: 'Food',         label: '🍱 Food & Dining',     color: '#f97316' },
   { value: 'Transport',    label: '🚗 Transport',          color: '#3b82f6' },
   { value: 'Utilities',    label: '💡 Utilities',          color: '#eab308' },
-  { value: 'Subscription', label: '📱 Subscriptions',      color: '#8b5cf6' },
-  { value: 'Healthcare',   label: '🏥 Healthcare',         color: '#ef4444' },
-  { value: 'Shopping',     label: '🛍️ Shopping',           color: '#ec4899' },
+  { value: 'Subscription', label: '📱 Subscriptions',      color: 'var(--accent)' },
+  { value: 'Healthcare',   label: '🏥 Healthcare',         color: 'var(--brand)' },
+  { value: 'Shopping',     label: '🛍️ Shopping',           color: 'var(--brand)' },
   { value: 'Education',    label: '📚 Education',          color: '#06b6d4' },
   { value: 'Loan',         label: '🏦 Loan / Installment', color: '#6366f1' },
-  { value: 'Rent',         label: '🏠 Rent / Housing',     color: '#22703a' },
+  { value: 'Rent',         label: '🏠 Rent / Housing',     color: 'var(--brand-dark)' },
   { value: 'Savings',      label: '💰 Savings Transfer',   color: '#10b981' },
   { value: 'Other',        label: '📌 Other',              color: '#94a3b8' },
 ]
 
 export const BANK_TYPES = [
   { value: 'bank'        as const, label: '🏦 Bank',         color: '#3b82f6' },
-  { value: 'ewallet'     as const, label: '📲 E-Wallet',     color: '#22703a' },
-  { value: 'cash'        as const, label: '💵 Cash',         color: '#f59e0b' },
-  { value: 'investment'  as const, label: '📈 Investment',   color: '#8b5cf6' },
+  { value: 'ewallet'     as const, label: '📲 E-Wallet',     color: 'var(--brand-dark)' },
+  { value: 'cash'        as const, label: '💵 Cash',         color: 'var(--brand)' },
+  { value: 'investment'  as const, label: '📈 Investment',   color: 'var(--accent)' },
   { value: 'other'       as const, label: '🗃️ Other',        color: '#94a3b8' },
 ]
 

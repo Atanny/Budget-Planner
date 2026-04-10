@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
 import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate, getLoanProgress } from '@/lib/utils'
-import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, Eye, EyeOff, Plus, Edit2, Trash2, Check, X, Star, Banknote } from 'lucide-react'
+import { TrendingUp, Wallet, CreditCard, PiggyBank, AlertCircle, ChevronRight, ChevronDown, ChevronUp, Eye, EyeOff, Plus, Edit2, Trash2, Check, X, Star, Banknote } from 'lucide-react'
 import Link from 'next/link'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import ConfirmModal from '@/components/ConfirmModal'
@@ -21,8 +21,18 @@ function DashboardPageInner() {
   const [payments,      setPayments]      = useState<Record<string, boolean[]>>({})
   const [banks,         setBanks]         = useState<BankAccount[]>([])
   const [loading,       setLoading]       = useState(true)
-  const [netHidden,     setNetHidden]     = useState(false)
-  const [banksHidden,   setBanksHidden]   = useState(false)
+  const [netHidden,     setNetHidden]     = useState(() => {
+    try { return localStorage.getItem('netHidden') === 'true' } catch { return false }
+  })
+  const [banksHidden,   setBanksHidden]   = useState(() => {
+    try { return localStorage.getItem('banksHidden') === 'true' } catch { return false }
+  })
+  const [netCollapsed,  setNetCollapsed]  = useState(() => {
+    try { return localStorage.getItem('netCollapsed') === 'true' } catch { return false }
+  })
+  const [banksCollapsed, setBanksCollapsed] = useState(() => {
+    try { return localStorage.getItem('banksCollapsed') === 'true' } catch { return false }
+  })
   const [showBankForm,  setShowBankForm]  = useState(false)
   const [editBank,      setEditBank]      = useState<BankAccount | null>(null)
   const [userId,        setUserId]        = useState<string | null>(null)
@@ -179,7 +189,7 @@ function DashboardPageInner() {
 
   {/* Header */}
   <div
-    className="px-4 sm:px-5 py-4 border-b flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    className="px-4 sm:px-5 py-4 border-b flex flex-row items-center justify-between gap-3"
     style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}
   >
     {/* Title */}
@@ -198,46 +208,35 @@ function DashboardPageInner() {
       </p>
     </div>
 
-    {/* Amount + Toggle */}
-    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
-      {!netHidden ? (
-        <span
-          className="text-lg sm:text-2xl font-bold break-all sm:break-normal"
-          style={{
-            color:
-              netWorth >= 0
-                ? 'white'
-                : 'white',
-          }}
-        >
-          {formatCurrency(netWorth)}
-        </span>
-      ) : (
-        <span
-          className="text-lg sm:text-2xl font-bold tracking-widest"
-          style={{ color: 'white' }}
-        >
-          ₱ •••••
-        </span>
-      )}
-
-      <button
-        onClick={() => setNetHidden(!netHidden)}
-        className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
-        style={{
-          background: 'white',
-          color: 'var(--text-muted)',
-        }}
+    <div className="flex items-center gap-3">
+      <span
+        className="text-lg sm:text-2xl font-bold"
+        style={{ color: 'white' }}
       >
-        {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-      </button>
+        {netHidden ? '₱ •••••' : formatCurrency(netWorth)}
+      </span>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => { const v = !netHidden; setNetHidden(v); try { localStorage.setItem('netHidden', String(v)) } catch {} }}
+          className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+          style={{ background: 'white', color: '#0f172a', border: '1.5px solid #0f172a' }}
+        >
+          {netHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+        </button>
+        <button
+          onClick={() => { const v = !netCollapsed; setNetCollapsed(v); try { localStorage.setItem('netCollapsed', String(v)) } catch {} }}
+          className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+          style={{ background: 'white', color: '#0f172a', border: '1.5px solid #0f172a' }}
+        >
+          {netCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </div>
     </div>
   </div>
-   {/* Header */}
   
 
   {/* Content */}
-  {!netHidden && (
+  {!netCollapsed && (
     <div className="p-4 sm:p-5 space-y-4 fade-in">
       <div
     className="px-4 sm:px-5 py-4 border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl shadow-lg"
@@ -285,15 +284,15 @@ function DashboardPageInner() {
   )}
 
    <div className="card p-4 flex items-center justify-between"
-        style={{ background: daysUntil <= 3 ? '#fee2e2' : 'var(--green-50)', borderColor: daysUntil <= 3 ? '#fca5a5' : 'var(--green-200)' }}>
+        style={{ background: daysUntil <= 3 ? 'var(--brand-pale)' : 'var(--brand-pale)', borderColor: daysUntil <= 3 ? 'var(--brand-muted)' : 'var(--brand-muted)' }}>
         <div className="flex items-center gap-3">
-          <AlertCircle size={20} style={{ color: daysUntil <= 3 ? '#b91c1c' : 'var(--green-500)' }} />
+          <AlertCircle size={20} style={{ color: daysUntil <= 3 ? 'var(--brand-dark)' : 'var(--brand)' }} />
           <div>
             <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{cutoffLabel} in {daysUntil} day{daysUntil !== 1 ? 's' : ''}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Due on {nextCutoff.toLocaleDateString('en-PH', { month: 'long', day: 'numeric' })}</p>
           </div>
         </div>
-        <Link href="/budget" className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
+        <Link href="/budget" className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--brand-dark)' }}>
           View <ChevronRight size={14} />
         </Link>
       </div>
@@ -306,7 +305,7 @@ function DashboardPageInner() {
 
   {/* Header */}
   <div
-    className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+    className="px-4 sm:px-5 py-4 border-b flex flex-row items-center justify-between gap-3"
    style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}
   >
     <div className="min-w-0">
@@ -318,44 +317,37 @@ function DashboardPageInner() {
       </p>
     </div>
 
-    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
-      {!banksHidden ? (
-        <div className="text-left sm:text-right">
-          <span
-            className="text-lg sm:text-xl font-bold font-mono"
-            style={{ color: 'white' }}
-          >
-            {formatCurrency(totalBankBalance)}
-          </span>
-          <p className="text-sm font-normal mt-1" style={{ color: 'white' }}>Total Balance</p>
-        </div>
-      ) : (
-        <div className="text-left sm:text-right">
-          <span
-            className="text-lg sm:text-xl font-bold tracking-widest"
-            style={{ color: 'white' }}
-          >
-            ₱ •••••
-          </span>
-          <p className="text-sm font-normal mt-1" style={{ color: 'white' }}>Total Balance</p>
-        </div>
-      )}
-
-      <button
-        onClick={() => setBanksHidden(!banksHidden)}
-        className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
-        style={{
-          background: 'white',
-          color: 'var(--text-muted)',
-        }}
-      >
-        {banksHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-      </button>
+    <div className="flex items-center gap-3">
+      <div className="text-right">
+        <span
+          className="text-lg sm:text-xl font-bold font-mono"
+          style={{ color: 'white' }}
+        >
+          {banksHidden ? '₱ •••••' : formatCurrency(totalBankBalance)}
+        </span>
+        <p className="text-xs font-normal mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>Total Balance</p>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => { const v = !banksHidden; setBanksHidden(v); try { localStorage.setItem('banksHidden', String(v)) } catch {} }}
+          className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+          style={{ background: 'white', color: '#0f172a', border: '1.5px solid #0f172a' }}
+        >
+          {banksHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+        </button>
+        <button
+          onClick={() => { const v = !banksCollapsed; setBanksCollapsed(v); try { localStorage.setItem('banksCollapsed', String(v)) } catch {} }}
+          className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+          style={{ background: 'white', color: '#0f172a', border: '1.5px solid #0f172a' }}
+        >
+          {banksCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </div>
     </div>
   </div>
 
   {/* Content */}
-  <div className="p-4 sm:p-5 space-y-3">
+  {!banksCollapsed && (<div className="p-4 sm:p-5 space-y-3">
 
     {/* Empty state */}
     {banks.length === 0 && (
@@ -441,7 +433,7 @@ function DashboardPageInner() {
               <span
                 className="font-bold font-mono text-sm sm:text-base"
                 style={{
-                  color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)'
+                  color: bank.balance >= 0 ? 'var(--brand-dark)' : 'var(--brand)'
                 }}
               >
                 {formatCurrency(bank.balance)}
@@ -470,9 +462,9 @@ function DashboardPageInner() {
                 onClick={() => askDeleteBank(bank.id, bank.name)}
                 className="p-2 rounded-lg"
                 style={{
-                  background: '#fee2e2',
-                  color: '#b91c1c',
-                  border: '1px solid #fca5a5'
+                  background: 'var(--brand-pale)',
+                  color: 'var(--brand-dark)',
+                  border: '1.5px solid var(--brand-muted)'
                 }}
               >
                 <Trash2 size={12} />
@@ -502,14 +494,14 @@ function DashboardPageInner() {
   <Plus size={15} />
   Add Account / Wallet
 </button>
-  </div>
+  </div>)}
 </div>
 
       {/* Sahod modal */}
       {showSahod && (
         <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
           <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+            style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
             <div className="flex items-center justify-between px-5 py-4 border-b"
               style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
               <div>
@@ -573,7 +565,7 @@ function DashboardPageInner() {
               </div>
               {(parseFloat(sahodAmount) > 0 || parseFloat(sahodExtra) > 0) && (
                 <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs"
-                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                  style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Total adding to <strong>{mainBank?.name}</strong></span>
                   <span className="font-bold font-mono" style={{ color: '#2563eb' }}>
                     {formatCurrency((parseFloat(sahodAmount) || 0) + (parseFloat(sahodExtra) || 0))}
@@ -584,7 +576,7 @@ function DashboardPageInner() {
             <div className="px-5 pb-5 flex gap-3">
               <button onClick={() => setShowSahod(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
                 Cancel
               </button>
               <button
@@ -614,25 +606,25 @@ function DashboardPageInner() {
     {
       label: '1st Cutoff Left',
       value: formatCurrency(rem1),
-      color: rem1 >= 0 ? 'var(--green-600)' : 'var(--red-500)',
+      color: rem1 >= 0 ? 'var(--brand-dark)' : 'var(--brand)',
       sub: `of ${formatCurrency(salary1)}`,
     },
     {
       label: '2nd Cutoff Left',
       value: formatCurrency(rem2),
-      color: rem2 >= 0 ? 'var(--green-600)' : 'var(--red-500)',
+      color: rem2 >= 0 ? 'var(--brand-dark)' : 'var(--brand)',
       sub: `of ${formatCurrency(salary2)}`,
     },
     {
       label: 'Total Savings',
       value: formatCurrency(totalSavings),
-      color: 'var(--purple-500)',
+      color: 'var(--accent)',
       sub: `${year}`,
     },
     {
       label: 'Active Loans',
       value: `${loans.length}`,
-      color: 'var(--amber-500)',
+      color: 'var(--brand)',
       sub: 'items',
     },
   ].map((stat) => (
@@ -673,11 +665,11 @@ function DashboardPageInner() {
             <BarChart data={chartData}>
               <XAxis dataKey="month" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${v/1000}k`} />
-              <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }}
                 formatter={(v: number) => [formatCurrency(v), 'Paid']} />
               <Bar dataKey="amount" radius={[5, 5, 0, 0]}>
                 {chartData.map((_, idx) => (
-                  <Cell key={idx} fill={idx === month - 1 ? 'var(--green-500)' : 'var(--green-100)'} />
+                  <Cell key={idx} fill={idx === month - 1 ? 'var(--brand)' : 'var(--brand-pale)'} />
                 ))}
               </Bar>
             </BarChart>
@@ -687,7 +679,7 @@ function DashboardPageInner() {
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Active Loans</h2>
-            <Link href="/loans" className="text-xs font-semibold" style={{ color: 'var(--green-600)' }}>View all</Link>
+            <Link href="/loans" className="text-xs font-semibold" style={{ color: 'var(--brand-dark)' }}>View all</Link>
           </div>
           <div className="space-y-3">
             {loans.length === 0 && <p className="text-sm text-center py-4" style={{ color: 'var(--text-faint)' }}>No active loans</p>}
@@ -721,18 +713,18 @@ function DashboardPageInner() {
           This Month — {MONTHS_SHORT[month - 1]} {year}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-          <div className="p-4 rounded-xl" style={{ background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
-            <p className="text-2xl font-bold" style={{ color: 'var(--green-600)' }}>{formatCurrency(curMonthExp)}</p>
+          <div className="p-4 rounded-xl" style={{ background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)' }}>
+            <p className="text-2xl font-bold" style={{ color: 'var(--brand-dark)' }}>{formatCurrency(curMonthExp)}</p>
             <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Already Paid</p>
           </div>
-          <div className="p-4 rounded-xl" style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
-            <p className="text-2xl font-bold" style={{ color: 'var(--red-500)' }}>
+          <div className="p-4 rounded-xl" style={{ background: 'var(--brand-pale)', border: '1.5px solid var(--brand-muted)' }}>
+            <p className="text-2xl font-bold" style={{ color: 'var(--brand)' }}>
               {formatCurrency(firstTotal + secondTotal - curMonthExp)}
             </p>
             <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Still Due</p>
           </div>
-          <div className="p-4 rounded-xl" style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
-            <p className="text-2xl font-bold" style={{ color: '#7c3aed' }}>
+          <div className="p-4 rounded-xl" style={{ background: '#eff6ff', border: '1px solid #93c5fd' }}>
+            <p className="text-2xl font-bold" style={{ color: '#2563eb' }}>
               {formatCurrency((salary1 + salary2) - firstTotal - secondTotal)}
             </p>
             <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--text-muted)' }}>Net After Expenses</p>
@@ -755,18 +747,18 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
   const [name,      setName]      = useState(bank?.name      || '')
   const [type,      setType]      = useState<'bank' | 'ewallet' | 'cash' | 'investment' | 'other'>(bank?.type || 'bank')
   const [balance,   setBalance]   = useState(bank?.balance?.toString() || '')
-  const [color,     setColor]     = useState(bank?.color     || '#22703a')
+  const [color,     setColor]     = useState(bank?.color     || 'var(--brand)')
   const [isMain,    setIsMain]    = useState(bank?.is_main_bank || false)
 
-  const COLORS = ['#22703a','#3b82f6','#f59e0b','#8b5cf6','#ef4444','#14b8a6','#ec4899','#f97316','#64748b']
+  const COLORS = ['var(--brand)','var(--accent)','var(--brand-dark)','var(--accent-dark)','var(--brand-light)','var(--accent-light)','#334155','#64748b','#94a3b8']
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
-          <h2 className="font-bold" style={{ color: 'var(--green-900)' }}>{bank ? 'Edit Account' : 'Add Account'}</h2>
+          style={{ borderColor: '#0f172a', background: 'var(--brand-pale)' }}>
+          <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>{bank ? 'Edit Account' : 'Add Account'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}><X size={17} /></button>
         </div>
         <div className="p-5 space-y-4">
@@ -830,13 +822,13 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
         </div>
         <div className="px-5 pb-5 flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
             Cancel
           </button>
           <button onClick={() => onSave({ name, type, balance: parseFloat(balance) || 0, color, is_main_bank: isMain })}
             disabled={!name}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-light))' }}>
             {bank ? 'Save Changes' : 'Add Account'}
           </button>
         </div>

@@ -67,33 +67,29 @@ export default function SavingsPage() {
   const ytd = savings.slice(0, currentMonth + 1).reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
   const maxSaving = Math.max(...savings.map(s => s.kinsenas + s.atrenta), 1)
 
-  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', padding: '5px 10px', fontSize: 13, width: '100%', outline: 'none', fontFamily: 'inherit' }
+  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid #0f172a', borderRadius: 8, color: 'var(--text-primary)', padding: '5px 10px', fontSize: 13, width: '100%', outline: 'none', fontFamily: 'inherit' }
 
   if (loading) return <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
 
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Savings Tracker</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Monthly Ipon</p>
-        </div>
-        <div className="flex items-center gap-2">
+  
           <button onClick={() => setYear(y => y - 1)} className="w-8 h-8 rounded-xl font-bold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>‹</button>
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>‹</button>
           <span className="font-bold w-12 text-center" style={{ color: 'var(--text-primary)' }}>{year}</span>
           <button onClick={() => setYear(y => y + 1)} className="w-8 h-8 rounded-xl font-bold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>›</button>
-        </div>
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>›</button>
+      
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Annual Total',    value: formatCurrency(grandTotal),    color: '#7c3aed', bg: '#ede9fe', icon: PiggyBank },
-          { label: 'Year-to-Date',    value: formatCurrency(ytd),           color: 'var(--green-600)', bg: 'var(--green-50)', icon: TrendingUp },
+          { label: 'Annual Total',    value: formatCurrency(grandTotal),    color: '#2563eb', bg: '#eff6ff', icon: PiggyBank },
+          { label: 'Year-to-Date',    value: formatCurrency(ytd),           color: 'var(--brand-dark)', bg: 'var(--brand-pale)', icon: TrendingUp },
           { label: 'Kinsenas (15th)', value: formatCurrency(totalKinsenas), color: 'var(--blue-500)', bg: '#dbeafe', icon: PiggyBank },
-          { label: 'Atrenta (30th)',  value: formatCurrency(totalAtrenta),  color: 'var(--amber-500)', bg: '#fef3c7', icon: PiggyBank },
+          { label: 'Atrenta (30th)',  value: formatCurrency(totalAtrenta),  color: 'var(--brand)', bg: 'var(--brand-pale)', icon: PiggyBank },
         ].map(s => (
           <div key={s.label} className="glass-card p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.bg }}>
@@ -132,25 +128,25 @@ export default function SavingsPage() {
             return (
               <div key={row.id} style={{
                 borderBottom: '1px solid var(--border)',
-                background: isCurrent ? 'var(--green-50)' : idx % 2 === 0 ? 'transparent' : 'var(--bg-subtle)'
+                background: isCurrent ? 'var(--brand-pale)' : idx % 2 === 0 ? 'transparent' : 'var(--bg-subtle)'
               }}>
                 {/* Mobile layout: stacked card */}
                 <div className="sm:hidden px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      {isCurrent && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--green-400)' }} />}
-                      <span className="font-semibold" style={{ color: isCurrent ? 'var(--green-700)' : 'var(--text-primary)' }}>{MONTHS[idx]}</span>
+                      {isCurrent && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--brand-light)' }} />}
+                      <span className="font-semibold" style={{ color: isCurrent ? 'var(--brand-dark)' : 'var(--text-primary)' }}>{MONTHS[idx]}</span>
                       {(fromBudget1 || fromBudget2) && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontSize: 9, border: '1px solid var(--green-200)' }}>AUTO</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', fontSize: 9, border: '1px solid var(--brand-muted)' }}>AUTO</span>
                       )}
                     </div>
                     {isEditing ? (
                       <div className="flex gap-1">
-                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--green-100)', color: 'var(--green-700)', border: '1px solid var(--green-300)' }}><Check size={14} /></button>
-                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}><X size={14} /></button>
+                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}><Check size={14} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' }}><X size={14} /></button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl" style={{ color: 'var(--text-faint)', border: '1px solid var(--border)', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
+                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl" style={{ color: 'var(--text-faint)', border: '1.5px solid #0f172a', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -159,22 +155,22 @@ export default function SavingsPage() {
                       {isEditing ? (
                         <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: '100%' }} />
                       ) : (
-                        <p className="font-mono font-semibold text-sm" style={{ color: row.kinsenas > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>{row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}</p>
+                        <p className="font-mono font-semibold text-sm" style={{ color: row.kinsenas > 0 ? 'var(--brand-dark)' : 'var(--text-faint)' }}>{row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}</p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-                      <p className="text-xs font-semibold mb-1" style={{ color: '#d97706' }}>Atrenta (30th)</p>
+                    <div className="p-2 rounded-lg" style={{ background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)' }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: 'var(--brand-dark)' }}>Atrenta (30th)</p>
                       {isEditing ? (
                         <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: '100%' }} />
                       ) : (
-                        <p className="font-mono font-semibold text-sm" style={{ color: row.atrenta > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>{row.atrenta > 0 ? formatCurrency(row.atrenta) : '—'}</p>
+                        <p className="font-mono font-semibold text-sm" style={{ color: row.atrenta > 0 ? 'var(--brand-dark)' : 'var(--text-faint)' }}>{row.atrenta > 0 ? formatCurrency(row.atrenta) : '—'}</p>
                       )}
                     </div>
                   </div>
                   {total > 0 && (
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-xs" style={{ color: 'var(--text-faint)' }}>Total</span>
-                      <span className="font-bold font-mono text-sm" style={{ color: 'var(--green-600)' }}>{formatCurrency(total)}</span>
+                      <span className="font-bold font-mono text-sm" style={{ color: 'var(--brand-dark)' }}>{formatCurrency(total)}</span>
                     </div>
                   )}
                   {isEditing && (
@@ -188,24 +184,24 @@ export default function SavingsPage() {
                 {/* Desktop layout: grid row */}
                 <div className="hidden sm:grid px-4 py-3 items-center" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto', gap: 8 }}>
                   <div className="flex items-center gap-2">
-                    {isCurrent && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--green-400)' }} />}
-                    <span className="font-semibold" style={{ color: isCurrent ? 'var(--green-700)' : 'var(--text-primary)' }}>{MONTHS[idx]}</span>
+                    {isCurrent && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--brand-light)' }} />}
+                    <span className="font-semibold" style={{ color: isCurrent ? 'var(--brand-dark)' : 'var(--text-primary)' }}>{MONTHS[idx]}</span>
                     {(fromBudget1 || fromBudget2) && (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full font-bold shrink-0" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontSize: 9, border: '1px solid var(--green-200)' }}>AUTO</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-bold shrink-0" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', fontSize: 9, border: '1px solid var(--brand-muted)' }}>AUTO</span>
                     )}
                   </div>
                   <div className="text-right">
                     {isEditing ? (
                       <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
                     ) : (
-                      <span className="font-mono font-semibold" style={{ color: row.kinsenas > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>{row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}</span>
+                      <span className="font-mono font-semibold" style={{ color: row.kinsenas > 0 ? 'var(--brand-dark)' : 'var(--text-faint)' }}>{row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}</span>
                     )}
                   </div>
                   <div className="text-right">
                     {isEditing ? (
                       <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: 100 }} />
                     ) : (
-                      <span className="font-mono font-semibold" style={{ color: row.atrenta > 0 ? 'var(--green-600)' : 'var(--text-faint)' }}>{row.atrenta > 0 ? formatCurrency(row.atrenta) : '—'}</span>
+                      <span className="font-mono font-semibold" style={{ color: row.atrenta > 0 ? 'var(--brand-dark)' : 'var(--text-faint)' }}>{row.atrenta > 0 ? formatCurrency(row.atrenta) : '—'}</span>
                     )}
                   </div>
                   <div className="text-right">
@@ -213,7 +209,7 @@ export default function SavingsPage() {
                       <div>
                         <span className="font-bold font-mono" style={{ color: 'var(--text-primary)' }}>{formatCurrency(total)}</span>
                         <div className="mt-1" style={{ width: 80, height: 4, borderRadius: 2, background: 'var(--border)', marginLeft: 'auto' }}>
-                          <div style={{ width: `${(total / maxSaving) * 100}%`, height: '100%', borderRadius: 2, background: 'var(--green-400)' }} />
+                          <div style={{ width: `${(total / maxSaving) * 100}%`, height: '100%', borderRadius: 2, background: 'var(--brand-light)' }} />
                         </div>
                       </div>
                     ) : <span style={{ color: 'var(--text-faint)' }}>—</span>}
@@ -228,11 +224,11 @@ export default function SavingsPage() {
                   <div className="text-right">
                     {isEditing ? (
                       <div className="flex gap-1 justify-end">
-                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--green-100)', color: 'var(--green-700)', border: '1px solid var(--green-300)' }}><Check size={14} /></button>
-                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}><X size={14} /></button>
+                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}><Check size={14} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' }}><X size={14} /></button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl transition" style={{ color: 'var(--text-faint)', border: '1px solid var(--border)', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
+                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl transition" style={{ color: 'var(--text-faint)', border: '1.5px solid #0f172a', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
                     )}
                   </div>
                 </div>
@@ -240,8 +236,8 @@ export default function SavingsPage() {
             )
           })}
           {/* Footer totals */}
-          <div className="px-4 py-3 flex flex-wrap gap-3 justify-between items-center" style={{ borderTop: '2px solid var(--border)', background: 'var(--green-50)' }}>
-            <span className="font-bold text-sm" style={{ color: 'var(--green-800)' }}>TOTAL</span>
+          <div className="px-4 py-3 flex flex-wrap gap-3 justify-between items-center" style={{ borderTop: '2px solid var(--border)', background: 'var(--brand-pale)' }}>
+            <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>TOTAL</span>
             <div className="flex gap-4 flex-wrap">
               <div className="text-right">
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Kinsenas</p>
@@ -249,11 +245,11 @@ export default function SavingsPage() {
               </div>
               <div className="text-right">
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Atrenta</p>
-                <p className="font-bold font-mono text-sm" style={{ color: 'var(--amber-500)' }}>{formatCurrency(totalAtrenta)}</p>
+                <p className="font-bold font-mono text-sm" style={{ color: 'var(--brand)' }}>{formatCurrency(totalAtrenta)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Grand Total</p>
-                <p className="font-bold font-mono text-sm" style={{ color: 'var(--green-600)' }}>{formatCurrency(grandTotal)}</p>
+                <p className="font-bold font-mono text-sm" style={{ color: 'var(--brand-dark)' }}>{formatCurrency(grandTotal)}</p>
               </div>
             </div>
           </div>

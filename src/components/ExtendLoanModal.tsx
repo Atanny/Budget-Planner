@@ -12,7 +12,7 @@ interface Props {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
-  border: '1.5px solid var(--border)', background: 'var(--bg-subtle)',
+  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
 const labelStyle: React.CSSProperties = {
@@ -117,7 +117,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-4 shrink-0"
-          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}
+          style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))' }}
         >
           <div className="flex items-center gap-2">
             <RefreshCw size={18} className="text-white" />
@@ -136,10 +136,10 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
           {/* Loan info */}
-          <div className="p-3 rounded-xl" style={{ background: '#ede9fe', border: '1px solid #c4b5fd' }}>
+          <div className="p-3 rounded-xl" style={{ background: '#eff6ff', border: '1px solid #93c5fd' }}>
             <p className="font-bold text-sm" style={{ color: '#4c1d95' }}>{loan.name}</p>
             {existingLD?.start_date && existingLD?.total_months && (
-              <p className="text-xs mt-0.5" style={{ color: '#7c3aed' }}>
+              <p className="text-xs mt-0.5" style={{ color: '#2563eb' }}>
                 Current: {formatDate(existingLD.start_date)} · {existingLD.total_months} months
               </p>
             )}
@@ -165,9 +165,9 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
                 <button key={n} onClick={() => setTotalMonths(String(n))}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold transition"
                   style={{
-                    background: totalMonths === String(n) ? '#ede9fe' : 'var(--bg-subtle)',
+                    background: totalMonths === String(n) ? '#eff6ff' : 'var(--bg-subtle)',
                     color: totalMonths === String(n) ? '#6d28d9' : 'var(--text-muted)',
-                    border: `1.5px solid ${totalMonths === String(n) ? '#8b5cf6' : 'var(--border)'}`,
+                    border: `1.5px solid ${totalMonths === String(n) ? 'var(--accent)' : 'var(--border)'}`,
                   }}>
                   {n}mo
                 </button>
@@ -175,13 +175,13 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
             </div>
             <input type="number" value={totalMonths} onChange={e => setTotalMonths(e.target.value)}
               min={1} placeholder="e.g. 12"
-              style={{ ...inputStyle, border: '1.5px solid #c4b5fd' }} />
+              style={{ ...inputStyle, border: '1.5px solid #93c5fd' }} />
           </div>
 
           {/* Mode toggle */}
           <div>
             <label style={labelStyle}>Payment Amount Mode</label>
-            <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}>
+            <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
               {(['equal', 'manual'] as const).map(m => (
                 <button
                   key={m}
@@ -190,7 +190,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
                   style={{
                     background: mode === m ? 'white' : 'transparent',
                     color: mode === m ? '#6d28d9' : 'var(--text-muted)',
-                    border: mode === m ? '1.5px solid #c4b5fd' : '1.5px solid transparent',
+                    border: mode === m ? '1.5px solid #93c5fd' : '1.5px solid transparent',
                     boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                   }}
                 >
@@ -243,7 +243,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
           {/* Preview */}
           {endDate && (
             <div className="p-3 rounded-xl text-sm" style={{ background: '#dcfce7', border: '1px solid #86efac' }}>
-              <p className="font-semibold" style={{ color: '#15803d' }}>
+              <p className="font-semibold" style={{ color: 'var(--brand-dark)' }}>
                 New period: {formatDate(startDate)} → {endDate}
               </p>
               <p className="text-xs mt-0.5" style={{ color: '#166534' }}>
@@ -252,7 +252,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
             </div>
           )}
 
-          {error && <p className="text-xs" style={{ color: 'var(--red-500)' }}>{error}</p>}
+          {error && <p className="text-xs" style={{ color: 'var(--brand)' }}>{error}</p>}
         </div>
 
         {/* Footer */}
@@ -263,7 +263,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
           <button
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}
           >
             Cancel
           </button>
@@ -271,7 +271,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
             onClick={handleSave}
             disabled={saving || !startDate || numMonths < 1}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))' }}
           >
             {saving ? 'Saving...' : 'Extend Loan'}
           </button>

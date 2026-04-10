@@ -17,7 +17,7 @@ interface NotifTemplate {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
-  border: '1.5px solid var(--border)', background: 'var(--bg-subtle)',
+  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit',
 }
 
@@ -120,9 +120,9 @@ export default function NotificationsPage() {
       {/* Permission Banner */}
       {!permGranted && (
         <div className="glass-card p-4 flex items-center justify-between gap-3"
-          style={{ background: '#fef3c7', borderColor: '#fde68a' }}>
+          style={{ background: 'var(--brand-pale)', borderColor: 'var(--brand-muted)' }}>
           <div className="flex items-center gap-3">
-            <BellOff size={18} style={{ color: '#d97706' }} />
+            <BellOff size={18} style={{ color: 'var(--brand-dark)' }} />
             <div>
               <p className="font-semibold text-sm" style={{ color: '#92400e' }}>Enable Push Notifications</p>
               <p className="text-xs mt-0.5" style={{ color: '#b45309' }}>Get reminded when cutoff is near</p>
@@ -130,7 +130,7 @@ export default function NotificationsPage() {
           </div>
           <button onClick={enableNotifications}
             className="px-4 py-2 rounded-xl text-sm text-white font-semibold shrink-0"
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-dark))' }}>
             Enable
           </button>
         </div>
@@ -154,9 +154,9 @@ export default function NotificationsPage() {
           </h2>
           <span className="text-xs px-2.5 py-1 rounded-full font-semibold"
             style={{
-              background: daysUntil <= 3 ? '#fee2e2' : 'rgba(255,255,255,0.2)',
-              color: daysUntil <= 3 ? '#b91c1c' : 'white',
-              border: `1px solid ${daysUntil <= 3 ? '#fca5a5' : 'rgba(255,255,255,0.4)'}`,
+              background: daysUntil <= 3 ? 'var(--brand-pale)' : 'rgba(255,255,255,0.2)',
+              color: daysUntil <= 3 ? 'var(--brand-dark)' : 'white',
+              border: `1px solid ${daysUntil <= 3 ? 'var(--brand-muted)' : 'rgba(255,255,255,0.4)'}`,
             }}>
             {daysUntil} days away
           </span>
@@ -174,7 +174,7 @@ export default function NotificationsPage() {
           </button>
           <button onClick={() => generateCutoffNotif('2nd')}
             className="flex-1 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd', minWidth: 140 }}>
+            style={{ background: '#eff6ff', color: '#6d28d9', border: '1px solid #93c5fd', minWidth: 140 }}>
             + Create 2nd Cutoff Alert
           </button>
         </div>
@@ -217,7 +217,7 @@ export default function NotificationsPage() {
               onClick={sendCustom}
               disabled={!permGranted || !customTitle || !customBody || sending === 'custom'}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))' }}>
               <Send size={13} />
               {sending === 'custom' ? 'Sending...' : 'Send Now'}
             </button>
@@ -242,17 +242,17 @@ export default function NotificationsPage() {
             <div key={n.id} className="p-4 flex items-start gap-3" style={{ borderBottom: '1px solid var(--border)' }}>
               <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
                 style={{
-                  background: n.cutoff === '1st' ? '#dbeafe' : n.cutoff === '2nd' ? '#ede9fe' : 'var(--green-50)',
-                  border: `1px solid ${n.cutoff === '1st' ? '#93c5fd' : n.cutoff === '2nd' ? '#c4b5fd' : 'var(--green-200)'}`,
+                  background: n.cutoff === '1st' ? '#dbeafe' : n.cutoff === '2nd' ? '#eff6ff' : 'var(--brand-pale)',
+                  border: `1px solid ${n.cutoff === '1st' ? '#93c5fd' : n.cutoff === '2nd' ? '#93c5fd' : 'var(--brand-muted)'}`,
                 }}>
-                <Bell size={14} style={{ color: n.cutoff === '1st' ? '#2563eb' : n.cutoff === '2nd' ? '#7c3aed' : 'var(--green-600)' }} />
+                <Bell size={14} style={{ color: n.cutoff === '1st' ? '#2563eb' : n.cutoff === '2nd' ? '#2563eb' : 'var(--brand-dark)' }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{n.title}</p>
                 <p className="text-xs mt-0.5 whitespace-pre-line" style={{ color: 'var(--text-muted)' }}>{n.body}</p>
                 <div className="flex items-center gap-3 mt-2 flex-wrap">
                   {n.sent ? (
-                    <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--green-600)' }}>
+                    <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--brand-dark)' }}>
                       <CheckCircle size={10} /> Sent
                     </span>
                   ) : (
@@ -273,7 +273,7 @@ export default function NotificationsPage() {
               </div>
               <button onClick={() => deleteNotif(n.id)}
                 className="p-1.5 rounded-lg shrink-0"
-                style={{ background: '#fee2e2', color: '#b91c1c' }}>
+                style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)' }}>
                 <Trash2 size={13} />
               </button>
             </div>

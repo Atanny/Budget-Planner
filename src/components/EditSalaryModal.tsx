@@ -47,17 +47,17 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b"
-          style={{ borderColor: 'var(--border)', background: 'var(--green-50)' }}>
+          style={{ borderColor: '#0f172a', background: 'var(--brand-pale)' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--green-100)' }}>
-              <Wallet size={16} style={{ color: 'var(--green-600)' }} />
+              style={{ background: 'var(--brand-pale)' }}>
+              <Wallet size={16} style={{ color: 'var(--brand-dark)' }} />
             </div>
-            <h2 className="font-bold text-base" style={{ color: 'var(--green-900)' }}>Salary & Income</h2>
+            <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Salary & Income</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg transition"
             style={{ color: 'var(--text-muted)' }}><X size={17} /></button>
@@ -66,8 +66,8 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
         <div className="p-5 space-y-4">
           {/* 1st Cutoff */}
           <div className="p-4 rounded-xl space-y-3"
-            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--green-600)' }}>1st Cutoff (15th)</p>
+            style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>1st Cutoff (15th)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Base Salary (₱)</label>
@@ -80,7 +80,7 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
             </div>
             {(n(sal1) + n(extra1)) > 0 && (
               <div className="flex items-center justify-between text-xs px-2.5 py-2 rounded-lg"
-                style={{ background: 'var(--green-100)', color: 'var(--green-700)' }}>
+                style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)' }}>
                 <span>Total 1st Cutoff</span>
                 <span className="font-bold">{fmt(n(sal1) + n(extra1))}</span>
               </div>
@@ -89,8 +89,8 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
 
           {/* 2nd Cutoff */}
           <div className="p-4 rounded-xl space-y-3"
-            style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--amber-500)' }}>2nd Cutoff (30th)</p>
+            style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>2nd Cutoff (30th)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Base Salary (₱)</label>
@@ -103,7 +103,7 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
             </div>
             {(n(sal2) + n(extra2)) > 0 && (
               <div className="flex items-center justify-between text-xs px-2.5 py-2 rounded-lg"
-                style={{ background: 'var(--amber-100)', color: 'var(--amber-500)' }}>
+                style={{ background: 'var(--brand-pale)', color: 'var(--brand)' }}>
                 <span>Total 2nd Cutoff</span>
                 <span className="font-bold">{fmt(n(sal2) + n(extra2))}</span>
               </div>
@@ -122,20 +122,20 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
           {/* Net preview */}
           {(n(sal1) + n(sal2)) > 0 && (
             <div className="p-3 rounded-xl space-y-2"
-              style={{ background: 'var(--green-50)', border: '1px solid var(--green-200)' }}>
-              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--green-600)' }}>Monthly Summary</p>
+              style={{ background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)' }}>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>Monthly Summary</p>
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--text-muted)' }}>Total Income</span>
-                  <span className="font-semibold" style={{ color: 'var(--green-700)' }}>{fmt(total1 + total2)}</span>
+                  <span className="font-semibold" style={{ color: 'var(--brand-dark)' }}>{fmt(total1 + total2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: 'var(--text-muted)' }}>Savings Set Aside</span>
-                  <span className="font-semibold" style={{ color: 'var(--amber-500)' }}>− {fmt(netSav)}</span>
+                  <span className="font-semibold" style={{ color: 'var(--brand)' }}>− {fmt(netSav)}</span>
                 </div>
-                <div className="flex justify-between pt-1.5 border-t" style={{ borderColor: 'var(--green-200)' }}>
-                  <span className="font-bold" style={{ color: 'var(--green-800)' }}>Remaining for Expenses</span>
-                  <span className="font-bold text-sm" style={{ color: grandNet >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>{fmt(grandNet)}</span>
+                <div className="flex justify-between pt-1.5 border-t" style={{ borderColor: 'var(--brand-muted)' }}>
+                  <span className="font-bold" style={{ color: 'var(--text-primary)' }}>Remaining for Expenses</span>
+                  <span className="font-bold text-sm" style={{ color: grandNet >= 0 ? 'var(--brand-dark)' : 'var(--brand)' }}>{fmt(grandNet)}</span>
                 </div>
               </div>
             </div>
@@ -144,12 +144,12 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
 
         <div className="px-5 pb-5 flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--green-500), var(--green-400))' }}>
+            style={{ background: 'linear-gradient(135deg, var(--brand), var(--brand-light))' }}>
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>

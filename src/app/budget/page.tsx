@@ -30,11 +30,11 @@ function timeAgo(dateStr: string) {
 }
 
 const ACTION_META: Record<string, { icon: string; color: string; label: string }> = {
-  add:    { icon: '+', color: '#16a34a', label: 'Added'   },
+  add:    { icon: '+', color: 'var(--brand-dark)', label: 'Added'   },
   edit:   { icon: '✎', color: '#2563eb', label: 'Edited'  },
-  delete: { icon: '✕', color: '#dc2626', label: 'Deleted' },
-  paid:   { icon: '✓', color: '#16a34a', label: 'Paid'    },
-  unpaid: { icon: '↩', color: '#d97706', label: 'Unpaid'  },
+  delete: { icon: '✕', color: 'var(--brand-dark)', label: 'Deleted' },
+  paid:   { icon: '✓', color: 'var(--brand-dark)', label: 'Paid'    },
+  unpaid: { icon: '↩', color: 'var(--brand-dark)', label: 'Unpaid'  },
 }
 
 // Returns exact 0-based month range the loan is active in the given year
@@ -192,6 +192,11 @@ function BudgetPageInner() {
       setShowAdd(true)
       router.replace('/budget')
     }
+    // Open salary modal when ?action=salary is triggered from Navbar
+    if (searchParams.get('action') === 'salary') {
+      setShowSalary(true)
+      router.replace('/budget')
+    }
   }, [searchParams, router])
 
   function goToPrevMonth() {
@@ -314,7 +319,7 @@ function BudgetPageInner() {
       "
       style={{
         borderBottom: '1px solid var(--border)',
-        background: isPaid ? '#f0fdf4' : 'white',
+        background: isPaid ? 'var(--brand-pale)' : 'white',
       }}
     >
 
@@ -334,8 +339,8 @@ function BudgetPageInner() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: isPaid ? '#16a34a' : 'white',
-            border: `2px solid ${isPaid ? '#16a34a' : '#94a3b8'}`,
+            background: isPaid ? 'var(--brand-dark)' : 'white',
+            border: `2px solid ${isPaid ? 'var(--brand-dark)' : '#94a3b8'}`,
             opacity: canToggle || isPaid ? 1 : 0.4,
             cursor: isPaid ? 'not-allowed' : canToggle ? 'pointer' : 'not-allowed',
           }}
@@ -379,13 +384,13 @@ function BudgetPageInner() {
             background: isPaid
               ? '#dcfce7'
               : loanNotYet
-              ? '#fef3c7'
-              : '#fee2e2',
+              ? 'var(--brand-pale)'
+              : 'var(--brand-pale)',
             color: isPaid
-              ? '#15803d'
+              ? 'var(--brand-dark)'
               : loanNotYet
               ? '#92400e'
-              : '#b91c1c',
+              : 'var(--brand-dark)',
           }}
         >
           {isPaid
@@ -426,7 +431,7 @@ function BudgetPageInner() {
               className="p-1.5 rounded-lg"
               style={{
                 background: '#dcfce7',
-                color: '#15803d',
+                color: 'var(--brand-dark)',
                 border: '1px solid #86efac',
               }}
             >
@@ -459,9 +464,9 @@ function BudgetPageInner() {
             onClick={() => askDeleteItem(item)}
             className="p-1.5 rounded-lg"
             style={{
-              background: '#fee2e2',
-              color: '#b91c1c',
-              border: '1px solid #fca5a5',
+              background: 'var(--brand-pale)',
+              color: 'var(--brand-dark)',
+              border: '1.5px solid var(--brand-muted)',
             }}
           >
             <Trash2 size={12} />
@@ -485,7 +490,7 @@ function BudgetPageInner() {
         return (
           <td className="text-center" style={{ padding: '3px 1px' }}>
             <div className="w-5 h-5 mx-auto rounded"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.12 }} />
+              style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a', opacity: 0.12 }} />
           </td>
         )
       }
@@ -498,7 +503,7 @@ function BudgetPageInner() {
         return (
           <td className="text-center" style={{ padding: '3px 1px' }}>
             <div className="w-5 h-5 mx-auto rounded"
-              style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)', opacity: 0.18 }} />
+              style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a', opacity: 0.18 }} />
           </td>
         )
       }
@@ -510,15 +515,15 @@ function BudgetPageInner() {
       <td className="text-center" style={{ padding: '3px 1px' }}>
         <div className="w-5 h-5 mx-auto flex items-center justify-center rounded"
           style={{
-            background: paid ? 'var(--green-100)' : isOverdue ? '#fee2e2' : isCurrent ? 'var(--green-50)' : 'transparent',
-            border: `1.5px solid ${paid ? 'var(--green-300)' : isOverdue ? '#fca5a5' : isCurrent ? 'var(--green-200)' : 'var(--border)'}`,
+            background: paid ? 'var(--brand-pale)' : isOverdue ? 'var(--brand-pale)' : isCurrent ? 'var(--brand-pale)' : 'transparent',
+            border: `1.5px solid ${paid ? 'var(--brand-muted)' : isOverdue ? 'var(--brand-muted)' : isCurrent ? 'var(--brand-muted)' : 'var(--border)'}`,
             opacity: isFuture ? 0.3 : 1,
           }}>
           {paid
-            ? <Check size={8} style={{ color: 'var(--green-600)' }} />
+            ? <Check size={8} style={{ color: 'var(--brand-dark)' }} />
             : isOverdue
-            ? <span className="w-1 h-1 rounded-full" style={{ background: '#ef4444' }} />
-            : <span className="w-1 h-1 rounded-full" style={{ background: isCurrent ? 'var(--green-400)' : 'var(--border-strong)' }} />
+            ? <span className="w-1 h-1 rounded-full" style={{ background: 'var(--brand)' }} />
+            : <span className="w-1 h-1 rounded-full" style={{ background: isCurrent ? 'var(--brand-light)' : 'var(--border-strong)' }} />
           }
         </div>
       </td>
@@ -528,26 +533,13 @@ function BudgetPageInner() {
   return (
     <div className="w-full space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Budget Tracker</h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{viewYear}</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowSalary(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid var(--border)' }}>
-            <Settings size={14} /> Salary
-          </button>
-         
-        </div>
-      </div>
+     
 
       {/* Month Navigator */}
       <div className="glass-card flex items-center justify-between px-3 py-2.5 gap-2">
         <button onClick={goToPrevMonth}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg"
-          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid var(--border)' }}>
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg pb-1"
+          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid #0f172a' }}>
           ‹
         </button>
         <div className="flex-1 flex items-center justify-center gap-2 flex-wrap">
@@ -557,14 +549,14 @@ function BudgetPageInner() {
           {!isCurrentMonth && (
             <button onClick={goToToday}
               className="text-xs px-2 py-0.5 rounded-full font-semibold transition-all"
-              style={{ background: 'var(--green-100)', color: 'var(--green-700)', border: '1px solid var(--green-200)' }}>
+              style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}>
               Back to Today
             </button>
           )}
         </div>
         <button onClick={goToNextMonth}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg"
-          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid var(--border)' }}>
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg pb-1"
+          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid #0f172a' }}>
           ›
         </button>
       </div>
@@ -573,9 +565,9 @@ function BudgetPageInner() {
       {!isCurrentMonth && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
           style={{
-            background: viewYear < CURRENT_YEAR || viewMonth < CURRENT_MONTH ? '#fef3c7' : '#eff6ff',
+            background: viewYear < CURRENT_YEAR || viewMonth < CURRENT_MONTH ? 'var(--brand-pale)' : '#eff6ff',
             color: viewYear < CURRENT_YEAR || (viewYear === CURRENT_YEAR && viewMonth < CURRENT_MONTH) ? '#92400e' : '#1d4ed8',
-            border: `1px solid ${viewYear < CURRENT_YEAR || (viewYear === CURRENT_YEAR && viewMonth < CURRENT_MONTH) ? '#fde68a' : '#bfdbfe'}`,
+            border: `1px solid ${viewYear < CURRENT_YEAR || (viewYear === CURRENT_YEAR && viewMonth < CURRENT_MONTH) ? 'var(--brand-muted)' : '#bfdbfe'}`,
           }}>
           <Calendar size={12} />
           {viewYear < CURRENT_YEAR || (viewYear === CURRENT_YEAR && viewMonth < CURRENT_MONTH)
@@ -585,83 +577,43 @@ function BudgetPageInner() {
       )}
 
       {/* Cutoff Tabs */}
-      <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}>
+      <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
         {(['1st', '2nd'] as Cutoff[]).map(c => (
           <button key={c} onClick={() => setActiveTab(c)}
-            className="flex-1 py-2 rounded-lg text-sm font-bold transition-all"
+            className="flex-1 py-2 rounded-lg text-sm font-bold transition-all border"
             style={{
               background: activeTab === c ? 'var(--bg-surface)' : 'transparent',
-              color: activeTab === c ? 'var(--green-600)' : 'var(--text-muted)',
-              border: activeTab === c ? '1.5px solid var(--green-300)' : '1.5px solid transparent',
+              color: activeTab === c ? 'var(--brand-dark)' : 'var(--text-muted)',
+              border: activeTab === c ? '1.5px solid #0f172a' : '1.5px solid transparent',
               boxShadow: activeTab === c ? '0 1px 4px rgba(13,40,24,0.08)' : 'none',
             }}>
-            {c === '1st' ? '1st (15th)' : '2nd (30th)'}
+            {c === '1st' ? 'Kinsenas' : 'Atrenta'}
           </button>
         ))}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[
-          { label: 'Income',        value: totalIncome,   color: 'var(--green-600)', sub: extraIncome > 0 ? `+${formatCurrency(extraIncome)} extra` : '' },
-          { label: 'Expenses',      value: totalExpenses, color: 'var(--red-500)',   sub: `${cutoffItems.length} items` },
-          { label: 'Remaining',     value: remaining,     color: remaining   >= 0 ? 'var(--amber-500)' : 'var(--red-500)', sub: 'before savings' },
-          { label: 'After Savings', value: afterSavings,  color: afterSavings >= 0 ? 'var(--green-500)' : 'var(--red-500)', sub: `goal: ${formatCurrency(savingsGoal)}` },
-        ].map(s => (
-          <div key={s.label} className="glass-card p-3">
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</p>
-            <p className="text-base font-bold mt-1 font-mono" style={{ color: s.color }}>{formatCurrency(s.value)}</p>
-            {s.sub && <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>{s.sub}</p>}
-          </div>
-        ))}
-      </div>
-
-      {/* Savings Goal Row with Checkbox */}
-      <div className="glass-card p-3 flex items-center gap-3" style={{ background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)', borderColor: '#060D38' }}>
-        <button
-          onClick={toggleSavingsGoal}
-          disabled={savingsSaving || !savingsGoal}
-          title={savingsGoal ? ((activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? 'Unmark savings' : 'Mark savings as added') : 'Set savings goal first'}
-          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all"
-          style={{
-            background: (activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? '#16a34a' : 'white',
-            border: `2px solid ${(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? '#16a34a' : savingsGoal ? '#94a3b8' : 'var(--border)'}`,
-            cursor: savingsGoal ? 'pointer' : 'not-allowed',
-            opacity: savingsGoal ? 1 : 0.4,
-          }}>
-          {(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) && <Check size={11} className="text-white" />}
-        </button>
-        <PiggyBank size={15} style={{ color: 'white' }} />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm" style={{ color: 'white' }}>
-            Savings Goal: {formatCurrency(savingsGoal)}/cutoff
-          </p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.8)' }}>
-            {(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? '✓ Saved — reflected in ' : 'Check to log to '}
-            <a href="/savings" className="underline font-semibold" style={{ color: 'white' }}>Savings</a>
-          </p>
-        </div>
-      </div>
+   
 
  {/* ═══ Unified Expenses + Loans Table ═══ */}
 <div className="glass-card overflow-hidden">
 
   {/* Header */}
   <div
-    className="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+    className="px-4 py-4 border-b"
     style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}>
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span
-          className="font-bold text-sm sm:text-base"
-          style={{ color: 'white' }}
-        >
-          MONTHLY PAYMENTS
-        </span>
-         </div>
+
+    {/* Title row */}
+    <div className="flex items-center justify-between ">
+      <span className="font-bold text-sm sm:text-base" style={{ color: 'white' }}>
+        MONTHLY PAYMENTS
+      </span>
+      <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+        style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
+        {cutoffItems.length} items
+      </span>
     </div>
 
-  
+   
   </div>
 
   {/* Content */}
@@ -697,7 +649,7 @@ function BudgetPageInner() {
         <>
 
           {/* Loan Items */}
-          <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+          <div className="divide-y" style={{ borderColor: '#0f172a' }}>
             {loanItems.map((item) => (
               <ItemRow key={item.id} item={item} />
             ))}
@@ -707,299 +659,131 @@ function BudgetPageInner() {
 
     </div>
   )}
-  {/* ═══ Totals ═══ */}
-<div className="card p-4 space-y-2">
 
-  <div className="flex justify-between text-sm">
-    <span style={{ color: 'var(--text-muted)' }}>
-      Total Expenses + Loans
-    </span>
-    <span className="font-bold" style={{ color: 'var(--red-500)' }}>
-      {formatCurrency(totalExpenses)}
-    </span>
-  </div>
+  
+  {/* Totals row — compact real table with amount on top and note below */}
+<div
+  className="overflow-x-auto"
+  style={{ borderColor: '#0f172a' }}
+>
+  <table className="w-full text-sm">
+    <thead style={{ background: 'var(--bg-subtle)' }}>
+      <tr>
+        <th
+          className="px-3 py-2 text-left text-xs md:text-sm font-semibold"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Type
+        </th>
+        <th
+          className="px-3 py-2 text-right text-xs md:text-sm font-semibold"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Summary
+        </th>
+      </tr>
+    </thead>
 
-  <div className="flex justify-between text-sm">
-    <span style={{ color: 'var(--text-muted)' }}>
-      Savings Goal
-    </span>
-    <span className="font-semibold" style={{ color: 'var(--amber-500)' }}>
-      − {formatCurrency(savingsGoal)}
-    </span>
-  </div>
+    <tbody style={{ background: 'white' }}>
+      {/* Income */}
+      <tr className="border-t" style={{ borderColor: '#0f172a' }}>
+        <td className="px-3 py-2 font-medium align-top">Income</td>
+        <td className="px-3 py-2 text-right">
+          <p
+            className="text-sm md:text-base font-bold font-mono leading-tight"
+            style={{ color: '#1d4ed8' }}
+          >
+            {formatCurrency(totalIncome)}
+          </p>
 
-  <div
-    className="flex justify-between text-sm font-bold pt-2 border-t"
-    style={{ borderColor: 'var(--border)' }}
-  >
-    <span style={{ color: 'var(--green-800)' }}>
-      Remaining Budget
-    </span>
-    <span
-      style={{
-        color: afterSavings >= 0
-          ? 'var(--green-600)'
-          : 'var(--red-500)'
-      }}
-    >
-      {formatCurrency(afterSavings)}
-    </span>
-  </div>
+          <p
+            className="text-[11px] md:text-xs mt-1 leading-tight"
+            style={{ color: '#2563eb' }}
+          >
+            {extraIncome > 0
+              ? `+${formatCurrency(extraIncome)} extra`
+              : 'No extra income'}
+          </p>
+        </td>
+      </tr>
 
+      {/* Expenses */}
+      <tr className="border-t" style={{ borderColor: '#0f172a' }}>
+        <td className="px-3 py-2 font-medium align-top">Expenses</td>
+        <td className="px-3 py-2 text-right">
+          <p
+            className="text-sm md:text-base font-bold font-mono leading-tight"
+            style={{ color: '#1d4ed8' }}
+          >
+            {formatCurrency(totalExpenses)}
+          </p>
+
+          <p
+            className="text-[11px] md:text-xs mt-1 leading-tight"
+            style={{ color: '#2563eb' }}
+          >
+            {savingsGoal > 0 ? '− savings deducted' : 'No savings deduction'}
+          </p>
+        </td>
+      </tr>
+
+      {/* Remaining */}
+      <tr className="border-t" style={{ borderColor: '#0f172a' }}>
+        <td className="px-3 py-2 font-medium align-top">Remaining</td>
+        <td className="px-3 py-2 text-right">
+          <p
+            className="text-sm md:text-base font-bold font-mono leading-tight"
+            style={{
+              color: afterSavings >= 0 ? 'var(--brand-dark)' : 'var(--brand-dark)',
+            }}
+          >
+            {formatCurrency(afterSavings)}
+          </p>
+
+          <p
+            className="text-[11px] md:text-xs mt-1 leading-tight"
+            style={{ color: '#2563eb' }}
+          >
+            after savings
+          </p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 </div>
 
-
-
-
-{/* ═══ Payment History (RESPONSIVE FIX) ═══ */}
-<div className="glass-card overflow-hidden">
-
-  {/* Toggle Header */}
-  <button
-    onClick={() => setShowYearly(!showYearly)}
-    className="w-full flex items-center justify-between px-4 py-3 gap-2"
-    style={{
-      borderBottom: showYearly ? '1.5px solid var(--border)' : 'none',
-      background: showYearly ? 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' : 'var(--bg-surface)',
-      borderColor: showYearly ? '#060D38' : 'transparent'
-    }}
-  >
-    <div className="flex items-center gap-2 flex-wrap">
-
-      <Calendar size={14} style={{ color: showYearly ? 'white' : 'var(--green-500)' }} />
-
-      <span
-        className="font-bold text-sm"
-        style={{ color: showYearly ? 'white' : 'var(--text-primary)' }}
-      >
-        Payment History — {viewYear}
-      </span>
-
-      <span
-        className="text-xs px-2 py-0.5 rounded-full font-semibold"
-        style={{
-          background: showYearly ? 'rgba(255,255,255,0.2)' : 'var(--green-100)',
-          color: showYearly ? 'white' : 'var(--green-700)'
-        }}
-      >
-        {items.length}
-      </span>
-
-    </div>
-
-    {showYearly ? (
-      <ChevronUp size={14} style={{ color: showYearly ? 'white' : 'var(--text-muted)' }} />
-    ) : (
-      <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
-    )}
-  </button>
-
-  {/* Table Wrapper (FIXED RESPONSIVE SCROLL) */}
-  {showYearly && (
-    <div className="w-full overflow-x-auto">
-      <div className="min-w-[700px]">
-
-        <table className="w-full text-xs">
-
-          {/* Header */}
-          <thead>
-            <tr
-              style={{
-                background: 'var(--bg-subtle)',
-                borderBottom: '1px solid var(--border)'
-              }}
-            >
-              <th
-                className="text-left px-3 py-2 font-semibold sticky left-0 z-10"
-                style={{
-                  color: 'var(--text-muted)',
-                  minWidth: 120,
-                  background: 'var(--bg-subtle)'
-                }}
-              >
-                Item
-              </th>
-
-              {MONTHS_SHORT.map((m, i) => (
-                <th
-                  key={m}
-                  className="text-center py-2 font-semibold"
-                  style={{
-                    color:
-                      i === CURRENT_MONTH
-                        ? 'var(--green-600)'
-                        : i > CURRENT_MONTH
-                        ? 'var(--border-strong)'
-                        : 'var(--text-faint)',
-                    fontWeight: i === CURRENT_MONTH ? 800 : 600,
-                    minWidth: 35
-                  }}
-                >
-                  {m.slice(0, 1)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          {/* Body */}
-          <tbody>
-            {items.length === 0 && (
-              <tr>
-                <td
-                  colSpan={14}
-                  className="text-center py-8"
-                  style={{ color: 'var(--text-faint)' }}
-                >
-                  No items.
-                </td>
-              </tr>
-            )}
-
-            {items.map((item, idx) => {
-              const monthPaid = Array.from(
-                { length: 12 },
-                (_, i) => payments[item.id]?.[i + 1] ?? false
-              )
-
-              const rowBg =
-                idx % 2 === 0
-                  ? 'var(--bg-surface)'
-                  : 'var(--bg-subtle)'
-
-              return (
-                <tr
-                  key={item.id}
-                  style={{
-                    borderBottom: '1px solid var(--border)',
-                    background: rowBg
-                  }}
-                >
-
-                  {/* Sticky first column */}
-                  <td
-                    className="px-3 py-2 sticky left-0 z-10"
-                    style={{ background: rowBg, minWidth: 120 }}
-                  >
-                    <div className="flex items-center gap-1">
-                      {item.is_loan && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: '#7c3aed',
-                            background: '#ede9fe',
-                            padding: '1px 4px',
-                            borderRadius: 4
-                          }}
-                        >
-                          LOAN
-                        </span>
-                      )}
-
-                      <span
-                        className="font-semibold truncate"
-                        style={{
-                          color: 'var(--text-primary)',
-                          maxWidth: 90
-                        }}
-                      >
-                        {item.name}
-                      </span>
-                    </div>
-
-                    <p
-                      className="text-xs"
-                      style={{ color: 'var(--text-faint)' }}
-                    >
-                      {item.cutoff}
-                    </p>
-                  </td>
-
-                  {monthPaid.map((paid, i) => (
-                    <YearlyCell
-                      key={i}
-                      item={item}
-                      monthIdx={i}
-                      paid={paid}
-                    />
-                  ))}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-
-      </div>
-    </div>
-  )}
-</div>
-
-      {/* ═══ History Log ═══ */}
-      <div className="glass-card overflow-hidden">
-        <button onClick={() => setShowHistory(!showHistory)}
-          className="w-full flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: showHistory ? '1.5px solid #060D38' : 'none', background: showHistory ? 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' : 'var(--bg-surface)' }}>
-          <div className="flex items-center gap-2">
-            <History size={14} style={{ color: showHistory ? 'white' : 'var(--green-500)' }} />
-            <span className="font-bold text-sm" style={{ color: showHistory ? 'white' : 'var(--text-primary)' }}>Transaction History</span>
-            {logs.length > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: showHistory ? 'rgba(255,255,255,0.2)' : 'var(--green-100)', color: showHistory ? 'white' : 'var(--green-700)' }}>{logs.length}</span>
-            )}
-          </div>
-          {showHistory ? <ChevronUp size={14} style={{ color: showHistory ? 'white' : 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
+   {/* Savings Goal Row with Checkbox */}
+      <div className="glass-card p-3 flex items-center gap-3" style={{
+    background: 'white',
+    color: 'dark',
+    border: '1.5px solid dark',
+  }}>
+        <button
+          onClick={toggleSavingsGoal}
+          disabled={savingsSaving || !savingsGoal}
+          title={savingsGoal ? ((activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? 'Unmark savings' : 'Mark savings as added') : 'Set savings goal first'}
+          className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all"
+          style={{
+            background: (activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? 'var(--brand-dark)' : 'white',
+            border: `2px solid ${(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? 'var(--brand-dark)' : savingsGoal ? '#94a3b8' : 'var(--border)'}`,
+            cursor: savingsGoal ? 'pointer' : 'not-allowed',
+            opacity: savingsGoal ? 1 : 0.4,
+          }}>
+          {(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) && <Check size={11} className="text-dark" />}
         </button>
-        {showHistory && (
-          <div>
-            {logs.length === 0 ? (
-              <div className="py-10 text-center" style={{ color: 'var(--text-faint)' }}>
-                <Clock size={22} className="mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No activity yet.</p>
-              </div>
-            ) : (
-              <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
-                {logs.map(log => {
-                  const meta = ACTION_META[log.action] || ACTION_META['add']
-                  const catInfo = EXPENSE_CATEGORIES.find(c => c.value === log.category)
-                  return (
-                    <div key={log.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                        style={{ background: meta.color + '18', color: meta.color, border: `1.5px solid ${meta.color}30` }}>
-                        {meta.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{log.item_name}</span>
-                          {catInfo && (
-                            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0"
-                              style={{ background: `${catInfo.color}18`, color: catInfo.color, fontSize: 9, fontWeight: 700 }}>
-                              {catInfo.label.split(' ')[0]}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span className="text-xs font-medium" style={{ color: meta.color }}>{meta.label}</span>
-                          {log.cutoff && <span className="text-xs" style={{ color: 'var(--text-faint)' }}>· {log.cutoff}</span>}
-                          <span className="text-xs" style={{ color: 'var(--text-faint)' }}>· {timeAgo(log.created_at)}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-bold font-mono text-sm"
-                          style={{ color: log.action === 'delete' ? 'var(--text-faint)' : log.action === 'unpaid' ? 'var(--amber-500)' : log.action === 'edit' ? '#2563eb' : '#dc2626' }}>
-                          {log.action === 'delete' ? '—' : log.action === 'unpaid' ? `+${formatCurrency(log.amount)}` : log.action === 'edit' ? formatCurrency(log.amount) : `-${formatCurrency(log.amount)}`}
-                        </p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-faint)' }}>
-                          {new Date(log.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        <PiggyBank size={15} style={{ color: 'dark' }} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm" style={{ color: 'var(--brand)' }}>
+            Savings Goal: {formatCurrency(savingsGoal)}/cutoff
+          </p>
+          <p className="text-xs" style={{ color: 'dark' }}>
+            {(activeTab === '1st' ? savingsCheck1st : savingsCheck2nd) ? '✓ Saved — reflected in ' : 'Check to log to '}
+            <a href="/savings" className="underline font-semibold" style={{ color: 'dark' }}>Savings</a>
+          </p>
+        </div>
       </div>
+
 
       {/* Modals */}
       {showAdd && (
@@ -1047,12 +831,12 @@ function BudgetPageInner() {
       {/* ═══ Pay Confirmation Modal ═══ */}
       {payConfirmItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)' }}>
-          <div className="w-full max-w-sm rounded-2xl overflow-hidden slide-up" style={{ background: 'white', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden slide-up" style={{ background: 'white', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
 
             {/* Header */}
             <div className="px-5 pt-5 pb-4 text-center">
               <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#dcfce7', border: '2px solid #86efac' }}>
-                <Check size={22} color="#16a34a" strokeWidth={3} />
+                <Check size={22} color="var(--brand-dark)" strokeWidth={3} />
               </div>
               <h2 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
                 Mark as Paid?
@@ -1077,7 +861,7 @@ function BudgetPageInner() {
               <button
                 onClick={() => setPayConfirmItem(null)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}
+                style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}
               >
                 Cancel
               </button>
@@ -1088,7 +872,7 @@ function BudgetPageInner() {
                   await toggleCurrentMonth(item)
                 }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)' }}
+                style={{ background: 'linear-gradient(135deg, var(--brand-dark), var(--brand-light))' }}
               >
                 Yes, Mark as Paid
               </button>

@@ -31,7 +31,7 @@ export default function ConfirmModal({
         className="w-full max-w-sm rounded-2xl overflow-hidden"
         style={{
           background: 'var(--bg-surface)',
-          border: '1.5px solid var(--border)',
+          border: '1.5px solid #0f172a',
           boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
           animation: 'slide-up 0.2s ease',
         }}
@@ -42,12 +42,12 @@ export default function ConfirmModal({
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
             style={{
-              background: danger ? '#fee2e2' : '#dbeafe',
-              border: `2px solid ${danger ? '#fca5a5' : '#93c5fd'}`,
+              background: danger ? 'var(--brand-pale)' : '#dbeafe',
+              border: `2px solid ${danger ? 'var(--brand-muted)' : '#93c5fd'}`,
             }}
           >
             {danger
-              ? <Trash2 size={28} style={{ color: '#dc2626' }} />
+              ? <Trash2 size={28} style={{ color: 'var(--brand-dark)' }} />
               : <AlertTriangle size={28} style={{ color: '#2563eb' }} />
             }
           </div>
@@ -76,7 +76,7 @@ export default function ConfirmModal({
             onClick={onConfirm}
             className="flex-1 py-4 text-sm font-bold transition-colors"
             style={{
-              color: danger ? '#dc2626' : '#2563eb',
+              color: danger ? 'var(--brand-dark)' : '#2563eb',
               background: 'transparent',
               borderRadius: 0,
             }}

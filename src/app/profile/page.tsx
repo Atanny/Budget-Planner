@@ -61,13 +61,13 @@ export default function ProfilePage() {
       </div>
 
       {/* Info rows */}
-      <div className="glass-card overflow-hidden divide-y" style={{ borderColor: 'var(--border)' }}>
+      <div className="glass-card overflow-hidden divide-y" style={{ borderColor: '#0f172a' }}>
         {[
           { icon: User,   label: 'Account Type', value: user?.is_anonymous ? 'Guest' : 'Email',  color: 'var(--blue-500)',   bg: '#dbeafe' },
-          { icon: Shield, label: 'User ID',       value: user?.id ? user.id.slice(0,8) + '...' : '—', color: '#7c3aed',   bg: '#ede9fe' },
-          { icon: Bell,   label: 'Notifications', value: notifStatus,                              color: 'var(--green-600)', bg: 'var(--green-100)' },
+          { icon: Shield, label: 'User ID',       value: user?.id ? user.id.slice(0,8) + '...' : '—', color: '#2563eb',   bg: '#eff6ff' },
+          { icon: Bell,   label: 'Notifications', value: notifStatus,                              color: 'var(--brand-dark)', bg: 'var(--brand-pale)' },
         ].map(item => (
-          <div key={item.label} className="flex items-center gap-4 px-5 py-4" style={{ borderColor: 'var(--border)' }}>
+          <div key={item.label} className="flex items-center gap-4 px-5 py-4" style={{ borderColor: '#0f172a' }}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: item.bg }}>
               <item.icon size={16} style={{ color: item.color }} />
             </div>
@@ -89,8 +89,8 @@ export default function ProfilePage() {
       )}
 
       {/* PWA tip */}
-      <div className="glass-card p-4 flex items-start gap-3" style={{ background: '#fef3c7', borderColor: '#fde68a' }}>
-        <Smartphone size={18} style={{ color: 'var(--amber-500)', flexShrink: 0, marginTop: 2 }} />
+      <div className="glass-card p-4 flex items-start gap-3" style={{ background: 'var(--brand-pale)', borderColor: 'var(--brand-muted)' }}>
+        <Smartphone size={18} style={{ color: 'var(--brand)', flexShrink: 0, marginTop: 2 }} />
         <div>
           <p className="text-sm font-bold" style={{ color: '#92400e' }}>Install as App</p>
           <p className="text-xs mt-0.5" style={{ color: '#a16207' }}>
@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
       <button onClick={handleLogout}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
-        style={{ background: '#fee2e2', color: '#b91c1c', border: '1.5px solid #fca5a5' }}>
+        style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' }}>
         <LogOut size={16} /> Sign Out
       </button>
     </div>

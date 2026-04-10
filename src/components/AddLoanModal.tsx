@@ -26,18 +26,18 @@ function getMonthLabel(startDate: string, idx: number): string {
 }
 
 const STATUS_BADGE_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  Required:        { bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
-  Optional:        { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+  Required:        { bg: 'var(--brand-pale)', color: 'var(--brand-dark)', border: 'var(--brand-muted)' },
+  Optional:        { bg: 'var(--brand-pale)', color: '#92400e', border: 'var(--brand-muted)' },
   'First Payment': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' },
-  'Last Payment':  { bg: '#ede9fe', color: '#6d28d9', border: '#c4b5fd' },
+  'Last Payment':  { bg: '#eff6ff', color: '#6d28d9', border: '#93c5fd' },
   Once:            { bg: '#ffedd5', color: '#c2410c', border: '#fdba74' },
   Suspended:       { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-  Paid:            { bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+  Paid:            { bg: '#dcfce7', color: 'var(--brand-dark)', border: '#86efac' },
 }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
-  border: '1.5px solid var(--border)', background: 'var(--bg-subtle)',
+  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
 const labelStyle: React.CSSProperties = {
@@ -173,21 +173,21 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(13,40,24,0.16)' }}>
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0"
-          style={{ borderColor: '#c4b5fd', background: '#ede9fe' }}>
+          style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: '#8b5cf620' }}>
-              <CreditCard size={16} style={{ color: '#7c3aed' }} />
+              style={{ background: 'var(--accent-pale)' }}>
+              <CreditCard size={16} style={{ color: '#2563eb' }} />
             </div>
             <h2 className="font-bold" style={{ color: '#4c1d95' }}>
               {editItem ? 'Edit Loan' : 'Add Loan'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: '#7c3aed' }}><X size={17} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: '#2563eb' }}><X size={17} /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -201,7 +201,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
           {/* Loan Details */}
           <div className="space-y-3 p-4 rounded-xl"
-            style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd' }}>
+            style={{ background: '#eff6ff', border: '1.5px solid #93c5fd' }}>
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#6d28d9' }}>Loan Details</p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -209,18 +209,18 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 <label style={{ ...labelStyle, color: '#6d28d9' }}>Total Months</label>
                 <input type="number" value={totalMonths} onChange={e => setTotalMonths(e.target.value)}
                   min="1" max="360"
-                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
               </div>
               <div>
                 <label style={{ ...labelStyle, color: '#6d28d9' }}>Start Date</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
               </div>
             </div>
 
             {/* Compute mode */}
             <div>
-              <p className="text-xs font-semibold mb-2" style={{ color: '#7c3aed' }}>Payment Computation</p>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#2563eb' }}>Payment Computation</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { key: 'none',     label: 'Manual',   desc: 'Enter yourself' },
@@ -233,11 +233,11 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                   }}
                     className="p-2.5 rounded-xl text-center transition-all"
                     style={{
-                      background: computeMode === m.key ? '#ede9fe' : 'white',
-                      border: `1.5px solid ${computeMode === m.key ? '#8b5cf6' : '#ddd6fe'}`,
+                      background: computeMode === m.key ? '#eff6ff' : 'white',
+                      border: `1.5px solid ${computeMode === m.key ? 'var(--accent)' : '#bfdbfe'}`,
                     }}>
-                    <p className="text-xs font-bold" style={{ color: computeMode === m.key ? '#7c3aed' : '#94a3b8' }}>{m.label}</p>
-                    <p style={{ fontSize: 10, color: computeMode === m.key ? '#8b5cf6' : '#94a3b8' }}>{m.desc}</p>
+                    <p className="text-xs font-bold" style={{ color: computeMode === m.key ? '#2563eb' : '#94a3b8' }}>{m.label}</p>
+                    <p style={{ fontSize: 10, color: computeMode === m.key ? 'var(--accent)' : '#94a3b8' }}>{m.desc}</p>
                   </button>
                 ))}
               </div>
@@ -248,11 +248,11 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 <label style={{ ...labelStyle, color: '#6d28d9' }}>Total Loan Amount *</label>
                 <input type="number" value={totalLoan} onChange={e => setTotalLoan(e.target.value)}
                   placeholder="e.g. 36000"
-                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd' }} />
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
                 {totalLoan && numMonths > 0 && (
-                  <div className="p-2.5 rounded-lg text-xs" style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                  <div className="p-2.5 rounded-lg text-xs" style={{ background: '#eff6ff', color: '#6d28d9' }}>
                     <span className="font-bold">₱{(parseFloat(totalLoan) / numMonths).toFixed(2)}</span>
-                    <span style={{ color: '#7c3aed' }}> × {numMonths} months</span>
+                    <span style={{ color: '#2563eb' }}> × {numMonths} months</span>
                   </div>
                 )}
               </div>
@@ -262,7 +262,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               <div className="slide-up space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Monthly Schedule</p>
-                  <button onClick={() => setShowSched(!showSched)} className="text-xs flex items-center gap-1" style={{ color: '#7c3aed' }}>
+                  <button onClick={() => setShowSched(!showSched)} className="text-xs flex items-center gap-1" style={{ color: '#2563eb' }}>
                     {showSched ? 'Hide' : 'Show'} {showSched ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                   </button>
                 </div>
@@ -287,12 +287,12 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 {!showSched && (
                   <button onClick={() => setShowSched(true)}
                     className="w-full py-2 rounded-lg text-xs font-semibold transition"
-                    style={{ background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd' }}>
+                    style={{ background: '#eff6ff', color: '#6d28d9', border: '1px solid #93c5fd' }}>
                     + Enter monthly amounts ({monthlyAmounts.filter(v => v !== '').length}/{numMonths} filled)
                   </button>
                 )}
                 {totalSched > 0 && (
-                  <div className="flex justify-between p-2 rounded-lg text-xs" style={{ background: '#dcfce7', color: '#15803d' }}>
+                  <div className="flex justify-between p-2 rounded-lg text-xs" style={{ background: '#dcfce7', color: 'var(--brand-dark)' }}>
                     <span>Scheduled total</span>
                     <span className="font-bold">₱{totalSched.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                   </div>
@@ -304,7 +304,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               <label style={{ ...labelStyle, color: '#6d28d9' }}>Notes (optional)</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
                 placeholder="e.g. Billease 12-month plan, interest rate..."
-                style={{ ...inputStyle, background: 'white', border: '1.5px solid #c4b5fd', resize: 'none' }} />
+                style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd', resize: 'none' }} />
             </div>
           </div>
 
@@ -368,10 +368,10 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '10px 14px', borderRadius: 10,
-              background: '#FEE2E2', border: '1.5px solid #FCA5A5', marginBottom: 10,
+              background: 'var(--brand-pale)', border: '1.5px solid var(--brand-muted)', marginBottom: 10,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>🔴 Required</span>
-              <span style={{ fontSize: 11, color: '#EF4444' }}>· All loans are required payments</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-dark)' }}>🔴 Required</span>
+              <span style={{ fontSize: 11, color: 'var(--brand)' }}>· All loans are required payments</span>
             </div>
             {/* Auto status display */}
             <div className="flex flex-wrap gap-2">
@@ -395,15 +395,15 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t flex gap-3 shrink-0"
-          style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
+          style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
+            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' }}>
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))' }}>
             {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Loan'}
           </button>
         </div>
@@ -512,7 +512,7 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
           <button
             onClick={onNo}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid var(--border)' }}>
+            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
             No, skip
           </button>
           <button
