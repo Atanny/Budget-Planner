@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, MonthlySavings, UserSettings, BankAccount, BANK_TYPES } from '@/lib/types'
@@ -12,7 +12,7 @@ import ConfirmModal from '@/components/ConfirmModal'
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-export default function DashboardPage() {
+function DashboardPageInner() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [settings,      setSettings]      = useState<UserSettings | null>(null)
@@ -812,4 +812,8 @@ function BankFormModal({ bank, onClose, onSave }: { bank: BankAccount | null; on
       </div>
     </div>
   )
+}
+
+export default function DashboardPage() {
+  return <Suspense fallback={<div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>}><DashboardPageInner /></Suspense>
 }

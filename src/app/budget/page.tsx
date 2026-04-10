@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, Cutoff, UserSettings, TransactionLog, EXPENSE_CATEGORIES } from '@/lib/types'
@@ -107,7 +107,7 @@ function canToggleMonth(item: BudgetItem, month = CURRENT_MONTH, year = CURRENT_
   return { ok: true, reason: '' }
 }
 
-export default function BudgetPage() {
+function BudgetPageInner() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [items,          setItems]          = useState<BudgetItem[]>([])
@@ -1099,4 +1099,8 @@ export default function BudgetPage() {
       )}
     </div>
   )
+}
+
+export default function BudgetPage() {
+  return <Suspense fallback={<div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>}><BudgetPageInner /></Suspense>
 }

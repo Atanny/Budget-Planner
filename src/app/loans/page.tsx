@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem } from '@/lib/types'
@@ -51,7 +51,7 @@ const STATUS_BADGE: Record<string, { bg: string; text: string; border: string }>
   Paid:            { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
 }
 
-export default function LoansPage() {
+function LoansPageInner() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [loans,       setLoans]       = useState<BudgetItem[]>([])
@@ -560,4 +560,8 @@ export default function LoansPage() {
       />
     </div>
   )
+}
+
+export default function LoansPage() {
+  return <Suspense fallback={<div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>}><LoansPageInner /></Suspense>
 }
