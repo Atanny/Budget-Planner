@@ -43,8 +43,17 @@ function getLoanMonthScope(item: BudgetItem, year = CURRENT_YEAR): { start: numb
   const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details
   if (!ld?.start_date || !ld?.total_months) return null
 
+  const totalM = parseInt(ld.total_months)
+
+  // Unlimited / no-expiry loan — always active from start month onward
+  if (totalM >= 9999) {
+    const loanStart = new Date(ld.start_date)
+    if (loanStart.getFullYear() > year) return null
+    const startM = loanStart.getFullYear() < year ? 0 : loanStart.getMonth()
+    return { start: startM, end: 11 }
+  }
+
   const loanStart   = new Date(ld.start_date)
-  const totalM      = parseInt(ld.total_months)
   const loanEndDate = new Date(loanStart)
   loanEndDate.setMonth(loanEndDate.getMonth() + totalM - 1)
 
@@ -283,16 +292,17 @@ function BudgetPageInner() {
     setSavingsSaving(false)
   }
 
-  const cutoffItems   = items.filter(i => i.cutoff === activeTab && isItemVisibleInMonth(i, viewMonth, viewYear))
-  const expenseItems  = cutoffItems.filter(i => !i.is_loan)
-  const loanItems     = cutoffItems.filter(i => i.is_loan)
-  const salary        = activeTab === '1st' ? (settings?.first_cutoff_salary || 0) : (settings?.second_cutoff_salary || 0)
-  const extraIncome   = activeTab === '1st' ? (settings?.extra_income_1st || 0) : (settings?.extra_income_2nd || 0)
-  const totalIncome   = salary + extraIncome
-  const totalExpenses = cutoffItems.reduce((s, i) => s + i.amount, 0)
-  const savingsGoal   = settings?.savings_goal || 0
-  const remaining     = totalIncome - totalExpenses
-  const afterSavings  = remaining - savingsGoal
+  const cutoffItems      = items.filter(i => i.cutoff === activeTab && isItemVisibleInMonth(i, viewMonth, viewYear))
+  const expenseItems     = cutoffItems.filter(i => !i.is_loan)
+  const loanItems        = cutoffItems.filter(i => i.is_loan)
+  const salary           = activeTab === '1st' ? (settings?.first_cutoff_salary || 0) : (settings?.second_cutoff_salary || 0)
+  const extraIncome      = activeTab === '1st' ? (settings?.extra_income_1st || 0) : (settings?.extra_income_2nd || 0)
+  const totalIncome      = salary + extraIncome
+  const totalExpenses    = cutoffItems.reduce((s, i) => s + i.amount, 0)
+  const savingsGoal      = settings?.savings_goal || 0
+  const savingsChecked   = activeTab === '1st' ? savingsCheck1st : savingsCheck2nd
+  const remaining        = totalIncome - totalExpenses
+  const afterSavings     = remaining - (savingsChecked ? savingsGoal : 0)
 
   if (loading) return (
     <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
@@ -310,35 +320,27 @@ function BudgetPageInner() {
 
   return (
     <div
-      className="
-        grid
-        grid-cols-1 sm:grid-cols-[40px_1fr_160px]
-        gap-3 sm:gap-4
-        px-3 py-3
-        items-center
-      "
       style={{
         borderBottom: '1px solid var(--border)',
         background: isPaid ? 'var(--brand-pale)' : 'white',
+        padding: '10px 12px',
+        display: 'flex', flexDirection: 'column', gap: 6,
       }}
     >
+      {/* ── Row 1: checkbox · name · badges ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
 
-      {/* ═══ CHECKBOX ═══ */}
-      <div className="flex sm:justify-center">
+        {/* CHECKBOX */}
         <button
           onClick={() => {
-            if (isPaid) return        // locked once paid
+            if (isPaid) return
             if (!canToggle) return
-            setPayConfirmItem(item)   // open pay confirmation
+            setPayConfirmItem(item)
           }}
           title={isPaid ? 'Already paid — cannot undo' : !canToggle ? 'Cannot toggle' : 'Mark as paid'}
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: 5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isPaid ? 'var(--brand-dark)' : 'white',
             border: `2px solid ${isPaid ? 'var(--brand-dark)' : '#94a3b8'}`,
             opacity: canToggle || isPaid ? 1 : 0.4,
@@ -347,129 +349,89 @@ function BudgetPageInner() {
         >
           {isPaid && <Check size={10} color="white" strokeWidth={3} />}
         </button>
-      </div>
-
-      {/* ═══ NAME + BADGES (FIXED ALIGNMENT) ═══ */}
-      <div className="min-w-0 flex flex-wrap items-center gap-2">
 
         {/* NAME */}
-        <p
-          className="font-semibold text-sm truncate max-w-[180px] sm:max-w-none"
-          style={{
-            color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)',
-            textDecoration: isPaid ? 'line-through' : 'none',
-          }}
-        >
+        <p style={{
+          fontWeight: 600, fontSize: 13, flexShrink: 1, minWidth: 0,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)',
+          textDecoration: isPaid ? 'line-through' : 'none',
+        }}>
           {item.name}
         </p>
 
-        {/* CATEGORY */}
-        {catInfo && (
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
-            style={{
-              background: `${catInfo.color}18`,
-              color: catInfo.color,
+        {/* BADGES — flex-shrink 0 so they don't crush */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
+          {catInfo && (
+            <span style={{
+              fontSize: 9, padding: '1px 6px', borderRadius: 20, fontWeight: 700,
+              whiteSpace: 'nowrap',
+              background: `${catInfo.color}18`, color: catInfo.color,
               border: `1px solid ${catInfo.color}40`,
-            }}
-          >
-            {catInfo.label.split(' ')[0]}
+            }}>
+              {catInfo.label.split(' ')[0]}
+            </span>
+          )}
+          <span style={{
+            fontSize: 9, padding: '1px 6px', borderRadius: 20, fontWeight: 700,
+            whiteSpace: 'nowrap',
+            background: isPaid ? '#dcfce7' : loanNotYet ? 'var(--brand-pale)' : 'var(--brand-pale)',
+            color: isPaid ? 'var(--brand-dark)' : loanNotYet ? '#92400e' : 'var(--brand-dark)',
+          }}>
+            {isPaid ? 'Paid' : loanDone ? 'Done' : loanNotYet ? 'Pending' : isSuspended ? 'Suspended' : 'Unpaid'}
           </span>
-        )}
-
-        {/* STATUS */}
-        <span
-          className="text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap"
-          style={{
-            background: isPaid
-              ? '#dcfce7'
-              : loanNotYet
-              ? 'var(--brand-pale)'
-              : 'var(--brand-pale)',
-            color: isPaid
-              ? 'var(--brand-dark)'
-              : loanNotYet
-              ? '#92400e'
-              : 'var(--brand-dark)',
-          }}
-        >
-          {isPaid
-            ? 'Paid'
-            : loanDone
-            ? 'Done'
-            : loanNotYet
-            ? 'Pending'
-            : isSuspended
-            ? 'Suspended'
-            : 'Unpaid'}
-        </span>
-
-        {/* LOAN */}
-        {item.is_loan && (
-          <span className="text-[9px] font-bold px-1 py-[1px] rounded bg-violet-100 text-violet-700 border border-violet-300 whitespace-nowrap">
-            LOAN
-          </span>
-        )}
+          {item.is_loan && (
+            <span style={{
+              fontSize: 9, padding: '1px 5px', borderRadius: 4, fontWeight: 700,
+              whiteSpace: 'nowrap',
+              background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd',
+            }}>
+              LOAN
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* ═══ PRICE + ACTIONS ═══ */}
-      <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2">
-
-        {/* PRICE */}
-        <p
-          className="font-mono font-bold text-xl sm:text-sm"
-          style={{ color: '#2563eb' }}
-        >
+      {/* ── Row 2: price · action buttons ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 28 }}>
+        <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)', fontVariantNumeric: 'tabular-nums' }}>
           {formatCurrency(item.amount)}
         </p>
-
-        {/* BUTTONS */}
-        <div className="flex gap-1">
+        <div style={{ display: 'flex', gap: 5 }}>
           {item.is_loan && (
             <button
               onClick={() => setExtendLoan(item)}
-              className="p-1.5 rounded-lg"
               style={{
-                background: '#dcfce7',
-                color: 'var(--brand-dark)',
-                border: '1px solid #86efac',
+                width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: '#dcfce7', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)',
+                cursor: 'pointer',
               }}
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={11} />
             </button>
           )}
-
           <button
             onClick={() => {
-              if (item.is_loan) {
-                setEditLoanItem(item)
-                setShowEditLoan(true)
-              } else {
-                setEditItem(item)
-                setEditCutoff(item.cutoff)
-                setShowAdd(true)
-              }
+              if (item.is_loan) { setEditLoanItem(item); setShowEditLoan(true) }
+              else { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }
             }}
-            className="p-1.5 rounded-lg"
             style={{
-              background: '#dbeafe',
-              color: '#1d4ed8',
-              border: '1px solid #93c5fd',
+              width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--accent-pale)', color: 'var(--accent)', border: '1.5px solid var(--accent)',
+              cursor: 'pointer',
             }}
           >
-            <Edit2 size={12} />
+            <Edit2 size={11} />
           </button>
-
           <button
             onClick={() => askDeleteItem(item)}
-            className="p-1.5 rounded-lg"
             style={{
-              background: 'var(--brand-pale)',
-              color: 'var(--brand-dark)',
-              border: '1.5px solid var(--brand-muted)',
+              width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--brand-pale)', color: 'var(--brand)', border: '1.5px solid var(--brand)',
+              cursor: 'pointer',
             }}
           >
-            <Trash2 size={12} />
+            <Trash2 size={11} />
           </button>
         </div>
       </div>
@@ -582,8 +544,8 @@ function BudgetPageInner() {
           <button key={c} onClick={() => setActiveTab(c)}
             className="flex-1 py-2 rounded-lg text-sm font-bold transition-all border"
             style={{
-              background: activeTab === c ? 'var(--bg-surface)' : 'transparent',
-              color: activeTab === c ? 'var(--brand-dark)' : 'var(--text-muted)',
+              background: activeTab === c ? 'var(--brand)' : 'transparent',
+              color: activeTab === c ? 'white' : 'var(--text-muted)',
               border: activeTab === c ? '1.5px solid #0f172a' : '1.5px solid transparent',
               boxShadow: activeTab === c ? '0 1px 4px rgba(13,40,24,0.08)' : 'none',
             }}>
@@ -722,7 +684,7 @@ function BudgetPageInner() {
             className="text-[11px] md:text-xs mt-1 leading-tight"
             style={{ color: '#2563eb' }}
           >
-            {savingsGoal > 0 ? '− savings deducted' : 'No savings deduction'}
+            {savingsChecked ? '− savings deducted' : 'No savings deduction'}
           </p>
         </td>
       </tr>
@@ -744,7 +706,7 @@ function BudgetPageInner() {
             className="text-[11px] md:text-xs mt-1 leading-tight"
             style={{ color: '#2563eb' }}
           >
-            after savings
+            {savingsChecked ? 'after savings' : 'savings not yet checked'}
           </p>
         </td>
       </tr>
@@ -861,7 +823,7 @@ function BudgetPageInner() {
               <button
                 onClick={() => setPayConfirmItem(null)}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}
+                style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}
               >
                 Cancel
               </button>

@@ -66,17 +66,19 @@ export default function Navbar() {
       <Link href={href} style={{
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        gap: 2, flex: 1, padding: '6px 4px',
+        gap: 3, flex: 1, padding: '6px 8px',
         borderRadius: 18, textDecoration: 'none',
         color: active ? 'var(--brand)' : 'var(--text-faint)',
         background: active ? 'var(--brand-pale)' : 'transparent',
-        minWidth: 0,
+        minWidth: 48,
+        transition: 'background 0.15s ease, color 0.15s ease',
       }}>
         <Icon size={18} strokeWidth={active ? 2.5 : 1.8}
           style={{ color: active ? 'var(--brand)' : 'var(--text-faint)' }} />
         <span style={{
           fontSize: 9, fontWeight: active ? 800 : 600, lineHeight: 1,
           color: active ? 'var(--brand)' : 'var(--text-faint)',
+          whiteSpace: 'nowrap',
         }}>{label}</span>
       </Link>
     )

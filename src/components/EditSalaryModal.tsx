@@ -144,7 +144,7 @@ export default function EditSalaryModal({ settings, onClose, onSave }: Props) {
 
         <div className="px-5 pb-5 flex gap-3">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving}

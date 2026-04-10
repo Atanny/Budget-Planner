@@ -165,9 +165,9 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
                 <button key={n} onClick={() => setTotalMonths(String(n))}
                   className="px-3 py-1.5 rounded-lg text-xs font-bold transition"
                   style={{
-                    background: totalMonths === String(n) ? '#eff6ff' : 'var(--bg-subtle)',
-                    color: totalMonths === String(n) ? '#6d28d9' : 'var(--text-muted)',
-                    border: `1.5px solid ${totalMonths === String(n) ? 'var(--accent)' : 'var(--border)'}`,
+                    background: totalMonths === String(n) ? 'var(--brand-pale)' : 'var(--bg-subtle)',
+                    color: totalMonths === String(n) ? 'var(--brand-dark)' : 'var(--text-muted)',
+                    border: `1.5px solid ${totalMonths === String(n) ? 'var(--brand)' : 'var(--border)'}`,
                   }}>
                   {n}mo
                 </button>
@@ -188,9 +188,9 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
                   onClick={() => setMode(m)}
                   className="flex-1 py-2 rounded-lg text-xs font-bold transition"
                   style={{
-                    background: mode === m ? 'white' : 'transparent',
-                    color: mode === m ? '#6d28d9' : 'var(--text-muted)',
-                    border: mode === m ? '1.5px solid #93c5fd' : '1.5px solid transparent',
+                    background: mode === m ? 'var(--brand-pale)' : 'transparent',
+                    color: mode === m ? 'var(--brand-dark)' : 'var(--text-muted)',
+                    border: mode === m ? '1.5px solid var(--brand)' : '1.5px solid transparent',
                     boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                   }}
                 >
@@ -263,7 +263,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
           <button
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}
           >
             Cancel
           </button>

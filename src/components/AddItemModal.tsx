@@ -195,7 +195,7 @@ export default function AddItemModal({ defaultCutoff, editItem, onClose, onSave 
           style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}

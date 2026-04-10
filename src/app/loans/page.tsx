@@ -26,6 +26,7 @@ function addMonths(dateStr: string, n: number) {
   return d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })
 }
 function getAutoStatus(totalMonths: number, startDate: string): string | null {
+  if (totalMonths >= 9999) return null // unlimited — just Required always
   if (totalMonths === 1) return 'Once'
   const elapsed = monthsBetween(startDate)
   if (elapsed === 0) return 'First Payment'
@@ -136,7 +137,9 @@ function LoansPageInner() {
 
   const paidOffCount = loans.filter(l => {
     const detail = l.loan_details as any
-    return detail?.start_date ? monthsBetween(detail.start_date) >= (detail?.total_months || 12) : false
+    const totalM = detail?.total_months || 12
+    if (totalM >= 9999) return false // unlimited never paid off
+    return detail?.start_date ? monthsBetween(detail.start_date) >= totalM : false
   }).length
 
   if (loading) return (
@@ -184,7 +187,7 @@ function LoansPageInner() {
           <button onClick={() => setShowAdd(true)} style={{
             marginTop: 20, padding: '10px 24px', borderRadius: 12,
             background: 'var(--brand)', color: 'white',
-            fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer',
+            fontWeight: 700, fontSize: 13, border: '1.5px solid var(--brand-dark)', cursor: 'pointer',
           }}>+ Add First Loan</button>
         </div>
       )}
@@ -194,21 +197,22 @@ function LoansPageInner() {
         {loans.map(loan => {
           const loanDetail    = loan.loan_details as any
           const totalMonths   = loanDetail?.total_months || 12
+          const isUnlimited   = totalMonths >= 9999
           const startDate     = loanDetail?.start_date || new Date().toISOString().split('T')[0]
           const monthlyAmounts: Record<string, number> | null = loanDetail?.monthly_amounts || null
-          const isReducing    = !!monthlyAmounts && (() => {
+          const isReducing    = !isUnlimited && !!monthlyAmounts && (() => {
             const vals = Object.values(monthlyAmounts)
             return vals.length > 0 && vals.some(v => v !== vals[0])
           })()
 
-          const estimatedPaid   = Math.min(monthsBetween(startDate), totalMonths)
+          const estimatedPaid   = isUnlimited ? monthsBetween(startDate) : Math.min(monthsBetween(startDate), totalMonths)
           const currentDue      = getAmountForMonth(estimatedPaid, loan.amount, monthlyAmounts)
-          const nextDue         = estimatedPaid + 1 < totalMonths
+          const nextDue         = !isUnlimited && estimatedPaid + 1 < totalMonths
             ? getAmountForMonth(estimatedPaid + 1, loan.amount, monthlyAmounts) : null
 
           const monthsPaidThisYear = Object.values(payments[loan.id] || {}).filter(Boolean).length
-          const { pct, remaining } = getLoanProgress(estimatedPaid, totalMonths)
-          const isFullyPaid    = estimatedPaid >= totalMonths
+          const { pct, remaining } = isUnlimited ? { pct: 0, remaining: 0 } : getLoanProgress(estimatedPaid, totalMonths)
+          const isFullyPaid    = !isUnlimited && estimatedPaid >= totalMonths
           const isSuspended    = loan.status === 'Suspended'
           const autoStatus     = getAutoStatus(totalMonths, startDate)
           const displayStatus  = isSuspended ? 'Suspended' : (autoStatus || loan.status)
@@ -227,17 +231,19 @@ function LoansPageInner() {
               {/* ── Card Header Strip (dashboard style) ── */}
               <div style={{
                 padding: '14px 18px 12px',
-                background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)',
+                background: isUnlimited
+                  ? 'linear-gradient(326deg, rgba(120,40,200,1) 19%, rgba(180,80,255,1) 100%)'
+                  : 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)',
                 borderBottom: '1px solid #060D38',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   <div style={{
                     width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: isSuspended ? 'rgba(255,255,255,0.15)' : isFullyPaid ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.15)',
+                    background: 'rgba(255,255,255,0.15)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <CreditCard size={18} style={{ color: 'white' }} />
+                    {isUnlimited ? <span style={{ fontSize: 18 }}>♾️</span> : <CreditCard size={18} style={{ color: 'white' }} />}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontWeight: 800, fontSize: 14, color: 'white', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -245,6 +251,7 @@ function LoansPageInner() {
                     </p>
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
                       {loan.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'}
+                      {isUnlimited && ' · No Expiry'}
                     </p>
                   </div>
                 </div>
@@ -261,6 +268,16 @@ function LoansPageInner() {
 
                 {/* Row 1: badges */}
                 <div className="flex items-center gap-2 flex-wrap mb-3">
+                  {isUnlimited && (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 3,
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                      background: '#F3E8FF', color: '#7C3AED', border: '1px solid #C4B5FD',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      ♾️ Maintenance
+                    </span>
+                  )}
                   {isReducing && (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -280,7 +297,13 @@ function LoansPageInner() {
                   </span>
                 </div>
                 
-                {/* Row 2: progress */}
+                {/* Row 2: progress (skip for unlimited) */}
+                {isUnlimited ? (
+                  <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: '#F3E8FF', border: '1px solid #C4B5FD' }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED' }}>♾️ No expiry — ongoing maintenance payment</p>
+                    <p style={{ fontSize: 10, color: '#6D28D9', marginTop: 3 }}>Since {formatDate(startDate)} · {estimatedPaid} months paid so far</p>
+                  </div>
+                ) : (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div>
@@ -304,6 +327,7 @@ function LoansPageInner() {
                     </span>
                   </div>
                 </div>
+                )}
 
                 {/* Row 3: Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -312,9 +336,9 @@ function LoansPageInner() {
                     style={{
                       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                       padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                      border: `1px solid ${isSuspended ? '#6EE7B7' : 'var(--border)'}`,
-                      background: isSuspended ? '#D1FAE5' : 'var(--bg-subtle)',
-                      color: isSuspended ? '#065F46' : 'var(--text-muted)',
+                      border: `1px solid ${isSuspended ? '#6EE7B7' : 'var(--brand)'}`,
+                      background: isSuspended ? '#D1FAE5' : 'var(--brand-pale)',
+                      color: isSuspended ? '#065F46' : 'var(--brand-dark)',
                     }}>
                     {isSuspended ? <PlayCircle size={13} /> : <PauseCircle size={13} />}
                     {isSuspended ? 'Resume' : 'Suspend'}
@@ -323,25 +347,25 @@ function LoansPageInner() {
                     onClick={() => { setEditLoan(loan); setShowAdd(true) }}
                     style={{
                       width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
-                      background: '#DBEAFE', border: '1px solid #93C5FD', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--brand-pale)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                    <Edit2 size={14} style={{ color: '#2563EB' }} />
+                    <Edit2 size={14} style={{ color: 'var(--brand-dark)' }} />
                   </button>
                   <button
                     onClick={() => { setConfirmLoan(loan); setConfirmOpen(true) }}
                     style={{
                       width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
-                      background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--brand-pale)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     <Trash2 size={14} style={{ color: 'var(--brand)' }} />
                   </button>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : loan.id)}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, border: '1.5px solid #0f172a', cursor: 'pointer',
-                      background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 10, border: '1px solid var(--brand)', cursor: 'pointer',
+                      background: 'var(--brand-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                    {isExpanded ? <ChevronUp size={14} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />}
+                    {isExpanded ? <ChevronUp size={14} style={{ color: 'var(--brand-dark)' }} /> : <ChevronDown size={14} style={{ color: 'var(--brand-dark)' }} />}
                   </button>
                 </div>
               </div>
@@ -478,6 +502,7 @@ function LoansPageInner() {
                 {loans.map((loan, idx) => {
                   const ld          = loan.loan_details as any
                   const totalM      = ld?.total_months || 12
+                  const isUnlimitedRow = totalM >= 9999
                   const startD      = ld?.start_date || ''
                   const monthPaid   = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1] ?? false)
                   const paidCount   = monthPaid.filter(Boolean).length
@@ -486,7 +511,9 @@ function LoansPageInner() {
                   return (
                     <tr key={loan.id} style={{ borderTop: '1px solid var(--border)', background: rowBg }}>
                       <td style={{ padding: '10px 16px', position: 'sticky', left: 0, background: rowBg }}>
-                        <p style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{loan.name}</p>
+                        <p style={{ fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                          {isUnlimitedRow ? '♾️ ' : ''}{loan.name}
+                        </p>
                         <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>{formatCurrency(loan.amount)}/mo</p>
                       </td>
                       {monthPaid.map((paid, i) => {
@@ -494,10 +521,11 @@ function LoansPageInner() {
                         const isFuture    = i > CURRENT_MONTH
                         const loanStart   = startD ? new Date(startD) : null
                         const calDate     = new Date(CURRENT_YEAR, i, 1)
-                        const loanEndD    = loanStart ? new Date(loanStart) : null
-                        if (loanEndD) loanEndD.setMonth(loanEndD.getMonth() + totalM - 1)
                         const isBeforeL   = loanStart ? calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1) : false
-                        const isAfterL    = loanEndD && loanEndD.getFullYear() <= CURRENT_YEAR ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
+                        // Unlimited: never "after" expiry
+                        const loanEndD    = (!isUnlimitedRow && loanStart) ? new Date(loanStart) : null
+                        if (loanEndD) loanEndD.setMonth(loanEndD.getMonth() + totalM - 1)
+                        const isAfterL    = !isUnlimitedRow && loanEndD && loanEndD.getFullYear() <= CURRENT_YEAR ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
                         const outScope    = isBeforeL || isAfterL
                         return (
                           <td key={i} style={{ textAlign: 'center', padding: '6px 2px' }}>

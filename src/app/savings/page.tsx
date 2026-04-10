@@ -75,11 +75,11 @@ export default function SavingsPage() {
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
   
-          <button onClick={() => setYear(y => y - 1)} className="w-8 h-8 rounded-xl font-bold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>‹</button>
+          <button onClick={() => setYear(y => y - 1)} className="w-8 h-8 rounded-xl font-bold transition pb-1"
+            style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>‹</button>
           <span className="font-bold w-12 text-center" style={{ color: 'var(--text-primary)' }}>{year}</span>
-          <button onClick={() => setYear(y => y + 1)} className="w-8 h-8 rounded-xl font-bold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>›</button>
+          <button onClick={() => setYear(y => y + 1)} className="w-8 h-8 rounded-xl font-bold transition pb-1"
+            style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>›</button>
       
       </div>
 
@@ -128,7 +128,7 @@ export default function SavingsPage() {
             return (
               <div key={row.id} style={{
                 borderBottom: '1px solid var(--border)',
-                background: isCurrent ? 'var(--brand-pale)' : idx % 2 === 0 ? 'transparent' : 'var(--bg-subtle)'
+                background: isCurrent ? 'var(--brand-pale)' : idx % 2 === 0 ? 'transparent' : 'var(--bg-brand)'
               }}>
                 {/* Mobile layout: stacked card */}
                 <div className="sm:hidden px-4 py-3">
@@ -142,15 +142,15 @@ export default function SavingsPage() {
                     </div>
                     {isEditing ? (
                       <div className="flex gap-1">
-                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}><Check size={14} /></button>
-                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' }}><X size={14} /></button>
+                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand)', color: 'white', border: '1px solid black' }}><Check size={14} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand)', color: 'white', border: '1px solid black' }}><X size={14} /></button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl" style={{ color: 'var(--text-faint)', border: '1.5px solid #0f172a', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
+                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-.05 text-xs" style={{ color: 'var(--text-brand)', background: 'var(--bg-brand)' }}>Edit</button>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="p-2 rounded-lg" style={{ background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                    <div className="p-2 rounded-lg " style={{ background: 'white', border: '1px solid #0f172a' }}>
                       <p className="text-xs font-semibold mb-1" style={{ color: '#3b82f6' }}>Kinsenas (15th)</p>
                       {isEditing ? (
                         <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: '100%' }} />
@@ -158,7 +158,7 @@ export default function SavingsPage() {
                         <p className="font-mono font-semibold text-sm" style={{ color: row.kinsenas > 0 ? 'var(--brand-dark)' : 'var(--text-faint)' }}>{row.kinsenas > 0 ? formatCurrency(row.kinsenas) : '—'}</p>
                       )}
                     </div>
-                    <div className="p-2 rounded-lg" style={{ background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)' }}>
+                    <div className="p-2 rounded-lg  " style={{ background: 'white', border: '1px solid #0f172a' }}>
                       <p className="text-xs font-semibold mb-1" style={{ color: 'var(--brand-dark)' }}>Atrenta (30th)</p>
                       {isEditing ? (
                         <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={{ ...inputStyle, textAlign: 'right', width: '100%' }} />
@@ -174,10 +174,10 @@ export default function SavingsPage() {
                     </div>
                   )}
                   {isEditing && (
-                    <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="notes..." style={{ ...inputStyle, width: '100%', marginTop: 8 }} />
+                    <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="notes..." style={{ ...inputStyle, width: '100%', marginTop: 8,  border: '1px solid black' }} />
                   )}
                   {!isEditing && row.notes && (
-                    <p className="text-xs italic mt-1" style={{ color: 'var(--text-faint)' }}>{row.notes}</p>
+                    <p className="text-xs italic mt-2 rounded-md p-2 bg-white " style={{ color: 'var(--text-faint)' , border: '1px solid black'  }}>{row.notes}</p>
                   )}
                 </div>
 

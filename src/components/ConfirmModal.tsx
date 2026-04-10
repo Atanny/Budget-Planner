@@ -64,8 +64,8 @@ export default function ConfirmModal({
             onClick={onCancel}
             className="flex-1 py-4 text-sm font-semibold transition-colors"
             style={{
-              color: 'var(--text-muted)',
-              background: 'transparent',
+              color: 'var(--brand-dark)',
+              background: 'var(--brand-pale)',
               borderRight: '1px solid var(--border)',
               borderRadius: 0,
             }}
@@ -76,8 +76,8 @@ export default function ConfirmModal({
             onClick={onConfirm}
             className="flex-1 py-4 text-sm font-bold transition-colors"
             style={{
-              color: danger ? 'var(--brand-dark)' : '#2563eb',
-              background: 'transparent',
+              color: 'var(--brand-dark)',
+              background: 'var(--brand-pale)',
               borderRadius: 0,
             }}
           >

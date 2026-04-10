@@ -54,7 +54,10 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [category,      setCategory]      = useState(editItem?.category || 'Loan')
   const [bankId,        setBankId]        = useState<string>(editItem?.bank_account_id || '')
   const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>('Required')
-  const [totalMonths,   setTotalMonths]   = useState(existingLD?.total_months?.toString() || '12')
+  const UNLIMITED_MONTHS = 9999
+  const isExistingUnlimited = existingLD?.total_months >= UNLIMITED_MONTHS
+  const [isUnlimited,   setIsUnlimited]   = useState(isExistingUnlimited)
+  const [totalMonths,   setTotalMonths]   = useState(isExistingUnlimited ? '12' : (existingLD?.total_months?.toString() || '12'))
   const [startDate,     setStartDate]     = useState(existingLD?.start_date || new Date().toISOString().split('T')[0])
   const [notes,         setNotes]         = useState(existingLD?.notes || '')
   const [computeMode,   setComputeMode]   = useState<'none' | 'flat' | 'reducing'>(() => {
@@ -138,13 +141,15 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     if (!user) { setSaving(false); return }
 
     let maObj: Record<string, number> | null = null
-    if (computeMode === 'reducing' && allFilled) {
+    if (computeMode === 'reducing' && allFilled && !isUnlimited) {
       maObj = {}
       monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
     }
 
+    const effectiveMonths = isUnlimited ? UNLIMITED_MONTHS : parseInt(totalMonths)
+
     const payload: any = {
-      name, amount: parseFloat(amount), cutoff, status: computedStatus,
+      name, amount: parseFloat(amount), cutoff, status: isUnlimited ? 'Required' : computedStatus,
       is_loan: true, category, bank_account_id: bankId || null
     }
 
@@ -152,7 +157,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
       await supabase.from('budget_items').update(payload).eq('id', editItem.id)
       await supabase.from('loan_details').upsert({
         budget_item_id: editItem.id, user_id: user.id,
-        total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
+        total_months: effectiveMonths, start_date: startDate, notes, monthly_amounts: maObj
       }, { onConflict: 'budget_item_id' })
     } else {
       const { data: newItem } = await supabase.from('budget_items')
@@ -160,7 +165,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
       if (newItem) {
         await supabase.from('loan_details').insert({
           budget_item_id: newItem.id, user_id: user.id,
-          total_months: parseInt(totalMonths), start_date: startDate, notes, monthly_amounts: maObj
+          total_months: effectiveMonths, start_date: startDate, notes, monthly_amounts: maObj
         })
       }
     }
@@ -209,12 +214,48 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 <label style={{ ...labelStyle, color: '#6d28d9' }}>Total Months</label>
                 <input type="number" value={totalMonths} onChange={e => setTotalMonths(e.target.value)}
                   min="1" max="360"
-                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
+                  disabled={isUnlimited}
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd', opacity: isUnlimited ? 0.45 : 1 }} />
               </div>
               <div>
                 <label style={{ ...labelStyle, color: '#6d28d9' }}>Start Date</label>
                 <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                   style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
+              </div>
+            </div>
+
+            {/* Unlimited / No Expiry toggle */}
+            <div
+              onClick={() => setIsUnlimited(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                borderRadius: 10, cursor: 'pointer',
+                background: isUnlimited ? '#FFF7ED' : 'white',
+                border: `1.5px solid ${isUnlimited ? 'var(--brand)' : '#bfdbfe'}`,
+                transition: 'all 0.2s',
+              }}
+            >
+              {/* Toggle knob */}
+              <div style={{
+                width: 38, height: 22, borderRadius: 11, flexShrink: 0, position: 'relative',
+                background: isUnlimited ? 'var(--brand)' : '#CBD5E1',
+                transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 3,
+                  left: isUnlimited ? 18 : 3,
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: 'white', transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: isUnlimited ? 'var(--brand-dark)' : 'var(--text-primary)' }}>
+                  ♾️ No Expiry (Maintenance)
+                </p>
+                <p style={{ fontSize: 11, color: isUnlimited ? 'var(--brand)' : 'var(--text-faint)', marginTop: 1 }}>
+                  {isUnlimited ? 'Loan never expires — always appears in budget' : 'Enable for recurring payments that never end'}
+                </p>
               </div>
             </div>
 
@@ -233,11 +274,11 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                   }}
                     className="p-2.5 rounded-xl text-center transition-all"
                     style={{
-                      background: computeMode === m.key ? '#eff6ff' : 'white',
-                      border: `1.5px solid ${computeMode === m.key ? 'var(--accent)' : '#bfdbfe'}`,
+                      background: computeMode === m.key ? 'var(--brand-pale)' : 'white',
+                      border: `1.5px solid ${computeMode === m.key ? 'var(--brand)' : '#bfdbfe'}`,
                     }}>
-                    <p className="text-xs font-bold" style={{ color: computeMode === m.key ? '#2563eb' : '#94a3b8' }}>{m.label}</p>
-                    <p style={{ fontSize: 10, color: computeMode === m.key ? 'var(--accent)' : '#94a3b8' }}>{m.desc}</p>
+                    <p className="text-xs font-bold" style={{ color: computeMode === m.key ? 'var(--brand-dark)' : '#94a3b8' }}>{m.label}</p>
+                    <p style={{ fontSize: 10, color: computeMode === m.key ? 'var(--brand)' : '#94a3b8' }}>{m.desc}</p>
                   </button>
                 ))}
               </div>
@@ -262,7 +303,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               <div className="slide-up space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold" style={{ color: '#6d28d9' }}>Monthly Schedule</p>
-                  <button onClick={() => setShowSched(!showSched)} className="text-xs flex items-center gap-1" style={{ color: '#2563eb' }}>
+                  <button onClick={() => setShowSched(!showSched)} className="text-xs flex items-center gap-1" style={{ color: 'var(--brand-dark)' }}>
                     {showSched ? 'Hide' : 'Show'} {showSched ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                   </button>
                 </div>
@@ -287,7 +328,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 {!showSched && (
                   <button onClick={() => setShowSched(true)}
                     className="w-full py-2 rounded-lg text-xs font-semibold transition"
-                    style={{ background: '#eff6ff', color: '#6d28d9', border: '1px solid #93c5fd' }}>
+                    style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand)' }}>
                     + Enter monthly amounts ({monthlyAmounts.filter(v => v !== '').length}/{numMonths} filled)
                   </button>
                 )}
@@ -398,7 +439,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
           style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'white', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}
@@ -512,7 +553,7 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
           <button
             onClick={onNo}
             className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
             No, skip
           </button>
           <button
