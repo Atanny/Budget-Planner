@@ -35,10 +35,7 @@ export default function ProfilePage() {
 
   return (
     <div className="w-full space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Profile</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Account settings</p>
-      </div>
+      
 
       {/* Avatar card */}
       <div className="glass-card overflow-hidden" style={{ borderColor: '#060D38' }}>

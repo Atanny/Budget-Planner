@@ -75,10 +75,10 @@ export default function SavingsPage() {
     <div className="w-full space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
   
-          <button onClick={() => setYear(y => y - 1)} className="w-8 h-8 rounded-xl font-bold transition pb-1"
+          <button onClick={() => setYear(y => y - 1)} className="w-8 h-8 rounded-lg font-bold transition pb-1"
             style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>‹</button>
           <span className="font-bold w-12 text-center" style={{ color: 'var(--text-primary)' }}>{year}</span>
-          <button onClick={() => setYear(y => y + 1)} className="w-8 h-8 rounded-xl font-bold transition pb-1"
+          <button onClick={() => setYear(y => y + 1)} className="w-8 h-8 rounded-lg font-bold transition pb-1"
             style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>›</button>
       
       </div>
@@ -92,7 +92,7 @@ export default function SavingsPage() {
           { label: 'Atrenta (30th)',  value: formatCurrency(totalAtrenta),  color: 'var(--brand)', bg: 'var(--brand-pale)', icon: PiggyBank },
         ].map(s => (
           <div key={s.label} className="glass-card p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: s.bg }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: s.bg }}>
               <s.icon size={18} style={{ color: s.color }} />
             </div>
             <div>
@@ -177,7 +177,7 @@ export default function SavingsPage() {
                     <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="notes..." style={{ ...inputStyle, width: '100%', marginTop: 8,  border: '1px solid black' }} />
                   )}
                   {!isEditing && row.notes && (
-                    <p className="text-xs italic mt-2 rounded-md p-2 bg-white " style={{ color: 'var(--text-faint)' , border: '1px solid black'  }}>{row.notes}</p>
+                    <p className="text-xs italic mt-2 rounded-lg p-2 bg-white " style={{ color: 'var(--text-faint)' , border: '1px solid black'  }}>{row.notes}</p>
                   )}
                 </div>
 
@@ -224,11 +224,11 @@ export default function SavingsPage() {
                   <div className="text-right">
                     {isEditing ? (
                       <div className="flex gap-1 justify-end">
-                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}><Check size={14} /></button>
-                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' }}><X size={14} /></button>
+                        <button onClick={() => saveEdit(row)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid black' }}><Check size={14} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg" style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid black' }}><X size={14} /></button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-xl transition" style={{ color: 'var(--text-faint)', border: '1.5px solid #0f172a', background: 'var(--bg-subtle)' }}><Edit2 size={14} /></button>
+                      <button onClick={() => startEdit(row)} className="p-1.5 rounded-lg transition" style={{ color: 'white', border: '1.5px solid #0f172a', background: 'var(--brand)' }}><Edit2 size={14} /></button>
                     )}
                   </div>
                 </div>
