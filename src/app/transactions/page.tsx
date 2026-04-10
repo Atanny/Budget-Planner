@@ -170,7 +170,7 @@ function TransactionsPageInner() {
                         <td className="px-3 py-2 sticky left-0 z-10" style={{ background: rowBg, minWidth: 120 }}>
                           <div className="flex items-center gap-1">
                             {item.is_loan && (
-                              <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 4px', borderRadius: 4 }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 4px', borderRadius: 'var(--radius-xs)' }}>
                                 LOAN
                               </span>
                             )}

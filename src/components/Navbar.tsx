@@ -67,7 +67,7 @@ export default function Navbar() {
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         gap: 3, flex: 1, padding: '6px 8px',
-        borderRadius: 18, textDecoration: 'none',
+        borderRadius: 'var(--radius-lg)', textDecoration: 'none',
         color: active ? 'var(--brand)' : 'var(--text-faint)',
         background: active ? 'var(--brand-pale)' : 'transparent',
         minWidth: 48,
@@ -106,7 +106,7 @@ export default function Navbar() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 12, fontWeight: 700,
-              padding: '5px 11px', borderRadius: 20,
+              padding: '5px 11px', borderRadius: 'var(--radius-lg)',
               background: urgent ? 'var(--brand-pale)' : 'var(--brand-pale)',
               color: urgent ? 'var(--brand-dark)' : 'var(--brand-dark)',
               border: `1px solid ${urgent ? 'var(--brand-muted)' : 'var(--brand-muted)'}`,
@@ -148,7 +148,7 @@ export default function Navbar() {
           <div style={{
             width: '100%',
             background: 'white',
-            borderRadius: 20,
+            borderRadius: 'var(--radius-lg)',
             border: '1.5px solid #0f172a',
             boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
             overflow: 'hidden',
@@ -168,7 +168,7 @@ export default function Navbar() {
                 animation: 'slideUp 0.18s ease',
               }}>
                 <div style={{
-                  width: 32, height: 32, borderRadius: 10,
+                  width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                   background: bg, border: `1.5px solid ${border}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
@@ -184,7 +184,7 @@ export default function Navbar() {
           <div style={{
             width: '100%',
             background: 'white',
-            borderRadius: 20,
+            borderRadius: 'var(--radius-lg)',
             border: '1.5px solid #0f172a',
             boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
             overflow: 'hidden',
@@ -204,7 +204,7 @@ export default function Navbar() {
                   animation: 'slideUp 0.18s ease',
                 }}>
                   <div style={{
-                    width: 32, height: 32, borderRadius: 10,
+                    width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                     background: active ? bg : 'var(--bg-subtle)',
                     border: `1.5px solid ${active ? border : 'var(--border)'}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -230,7 +230,7 @@ export default function Navbar() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-around',
           background: '#FFFFFF',
           border: '1.5px solid #0f172a',
-          borderRadius: 26,
+          borderRadius: 'var(--radius-xl)',
           boxShadow: '0 8px 28px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06)',
           padding: '6px 6px',
         }}>

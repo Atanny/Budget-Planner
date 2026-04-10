@@ -160,7 +160,7 @@ function LoansPageInner() {
         ].map(s => (
           <div key={s.label} className="glass-card" style={{ padding: '14px 10px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
             <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              width: 36, height: 36, borderRadius: 'var(--radius-sm)', flexShrink: 0,
               background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
               marginBottom: 8,
             }}>
@@ -185,7 +185,7 @@ function LoansPageInner() {
           <p style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 16 }}>No loans yet</p>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 6 }}>Track your monthly loan payments here</p>
           <button onClick={() => setShowAdd(true)} style={{
-            marginTop: 20, padding: '10px 24px', borderRadius: 12,
+            marginTop: 20, padding: '10px 24px', borderRadius: 'var(--radius-md)',
             background: 'var(--brand)', color: 'white',
             fontWeight: 700, fontSize: 13, border: '1.5px solid var(--brand-dark)', cursor: 'pointer',
           }}>+ Add First Loan</button>
@@ -239,7 +239,7 @@ function LoansPageInner() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    width: 36, height: 36, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                     background: 'rgba(255,255,255,0.15)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -271,7 +271,7 @@ function LoansPageInner() {
                   {isUnlimited && (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 3,
-                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-lg)',
                       background: '#F3E8FF', color: '#7C3AED', border: '1px solid #C4B5FD',
                       whiteSpace: 'nowrap',
                     }}>
@@ -281,7 +281,7 @@ function LoansPageInner() {
                   {isReducing && (
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 3,
-                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                      fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 'var(--radius-lg)',
                       background: '#FFEDD5', color: '#C2410C', border: '1px solid #FDBA74',
                       whiteSpace: 'nowrap',
                     }}>
@@ -289,7 +289,7 @@ function LoansPageInner() {
                     </span>
                   )}
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-lg)',
                     background: badge.bg, color: badge.text, border: `1px solid ${badge.border}`,
                     whiteSpace: 'nowrap',
                   }}>
@@ -299,7 +299,7 @@ function LoansPageInner() {
                 
                 {/* Row 2: progress (skip for unlimited) */}
                 {isUnlimited ? (
-                  <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: '#F3E8FF', border: '1px solid #C4B5FD' }}>
+                  <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: '#F3E8FF', border: '1px solid #C4B5FD' }}>
                     <p style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED' }}>♾️ No expiry — ongoing maintenance payment</p>
                     <p style={{ fontSize: 10, color: '#6D28D9', marginTop: 3 }}>Since {formatDate(startDate)} · {estimatedPaid} months paid so far</p>
                   </div>
@@ -317,8 +317,8 @@ function LoansPageInner() {
                       </p>
                     </div>
                   </div>
-                  <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', borderRadius: 3, width: `${pct}%`, background: progressColor, transition: 'width 0.7s ease' }} />
+                  <div style={{ height: 6, borderRadius: 'var(--radius-xs)', background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 'var(--radius-xs)', width: `${pct}%`, background: progressColor, transition: 'width 0.7s ease' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
                     <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>Since {formatDate(startDate)}</span>
@@ -335,7 +335,7 @@ function LoansPageInner() {
                     onClick={() => toggleSuspend(loan)}
                     style={{
                       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                      padding: '8px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                       border: `1px solid ${isSuspended ? '#6EE7B7' : 'var(--brand)'}`,
                       background: isSuspended ? '#D1FAE5' : 'var(--brand-pale)',
                       color: isSuspended ? '#065F46' : 'var(--brand-dark)',
@@ -346,7 +346,7 @@ function LoansPageInner() {
                   <button
                     onClick={() => { setEditLoan(loan); setShowAdd(true) }}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                      width: 36, height: 36, borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                       background: 'var(--brand-pale)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     <Edit2 size={14} style={{ color: 'var(--brand-dark)' }} />
@@ -354,7 +354,7 @@ function LoansPageInner() {
                   <button
                     onClick={() => { setConfirmLoan(loan); setConfirmOpen(true) }}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+                      width: 36, height: 36, borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                       background: 'var(--brand-pale)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     <Trash2 size={14} style={{ color: 'var(--brand)' }} />
@@ -362,7 +362,7 @@ function LoansPageInner() {
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : loan.id)}
                     style={{
-                      width: 36, height: 36, borderRadius: 10, border: '1px solid var(--brand)', cursor: 'pointer',
+                      width: 36, height: 36, borderRadius: 'var(--radius-sm)', border: '1px solid var(--brand)', cursor: 'pointer',
                       background: 'var(--brand-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                     {isExpanded ? <ChevronUp size={14} style={{ color: 'var(--brand-dark)' }} /> : <ChevronDown size={14} style={{ color: 'var(--brand-dark)' }} />}
@@ -397,7 +397,7 @@ function LoansPageInner() {
                         return (
                           <div key={m} style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
-                              height: 32, borderRadius: 6, display: 'flex', flexDirection: 'column',
+                              height: 32, borderRadius: 'var(--radius-xs)', display: 'flex', flexDirection: 'column',
                               alignItems: 'center', justifyContent: 'center', gap: 1,
                               background: paid
                                 ? 'var(--brand)'
@@ -428,20 +428,20 @@ function LoansPageInner() {
                     {/* Legend */}
                     <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: '#EEF2FF', border: '1px solid #A5B4FC', display: 'inline-block' }} /> Scoped
+                        <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: '#EEF2FF', border: '1px solid #A5B4FC', display: 'inline-block' }} /> Scoped
                       </span>
                       <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--brand)', display: 'inline-block' }} /> Paid
+                        <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: 'var(--brand)', display: 'inline-block' }} /> Paid
                       </span>
                       <span style={{ fontSize: 10, color: 'var(--text-faint)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)', display: 'inline-block' }} /> Overdue
+                        <span style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: 'var(--brand-pale)', border: '1px solid var(--brand-muted)', display: 'inline-block' }} /> Overdue
                       </span>
                     </div>
                   </div>
 
                   {/* Upcoming payments (reducing) */}
                   {isReducing && !isFullyPaid && (
-                    <div style={{ background: '#FFF8F0', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--brand-muted)' }}>
+                    <div style={{ background: '#FFF8F0', borderRadius: 'var(--radius-sm)', padding: '12px 14px', border: '1px solid var(--brand-muted)' }}>
                       <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--brand-dark)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
                         Upcoming Payments
                       </p>
@@ -453,7 +453,7 @@ function LoansPageInner() {
                           return (
                             <div key={i} style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                              padding: '8px 10px', borderRadius: 8,
+                              padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                               background: i === 0 ? '#DBEAFE' : 'white',
                               border: `1px solid ${i === 0 ? '#93C5FD' : 'var(--border)'}`,
                             }}>
@@ -530,10 +530,10 @@ function LoansPageInner() {
                         return (
                           <td key={i} style={{ textAlign: 'center', padding: '6px 2px' }}>
                             {outScope ? (
-                              <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg-subtle)', margin: '0 auto', opacity: 0.3 }} />
+                              <div style={{ width: 26, height: 26, borderRadius: 'var(--radius-xs)', background: 'var(--bg-subtle)', margin: '0 auto', opacity: 0.3 }} />
                             ) : (
                               <div style={{
-                                width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto',
+                                width: 26, height: 26, borderRadius: 'var(--radius-xs)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto',
                                 background: paid ? 'var(--brand-pale)' : isCurrent ? '#FFF8F0' : 'transparent',
                                 border: `1.5px solid ${paid ? 'var(--brand-muted)' : isCurrent ? 'var(--brand-muted)' : 'var(--border)'}`,
                                 opacity: isFuture ? 0.3 : 1,
@@ -547,8 +547,8 @@ function LoansPageInner() {
                       <td style={{ padding: '6px 12px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
                           <span style={{ fontWeight: 800, fontSize: 12, color: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : 'var(--brand)' }}>{pct}%</span>
-                          <div style={{ width: 48, height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', borderRadius: 2, width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : 'var(--brand)' }} />
+                          <div style={{ width: 48, height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--border)', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', borderRadius: 'var(--radius-xs)', width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : 'var(--brand)' }} />
                           </div>
                         </div>
                       </td>

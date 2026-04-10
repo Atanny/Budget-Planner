@@ -317,6 +317,8 @@ function BudgetPageInner() {
   const loanDone = item.is_loan && loanScope !== null && viewMonth > loanScope.end
   const loanNotYet = item.is_loan && loanScope !== null && viewMonth < loanScope.start
   const isSuspended = item.status === 'Suspended'
+  const loanDetail = (item as any).loan_details?.[0] ?? (item as any).loan_details
+  const isUnlimited = item.is_loan && (loanDetail?.total_months >= 9999)
 
   return (
     <div
@@ -339,7 +341,7 @@ function BudgetPageInner() {
           }}
           title={isPaid ? 'Already paid — cannot undo' : !canToggle ? 'Cannot toggle' : 'Mark as paid'}
           style={{
-            width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+            width: 20, height: 20, borderRadius: 'var(--radius-xs)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: isPaid ? 'var(--brand-dark)' : 'white',
             border: `2px solid ${isPaid ? 'var(--brand-dark)' : '#94a3b8'}`,
@@ -364,7 +366,7 @@ function BudgetPageInner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 'auto' }}>
           {catInfo && (
             <span style={{
-              fontSize: 9, padding: '1px 6px', borderRadius: 20, fontWeight: 700,
+              fontSize: 9, padding: '1px 6px', borderRadius: 'var(--radius-lg)', fontWeight: 700,
               whiteSpace: 'nowrap',
               background: `${catInfo.color}18`, color: catInfo.color,
               border: `1px solid ${catInfo.color}40`,
@@ -373,7 +375,7 @@ function BudgetPageInner() {
             </span>
           )}
           <span style={{
-            fontSize: 9, padding: '1px 6px', borderRadius: 20, fontWeight: 700,
+            fontSize: 9, padding: '1px 6px', borderRadius: 'var(--radius-lg)', fontWeight: 700,
             whiteSpace: 'nowrap',
             background: isPaid ? '#dcfce7' : loanNotYet ? 'var(--brand-pale)' : 'var(--brand-pale)',
             color: isPaid ? 'var(--brand-dark)' : loanNotYet ? '#92400e' : 'var(--brand-dark)',
@@ -382,11 +384,13 @@ function BudgetPageInner() {
           </span>
           {item.is_loan && (
             <span style={{
-              fontSize: 9, padding: '1px 5px', borderRadius: 4, fontWeight: 700,
+              fontSize: 9, padding: '1px 5px', borderRadius: 'var(--radius-xs)', fontWeight: 700,
               whiteSpace: 'nowrap',
-              background: '#ede9fe', color: '#6d28d9', border: '1px solid #c4b5fd',
+              background: isUnlimited ? '#FFF7ED' : '#ede9fe',
+              color: isUnlimited ? 'var(--brand-dark)' : '#6d28d9',
+              border: `1px solid ${isUnlimited ? 'var(--brand-muted)' : '#c4b5fd'}`,
             }}>
-              LOAN
+              {isUnlimited ? '♾️ MAINTENANCE' : 'LOAN'}
             </span>
           )}
         </div>
@@ -402,7 +406,7 @@ function BudgetPageInner() {
             <button
               onClick={() => setExtendLoan(item)}
               style={{
-                width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 28, height: 28, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: '#dcfce7', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)',
                 cursor: 'pointer',
               }}
@@ -416,7 +420,7 @@ function BudgetPageInner() {
               else { setEditItem(item); setEditCutoff(item.cutoff); setShowAdd(true) }
             }}
             style={{
-              width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--accent-pale)', color: 'var(--accent)', border: '1.5px solid var(--accent)',
               cursor: 'pointer',
             }}
@@ -426,7 +430,7 @@ function BudgetPageInner() {
           <button
             onClick={() => askDeleteItem(item)}
             style={{
-              width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--brand-pale)', color: 'var(--brand)', border: '1.5px solid var(--brand)',
               cursor: 'pointer',
             }}
@@ -501,7 +505,7 @@ function BudgetPageInner() {
       <div className="glass-card flex items-center justify-between px-3 py-2.5 gap-2">
         <button onClick={goToPrevMonth}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg pb-1"
-          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid #0f172a' }}>
+          style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>
           ‹
         </button>
         <div className="flex-1 flex items-center justify-center gap-2 flex-wrap">
@@ -511,14 +515,14 @@ function BudgetPageInner() {
           {!isCurrentMonth && (
             <button onClick={goToToday}
               className="text-xs px-2 py-0.5 rounded-full font-semibold transition-all"
-              style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid var(--brand-muted)' }}>
+              style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1px solid black' }}>
               Back to Today
             </button>
           )}
         </div>
         <button onClick={goToNextMonth}
           className="w-8 h-8 rounded-lg flex items-center justify-center transition-all font-bold text-lg pb-1"
-          style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid #0f172a' }}>
+          style={{ background: 'var(--brand)', color: 'white', border: '1.5px solid #0f172a' }}>
           ›
         </button>
       </div>

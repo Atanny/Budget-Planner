@@ -16,7 +16,7 @@ interface NotifTemplate {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
+  width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', fontSize: 14,
   border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none', fontFamily: 'inherit',
 }

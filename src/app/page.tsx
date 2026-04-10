@@ -665,7 +665,7 @@ function DashboardPageInner() {
             <BarChart data={chartData}>
               <XAxis dataKey="month" tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: 'var(--text-faint)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₱${v/1000}k`} />
-              <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', borderRadius: 10, color: 'var(--text-primary)', fontSize: 12 }}
+              <Tooltip contentStyle={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: 12 }}
                 formatter={(v: number) => [formatCurrency(v), 'Paid']} />
               <Bar dataKey="amount" radius={[5, 5, 0, 0]}>
                 {chartData.map((_, idx) => (

@@ -67,7 +67,7 @@ export default function SavingsPage() {
   const ytd = savings.slice(0, currentMonth + 1).reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
   const maxSaving = Math.max(...savings.map(s => s.kinsenas + s.atrenta), 1)
 
-  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid #0f172a', borderRadius: 8, color: 'var(--text-primary)', padding: '5px 10px', fontSize: 13, width: '100%', outline: 'none', fontFamily: 'inherit' }
+  const inputStyle = { background: 'var(--bg-subtle)', border: '1.5px solid #0f172a', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', padding: '5px 10px', fontSize: 13, width: '100%', outline: 'none', fontFamily: 'inherit' }
 
   if (loading) return <div className="w-full flex items-center justify-center h-64"><div className="spinner" /></div>
 
@@ -208,8 +208,8 @@ export default function SavingsPage() {
                     {total > 0 ? (
                       <div>
                         <span className="font-bold font-mono" style={{ color: 'var(--text-primary)' }}>{formatCurrency(total)}</span>
-                        <div className="mt-1" style={{ width: 80, height: 4, borderRadius: 2, background: 'var(--border)', marginLeft: 'auto' }}>
-                          <div style={{ width: `${(total / maxSaving) * 100}%`, height: '100%', borderRadius: 2, background: 'var(--brand-light)' }} />
+                        <div className="mt-1" style={{ width: 80, height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--border)', marginLeft: 'auto' }}>
+                          <div style={{ width: `${(total / maxSaving) * 100}%`, height: '100%', borderRadius: 'var(--radius-xs)', background: 'var(--brand-light)' }} />
                         </div>
                       </div>
                     ) : <span style={{ color: 'var(--text-faint)' }}>—</span>}

@@ -36,11 +36,13 @@
   --text-muted:      #64748B;
   --text-faint:      #94A3B8;
 
-  /* Radius */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
+  /* Radius — consistent scale */
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   14px;
+  --radius-lg:   18px;
+  --radius-xl:   22px;
+  --radius-full: 999px;
 
   /* Shadows */
   --shadow-card:  0 2px 12px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
@@ -65,7 +67,7 @@ body {
 /* ─── Scrollbar ───────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-xs); }
 
 /* ─── Cards ───────────────────────────────────────── */
 .glass-card {
@@ -78,14 +80,14 @@ body {
 /* ─── Progress ────────────────────────────────────── */
 .progress-bar {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--border);
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   transition: width 0.6s ease;
   background: linear-gradient(90deg, var(--brand), var(--accent));
 }
@@ -109,7 +111,7 @@ input, select, textarea {
   background: #FFFFFF !important;
   border: 1.5px solid var(--border) !important;
   color: var(--text-primary) !important;
-  border-radius: var(--radius-sm) !important;
+  border-radius: var(--radius-md) !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
@@ -190,3 +192,15 @@ button:not(:disabled):active {
 .badge-once      { background: var(--brand-pale);  color: var(--brand-dark);  border: 1px solid var(--brand-muted); }
 .badge-suspended { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
 .badge-paid      { background: var(--accent-pale); color: var(--accent-dark); border: 1px solid var(--accent-muted); }
+
+/* ─── Consistent Radius Overrides ────────────────── */
+/* Maps Tailwind rounded classes to our design system vars */
+.rounded    { border-radius: var(--radius-xs)   !important; }
+.rounded-md { border-radius: var(--radius-sm)   !important; }
+.rounded-lg { border-radius: var(--radius-sm)   !important; }
+.rounded-xl { border-radius: var(--radius-md)   !important; }
+.rounded-2xl{ border-radius: var(--radius-lg)   !important; }
+.rounded-3xl{ border-radius: var(--radius-xl)   !important; }
+
+/* Nav bar pill shell */
+.rounded-\[26px\] { border-radius: var(--radius-xl) !important; }

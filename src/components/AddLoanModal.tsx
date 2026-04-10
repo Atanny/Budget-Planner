@@ -36,7 +36,7 @@ const STATUS_BADGE_STYLE: Record<string, { bg: string; color: string; border: st
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
+  width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', fontSize: 14,
   border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
@@ -229,7 +229,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               onClick={() => setIsUnlimited(v => !v)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                borderRadius: 10, cursor: 'pointer',
+                borderRadius: 'var(--radius-sm)', cursor: 'pointer',
                 background: isUnlimited ? '#FFF7ED' : 'white',
                 border: `1.5px solid ${isUnlimited ? 'var(--brand)' : '#bfdbfe'}`,
                 transition: 'all 0.2s',
@@ -237,7 +237,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             >
               {/* Toggle knob */}
               <div style={{
-                width: 38, height: 22, borderRadius: 11, flexShrink: 0, position: 'relative',
+                width: 38, height: 22, borderRadius: 'var(--radius-md)', flexShrink: 0, position: 'relative',
                 background: isUnlimited ? 'var(--brand)' : '#CBD5E1',
                 transition: 'background 0.2s',
               }}>
@@ -408,7 +408,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             <label style={labelStyle}>Priority</label>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '10px 14px', borderRadius: 10,
+              padding: '10px 14px', borderRadius: 'var(--radius-sm)',
               background: 'var(--brand-pale)', border: '1.5px solid var(--brand-muted)', marginBottom: 10,
             }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand-dark)' }}>🔴 Required</span>
@@ -422,7 +422,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 return (
                   <span key={s} style={{
                     display: 'inline-flex', alignItems: 'center', padding: '4px 12px',
-                    borderRadius: 999, fontSize: 11, fontWeight: 700,
+                    borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 700,
                     background: isActive ? st.bg : 'var(--bg-subtle)',
                     color: isActive ? st.color : 'var(--text-faint)',
                     border: `1.5px solid ${isActive ? st.border : 'var(--border)'}`,
