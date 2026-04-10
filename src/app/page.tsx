@@ -22,6 +22,7 @@ function DashboardPageInner() {
   const [banks,         setBanks]         = useState<BankAccount[]>([])
   const [loading,       setLoading]       = useState(true)
   const [netHidden,     setNetHidden]     = useState(false)
+  const [banksHidden,   setBanksHidden]   = useState(false)
   const [showBankForm,  setShowBankForm]  = useState(false)
   const [editBank,      setEditBank]      = useState<BankAccount | null>(null)
   const [userId,        setUserId]        = useState<string | null>(null)
@@ -308,7 +309,7 @@ function DashboardPageInner() {
     className="px-4 sm:px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
    style={{ borderColor: '#060D38', background: 'linear-gradient(326deg,rgba(11, 11, 176, 1) 19%, rgba(89, 89, 255, 1) 100%)' }}
   >
-    <div>
+    <div className="min-w-0">
       <h2 className="font-bold text-base sm:text-lg" style={{ color: 'white' }}>
         Accounts & Wallets
       </h2>
@@ -317,16 +318,40 @@ function DashboardPageInner() {
       </p>
     </div>
 
-    <span
-      className="text-lg sm:text-xl font-bold font-mono text-left sm:text-right"
-      style={{ color: 'white' }}
-    >
-      {formatCurrency(totalBankBalance)}
-      <div> 
-           <p className="text-sm font-normal mt-1 " style={{ color: 'white' }}>Total Balance</p>
-      </div>
-  
-    </span>
+    <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+      {!banksHidden ? (
+        <div className="text-left sm:text-right">
+          <span
+            className="text-lg sm:text-xl font-bold font-mono"
+            style={{ color: 'white' }}
+          >
+            {formatCurrency(totalBankBalance)}
+          </span>
+          <p className="text-sm font-normal mt-1" style={{ color: 'white' }}>Total Balance</p>
+        </div>
+      ) : (
+        <div className="text-left sm:text-right">
+          <span
+            className="text-lg sm:text-xl font-bold tracking-widest"
+            style={{ color: 'white' }}
+          >
+            ₱ •••••
+          </span>
+          <p className="text-sm font-normal mt-1" style={{ color: 'white' }}>Total Balance</p>
+        </div>
+      )}
+
+      <button
+        onClick={() => setBanksHidden(!banksHidden)}
+        className="p-2 rounded-xl shrink-0 transition-all duration-200 hover:scale-105"
+        style={{
+          background: 'white',
+          color: 'var(--text-muted)',
+        }}
+      >
+        {banksHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+      </button>
+    </div>
   </div>
 
   {/* Content */}
@@ -408,14 +433,20 @@ function DashboardPageInner() {
           <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
 
             {/* Balance */}
-            <span
-              className="font-bold font-mono text-sm sm:text-base"
-              style={{
-                color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)'
-              }}
-            >
-              {formatCurrency(bank.balance)}
-            </span>
+            {banksHidden ? (
+              <span className="font-bold font-mono text-sm sm:text-base tracking-widest" style={{ color: 'var(--text-faint)' }}>
+                •••••
+              </span>
+            ) : (
+              <span
+                className="font-bold font-mono text-sm sm:text-base"
+                style={{
+                  color: bank.balance >= 0 ? 'var(--green-600)' : 'var(--red-500)'
+                }}
+              >
+                {formatCurrency(bank.balance)}
+              </span>
+            )}
 
             {/* Actions */}
             <div className="flex gap-1">
