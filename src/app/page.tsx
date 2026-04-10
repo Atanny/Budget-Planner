@@ -310,10 +310,10 @@ function DashboardPageInner() {
   >
     <div className="min-w-0">
       <h2 className="font-bold text-base sm:text-lg" style={{ color: 'white' }}>
-        Accounts & Wallets
+        Accounts
       </h2>
       <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'white' }}>
-        Not counted in net worth
+        All Accounts
       </p>
     </div>
 
