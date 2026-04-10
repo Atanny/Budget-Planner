@@ -151,8 +151,8 @@ function DashboardPageInner() {
   const nextCutoff  = getNextCutoffDate()
   const cutoffLabel = nextCutoff.getDate() === 15 ? '1st Cutoff' : '2nd Cutoff'
 
-  // Net Worth = total salary received (not bank balances)
-  const netWorth = settings?.total_salary_received || 0
+  // Net Worth = monthly salary (1st cutoff + 2nd cutoff)
+  const netWorth = (settings?.first_cutoff_salary || 0) + (settings?.second_cutoff_salary || 0)
   // Total bank balance = separate
   const totalBankBalance = banks.reduce((s, b) => s + b.balance, 0)
   const mainBank = banks.find(b => b.is_main_bank)
@@ -194,7 +194,7 @@ function DashboardPageInner() {
         className="text-xs sm:text-sm mt-1"
         style={{ color: 'white' }}
       >
-        Total salary received
+        Monthly salary
       </p>
     </div>
 

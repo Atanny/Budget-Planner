@@ -165,16 +165,16 @@ function LoansPageInner() {
           { label: 'Active',        value: String(loans.length),             color: '#F59E0B', bg: '#FEF3C7', icon: Clock },
           { label: 'Paid Off',      value: String(paidOffCount),             color: '#10B981', bg: '#D1FAE5', icon: CheckCircle2 },
         ].map(s => (
-          <div key={s.label} className="glass-card" style={{ padding: '16px 12px', textAlign: 'center' }}>
+          <div key={s.label} className="glass-card" style={{ padding: '14px 10px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}>
             <div style={{
-              width: 40, height: 40, borderRadius: 12,
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
               background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 8px',
+              marginBottom: 8,
             }}>
-              <s.icon size={18} style={{ color: s.color }} />
+              <s.icon size={16} style={{ color: s.color }} />
             </div>
-            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, fontWeight: 600 }}>{s.label}</p>
+            <p style={{ fontSize: 15, fontWeight: 800, color: s.color, lineHeight: 1.2, wordBreak: 'break-word', overflowWrap: 'anywhere', width: '100%' }}>{s.value}</p>
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, fontWeight: 600, lineHeight: 1.3, wordBreak: 'break-word', width: '100%' }}>{s.label}</p>
           </div>
         ))}
       </div>
