@@ -112,8 +112,8 @@ export default function NotificationsPage() {
   return (
     <div className="w-full space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Alerts</h1>
+      <div style={{ marginBottom: 14 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>Alerts</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Cutoff reminders and payment alerts</p>
       </div>
 

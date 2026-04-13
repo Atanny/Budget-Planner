@@ -95,15 +95,15 @@ function TransactionsPageInner() {
       {/* Page Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Transactions</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>Transactions</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>Payment history & activity log</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setViewYear(y => y - 1)} className="w-8 h-8 rounded-xl font-bold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>‹</button>
+            style={{ background: '#2563EB', color: 'white', border: '1.5px solid #0f172a' }}>‹</button>
           <span className="font-bold w-12 text-center" style={{ color: 'var(--text-primary)' }}>{viewYear}</span>
           <button onClick={() => setViewYear(y => y + 1)} className="w-8 h-8 rounded-xl font-bold"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)', border: '1.5px solid #0f172a' }}>›</button>
+            style={{ background: '#2563EB', color: 'white', border: '1.5px solid #0f172a' }}>›</button>
         </div>
       </div>
 

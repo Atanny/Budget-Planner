@@ -52,7 +52,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [amount,        setAmount]        = useState(editItem?.amount?.toString() || '')
   const [cutoff,        setCutoff]        = useState<Cutoff>(editItem?.cutoff || '1st')
   const [category,      setCategory]      = useState(editItem?.category || 'Loan')
-  const [bankId,        setBankId]        = useState<string>(editItem?.bank_account_id || '')
+  // REMOVED: bankId state - no longer needed for loans
   const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>('Required')
   const UNLIMITED_MONTHS = 9999
   const isExistingUnlimited = existingLD?.total_months >= UNLIMITED_MONTHS
@@ -68,7 +68,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [totalLoan,     setTotalLoan]     = useState('')
   const [showSched,     setShowSched]     = useState(Object.keys(existingMA).length > 0)
   const [saving,        setSaving]        = useState(false)
-  const [banks,         setBanks]         = useState<BankAccount[]>([])
+  // REMOVED: banks state - no longer needed
   const [showPrevMonthConfirm, setShowPrevMonthConfirm] = useState(false)
 
   const numMonths = parseInt(totalMonths) || 0
@@ -81,13 +81,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     return Array.from({ length: 12 }, () => '')
   })
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('bank_accounts').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order')
-        .then(({ data }) => setBanks(data || []))
-    })
-  }, [])
+  // REMOVED: useEffect that fetched banks
 
   useEffect(() => {
     const n = parseInt(totalMonths) || 0
@@ -148,9 +142,11 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
     const effectiveMonths = isUnlimited ? UNLIMITED_MONTHS : parseInt(totalMonths)
 
+    // REMOVED: bank_account_id from payload - loans don't have bank at creation
     const payload: any = {
       name, amount: parseFloat(amount), cutoff, status: isUnlimited ? 'Required' : computedStatus,
-      is_loan: true, category, bank_account_id: bankId || null
+      is_loan: true, category,
+      bank_account_id: null // Always null for loans - bank selected when paying
     }
 
     if (editItem) {
@@ -389,19 +385,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             </div>
           </div>
 
-          {/* Bank Account */}
-          <div>
-            <label style={labelStyle}>Deducted from Account</label>
-            <select value={bankId} onChange={e => setBankId(e.target.value)} style={inputStyle}>
-              <option value="">— None —</option>
-              {banks.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-faint)' }}>
-              Marking this loan paid will decrease this account's balance
-            </p>
-          </div>
+          {/* REMOVED: Bank Account section - no longer needed for loans */}
 
           {/* Priority — always Required */}
           <div>
@@ -467,7 +451,8 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
         }
         const payload: any = {
           name, amount: parseFloat(amount), cutoff, status: computedStatus,
-          is_loan: true, category, bank_account_id: bankId || null
+          is_loan: true, category,
+          bank_account_id: null // Always null for loans
         }
         const { data: newItem } = await supabase.from('budget_items')
           .insert({ user_id: user.id, ...payload }).select().single()

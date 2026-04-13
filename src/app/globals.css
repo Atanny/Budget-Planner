@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
 /* ─── Orange + Blue Only Palette ──────────────────── */
 :root {
@@ -60,8 +60,21 @@ html, body {
 body {
   background-color: var(--bg-page);
   color: var(--text-primary);
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Poppins', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Heading Font ────────────────────────────────── */
+h1, h2, h3, .heading {
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Badge Font ──────────────────────────────────── */
+.badge, [class*="badge-"] {
+  font-family: Helvetica, Arial, sans-serif;
+  letter-spacing: 0.03em;
 }
 
 /* ─── Scrollbar ───────────────────────────────────── */
@@ -112,7 +125,7 @@ input, select, textarea {
   border: 1.5px solid var(--border) !important;
   color: var(--text-primary) !important;
   border-radius: var(--radius-md) !important;
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: 'Poppins', sans-serif !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
@@ -204,3 +217,10 @@ button:not(:disabled):active {
 
 /* Nav bar pill shell */
 .rounded-\[26px\] { border-radius: var(--radius-xl) !important; }
+
+/* ─── Responsive: hide text labels on small screens ──── */
+@media (max-width: 400px) {
+  .hide-on-small {
+    display: none;
+  }
+}

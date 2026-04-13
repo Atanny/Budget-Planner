@@ -22,10 +22,15 @@ const MORE_PAGES = [
 ]
 
 const FAB_ACTIONS = [
-  { key: 'sahod',   label: 'May Sahod Na!', icon: Banknote,     color: '#e07a00', bg: '#fff7ed', border: '#ffb733' },
+
   { key: 'salary',  label: 'Edit Salary',   icon: Settings,     color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
   { key: 'expense', label: 'Add Expense',   icon: ShoppingCart, color: '#e07a00', bg: '#fff7ed', border: '#ffb733' },
   { key: 'loan',    label: 'Add Loan',      icon: CreditCard,   color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+]
+
+const SEPERATE_ACTION = [
+    { key: 'sahod',   label: 'May Sahod Na!', icon: Banknote,  bg: 'white', border: '#ffb733' },
+
 ]
 
 export default function Navbar() {
@@ -179,6 +184,8 @@ export default function Navbar() {
               </button>
             ))}
           </div>
+           
+
 
           {/* More Pages */}
           <div style={{
@@ -215,10 +222,45 @@ export default function Navbar() {
                   <ChevronRight size={14} style={{ color: 'var(--text-faint)' }} />
                 </Link>
               )
+
+             
             })}
+
+     
+          </div>
+             <div style={{
+            width: '100%',
+            background: 'white',
+            borderRadius: 'var(--radius-lg)',
+            border: '1.5px solid #0f172a',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+            overflow: 'hidden',
+          }}>
+            
+            {SEPERATE_ACTION.map(({ key, label, icon: Icon, bg, border }) => (
+              <button key={key} onClick={() => trigger(key)} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '11px 16px',
+                background: 'var(--brand)',
+                border: 'none',
+                cursor: 'pointer',
+                width: '100%',
+                color: 'white',
+                animation: 'slideUp 0.18s ease',
+              }} >
+              
+                <span style={{ fontWeight: 700, fontSize: 14, flex: 1, textAlign: 'center' }}>{label}</span>
+                
+              </button>
+            ))}
           </div>
         </div>
+        
+
+        
       )}
+
+      
 
       {/* Bottom nav */}
       <nav style={{
