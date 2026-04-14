@@ -686,7 +686,7 @@ function DashboardPageInner() {
                   cursor: isPaid ? "default" : "pointer",
                   display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
                 }}>
-                <Check size={12} /> {isPaid ? "Paid" : "Mark as Paid"}
+                <Check size={12} /> {isPaid ? "Paid" : "Paid?"}
               </button>
             </div>
           );
