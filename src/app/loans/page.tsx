@@ -218,10 +218,6 @@ function LoansPageInner() {
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', overflow: 'visible' }}>
-          <button onClick={() => { setLoading(true); if (viewMonth === 0) setViewMonth(11); else setViewMonth(m => m - 1); }}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <ChevronLeft size={16} color="white" />
-          </button>
           <button ref={monthBtnRef}
             onClick={() => {
               if (!showMonthPicker && monthBtnRef.current) {
@@ -230,13 +226,19 @@ function LoansPageInner() {
               }
               setShowMonthPicker(v => !v)
             }}
-            style={{ flex: 1, fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', textAlign: 'center', background: showMonthPicker ? '#e0e7ff' : '#f8fafc', border: showMonthPicker ? '1.5px solid #2563EB' : '1.5px solid #e2e8f0', borderRadius: 10, padding: '6px 8px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Poppins', sans-serif" }}>
+            style={{ flex: 1, fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', textAlign: 'left', background: 'transparent', border: showMonthPicker ? '1.5px solid #2563EB' : '1.5px solid transparent', borderRadius: 10, padding: '6px 8px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Poppins', sans-serif" }}>
             {MONTHS_LONG[viewMonth]}
           </button>
-          <button onClick={() => { setLoading(true); if (viewMonth === 11) setViewMonth(0); else setViewMonth(m => m + 1); }}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <ChevronRight size={16} color="white" />
-          </button>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button onClick={() => { setLoading(true); if (viewMonth === 0) setViewMonth(11); else setViewMonth(m => m - 1); }}
+              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronLeft size={16} color="white" />
+            </button>
+            <button onClick={() => { setLoading(true); if (viewMonth === 11) setViewMonth(0); else setViewMonth(m => m + 1); }}
+              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronRight size={16} color="white" />
+            </button>
+          </div>
           {showMonthPicker && (
             <div style={{ position: 'fixed', top: monthPickerPos.top, left: 16, right: 16, zIndex: 9999, background: 'white', border: '1.5px solid #0f172a', borderRadius: 14, boxShadow: '0 8px 28px rgba(15,23,42,0.16)', overflow: 'hidden' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
@@ -544,7 +546,7 @@ function LoansPageInner() {
                         const isBeforeL = loanStart ? calDate < new Date(loanStart.getFullYear(), loanStart.getMonth(), 1) : false
                         const loanEndD = (!isUnlimitedRow && loanStart) ? new Date(loanStart) : null
                         if (loanEndD) loanEndD.setMonth(loanEndD.getMonth() + totalM - 1)
-                        const isAfterL = !isUnlimitedRow && loanEndD && loanEndD.getFullYear() <= CURRENT_YEAR ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
+                        const isAfterL = !isUnlimitedRow && loanEndD ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
                         const outScope = isBeforeL || isAfterL
                         return (
                           <td key={i} style={{ textAlign: 'center', padding: '6px 2px' }}>

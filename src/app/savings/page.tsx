@@ -6,7 +6,7 @@ import { MonthlySavings } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { PiggyBank, TrendingUp, Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()
 
 export default function SavingsPage() {
@@ -30,7 +30,7 @@ export default function SavingsPage() {
     const existing = savRes.data || []
     setSavingsGoal(settRes.data?.savings_goal || 0)
     const months: MonthlySavings[] = Array.from({ length: 12 }, (_, i) => {
-      const found = existing.find(e => e.month === i + 1)
+      const found = existing.find((e: any) => e.month === i + 1)
       return found || { id: `temp-${i+1}`, user_id: user.id, year, month: i + 1, kinsenas: 0, atrenta: 0, notes: '' } as any
     })
     setSavings(months)
@@ -84,65 +84,51 @@ export default function SavingsPage() {
   return (
     <div style={{ width: '100%', paddingBottom: 24 }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Header */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', marginBottom: 20, gap: 12 }}>
-        <h1 style={{ fontSize: 28, fontFamily: "'Prosto One', serif", fontWeight: 400, color: 'var(--text-primary)' }}>
-          Savings
-        </h1>
-        {/* Year navigator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => setYear(y => y - 1)}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-            <ChevronLeft size={16} color="white" />
-          </button>
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', minWidth: 48, textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>{year}</span>
-          <button onClick={() => setYear(y => y + 1)}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-            <ChevronRight size={16} color="white" />
-          </button>
+        <h1 style={{ fontSize: 28, fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, color: 'var(--text-primary)' }}>Savings</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>{year}</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button onClick={() => setYear(y => y - 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronLeft size={16} color="white" />
+            </button>
+            <button onClick={() => setYear(y => y + 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronRight size={16} color="white" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Stat Cards 2×2 ────────────────────────────────────────────── */}
+      {/* Stat Cards 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}>
-            <PiggyBank size={19} color="white" />
-          </div>
+        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="white" /></div>
           <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Annual Total</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {grandTotal.toLocaleString()}</p>
         </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}>
-            <TrendingUp size={19} color="#94A3B8" />
-          </div>
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><TrendingUp size={18} color="#94A3B8" /></div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Year-to-Date</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {ytd.toLocaleString()}</p>
         </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#EFF6FF', display: 'grid', placeItems: 'center' }}>
-            <PiggyBank size={19} color="#3B82F6" />
-          </div>
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#EFF6FF', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="#2563EB" /></div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Kinsenas (15th)</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#2563EB', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalKinsenas.toLocaleString()}</p>
         </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#F0FDF4', display: 'grid', placeItems: 'center' }}>
-            <PiggyBank size={19} color="#16A34A" />
-          </div>
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F0FDF4', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="#16A34A" /></div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Atrenta (30th)</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#16A34A', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalAtrenta.toLocaleString()}</p>
         </div>
       </div>
 
-      {/* ── Monthly Table ─────────────────────────────────────────────── */}
-      <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A' }}>
-        {/* Table header */}
+      {/* Monthly Table */}
+      <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A', marginBottom: 22 }}>
         <div style={{ background: '#1a237e', padding: '14px 20px' }}>
-          <p style={{ color: 'white', fontFamily: "'Prosto One', serif", fontWeight: 400, fontSize: 15 }}>Monthly Breakdown — {year}</p>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 3, fontFamily: "'Poppins', sans-serif" }}>
-            Savings checkbox in Budget auto-fills · or edit manually below
-          </p>
+          <p style={{ color: 'white', fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15 }}>Monthly Breakdown — {year}</p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 3, fontFamily: "'Poppins', sans-serif" }}>Savings checkbox in Budget auto-fills · or edit manually below</p>
         </div>
 
         {savings.map((row, idx) => {
@@ -151,83 +137,49 @@ export default function SavingsPage() {
           const total      = row.kinsenas + row.atrenta
           const fromBudget = savingsGoal > 0 && (row.kinsenas === savingsGoal || row.atrenta === savingsGoal)
           const barPct     = Math.round((total / maxSaving) * 100)
-
           return (
-            <div key={row.id} style={{
-              borderBottom: idx < 11 ? '1px solid #F1F5F9' : 'none',
-              background: isCurrent ? '#EFF6FF' : isEditing ? '#FAFFFE' : 'white',
-            }}>
-              {/* Main row */}
+            <div key={row.id} style={{ borderBottom: idx < 11 ? '1px solid #F1F5F9' : 'none', background: isCurrent ? '#EFF6FF' : isEditing ? '#FAFFFE' : 'white' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr auto', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
-
-                {/* Month label */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   {isCurrent && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563EB', display: 'block', flexShrink: 0 }} />}
                   <div>
-                    <p style={{ fontWeight: isCurrent ? 700 : 600, fontSize: 13, color: isCurrent ? '#1d4ed8' : 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>
-                      {MONTHS[idx]}
-                    </p>
+                    <p style={{ fontWeight: isCurrent ? 700 : 600, fontSize: 13, color: isCurrent ? '#1d4ed8' : 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>{MONTHS_LONG[idx]}</p>
                     {fromBudget && !isEditing && (
                       <span style={{ fontSize: 9, fontWeight: 700, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: 8, padding: '1px 6px', display: 'inline-block', marginTop: 2, fontFamily: "'Poppins', sans-serif" }}>AUTO</span>
                     )}
                   </div>
                 </div>
-
-                {/* Kinsenas */}
                 <div>
                   <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2, fontFamily: "'Poppins', sans-serif" }}>Kinsenas</p>
                   {isEditing ? (
-                    <input type="number" value={editValues.kinsenas}
-                      onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))}
-                      style={inputStyle} />
+                    <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={inputStyle} />
                   ) : (
-                    <p style={{ fontWeight: 700, fontSize: 13, color: row.kinsenas > 0 ? '#2563EB' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>
-                      {row.kinsenas > 0 ? `₱ ${row.kinsenas.toLocaleString()}` : '—'}
-                    </p>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: row.kinsenas > 0 ? '#2563EB' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>{row.kinsenas > 0 ? `₱ ${row.kinsenas.toLocaleString()}` : '—'}</p>
                   )}
                 </div>
-
-                {/* Atrenta */}
                 <div>
                   <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2, fontFamily: "'Poppins', sans-serif" }}>Atrenta</p>
                   {isEditing ? (
-                    <input type="number" value={editValues.atrenta}
-                      onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))}
-                      style={inputStyle} />
+                    <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={inputStyle} />
                   ) : (
-                    <p style={{ fontWeight: 700, fontSize: 13, color: row.atrenta > 0 ? '#16A34A' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>
-                      {row.atrenta > 0 ? `₱ ${row.atrenta.toLocaleString()}` : '—'}
-                    </p>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: row.atrenta > 0 ? '#16A34A' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>{row.atrenta > 0 ? `₱ ${row.atrenta.toLocaleString()}` : '—'}</p>
                   )}
                 </div>
-
-                {/* Edit / Save / Cancel */}
                 <div style={{ display: 'flex', gap: 6 }}>
                   {isEditing ? (
                     <>
-                      <button onClick={() => saveEdit(row)}
-                        style={{ width: 32, height: 32, borderRadius: 10, background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                        <Check size={14} color="white" />
-                      </button>
-                      <button onClick={() => setEditingId(null)}
-                        style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                        <X size={14} color="#64748B" />
-                      </button>
+                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
+                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
                     </>
                   ) : (
-                    <button onClick={() => startEdit(row)}
-                      style={{ width: 32, height: 32, borderRadius: 10, background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                      <Edit2 size={14} color="white" />
-                    </button>
+                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
                   )}
                 </div>
               </div>
-
-              {/* Notes + progress bar when has data */}
               {(total > 0 || isEditing) && (
                 <div style={{ padding: '0 20px 14px' }}>
                   {total > 0 && !isEditing && (
-                    <div style={{ marginBottom: isEditing ? 8 : 0 }}>
+                    <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Poppins', sans-serif" }}>Total saved</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>₱ {total.toLocaleString()}</span>
@@ -237,15 +189,8 @@ export default function SavingsPage() {
                       </div>
                     </div>
                   )}
-                  {isEditing && (
-                    <input value={editValues.notes}
-                      onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
-                      placeholder="Notes (optional)..."
-                      style={{ ...inputStyle, marginTop: 4 }} />
-                  )}
-                  {!isEditing && row.notes && (
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 6, fontFamily: "'Poppins', sans-serif" }}>{row.notes}</p>
-                  )}
+                  {isEditing && <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="Notes (optional)..." style={{ ...inputStyle, marginTop: 4 }} />}
+                  {!isEditing && row.notes && <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 6, fontFamily: "'Poppins', sans-serif" }}>{row.notes}</p>}
                 </div>
               )}
             </div>
@@ -260,7 +205,7 @@ export default function SavingsPage() {
             { label: 'Grand Total',    value: grandTotal,    color: '#0F172A' },
           ].map((row, i, arr) => (
             <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid #FFE0B2' : 'none' }}>
-              <span style={{ fontFamily: "'Prosto One', serif", fontWeight: 400, fontSize: 15, color: 'var(--brand)' }}>{row.label}</span>
+              <span style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15, color: 'var(--brand)' }}>{row.label}</span>
               <span style={{ fontWeight: 700, fontSize: 15, color: row.color, fontFamily: "'Poppins', sans-serif" }}>₱ {row.value.toLocaleString()}</span>
             </div>
           ))}

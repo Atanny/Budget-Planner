@@ -281,24 +281,24 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
         </div>
       </div>
 
-      {/* Stat Cards — 3 col grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
-        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}>
-            <TrendingUp size={19} color="white" />
+      {/* Stat Cards — 2 top + 1 full bottom */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 18 }}>
+        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}>
+            <TrendingUp size={18} color="white" />
           </div>
           <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Income</p>
-          <p style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalIncome.toLocaleString()}</p>
+          <p style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalIncome.toLocaleString()}</p>
         </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><CreditCard size={19} color="#94A3B8" /></div>
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><CreditCard size={18} color="#94A3B8" /></div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Expenses</p>
-          <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalExpenses.toLocaleString()}</p>
+          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalExpenses.toLocaleString()}</p>
         </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '20px 16px', display: 'grid', justifyItems: 'center', gap: 6 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><PiggyBank size={19} color="#94A3B8" /></div>
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5, gridColumn: '1 / -1' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="#94A3B8" /></div>
           <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Remaining</p>
-          <p style={{ fontSize: 18, fontWeight: 700, color: remaining < 0 ? '#dc2626' : 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {remaining.toLocaleString()}</p>
+          <p style={{ fontSize: 22, fontWeight: 700, color: remaining < 0 ? '#dc2626' : 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {remaining.toLocaleString()}</p>
         </div>
       </div>
 
@@ -311,11 +311,6 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', overflow: 'visible' }}>
-          <button
-            onClick={() => { setLoading(true); if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <ChevronLeft size={16} color="white" />
-          </button>
           <button ref={monthBtnRef}
             onClick={() => {
               if (!showMonthPicker && monthBtnRef.current) {
@@ -324,14 +319,21 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
               }
               setShowMonthPicker(v => !v)
             }}
-            style={{ flex: 1, fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', textAlign: 'center', background: showMonthPicker ? '#e0e7ff' : '#f8fafc', border: showMonthPicker ? '1.5px solid #2563EB' : '1.5px solid #e2e8f0', borderRadius: 10, padding: '6px 8px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Poppins', sans-serif" }}>
-            {MONTHS_LONG[viewMonth]}
+            style={{ flex: 1, fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', textAlign: 'left', background: 'transparent', border: showMonthPicker ? '1.5px solid #2563EB' : '1.5px solid transparent', borderRadius: 10, padding: '6px 8px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Poppins', sans-serif" }}>
+            {MONTHS_LONG[viewMonth]} {viewYear !== CURRENT_YEAR ? viewYear : ''}
           </button>
-          <button
-            onClick={() => { setLoading(true); if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}
-            style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <ChevronRight size={16} color="white" />
-          </button>
+          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+            <button
+              onClick={() => { setLoading(true); if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }}
+              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronLeft size={16} color="white" />
+            </button>
+            <button
+              onClick={() => { setLoading(true); if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }}
+              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <ChevronRight size={16} color="white" />
+            </button>
+          </div>
           {showMonthPicker && (
             <div style={{ position: 'fixed', top: monthPickerPos.top, left: 16, right: 16, zIndex: 9999, background: 'white', border: '1.5px solid #0f172a', borderRadius: 14, boxShadow: '0 8px 28px rgba(15,23,42,0.16)', overflow: 'hidden' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
