@@ -33,13 +33,49 @@ const MONTHS_LONG = [
 const CURRENT_MONTH = new Date().getMonth();
 const CURRENT_YEAR  = new Date().getFullYear();
 
+function getLoanMonthScope(item: BudgetItem, year: number): { start: number; end: number } | null {
+  if (!item.is_loan) return null;
+  const ld = (item as any).loan_details?.[0] ?? (item as any).loan_details;
+  if (!ld?.start_date || !ld?.total_months) return null;
+  const totalM = parseInt(ld.total_months);
+  const loanStart = new Date(ld.start_date);
+  if (totalM >= 9999) {
+    if (loanStart.getFullYear() > year) return null;
+    const startM = loanStart.getFullYear() < year ? 0 : loanStart.getMonth();
+    return { start: startM, end: 11 };
+  }
+  const loanEndDate = new Date(loanStart);
+  loanEndDate.setMonth(loanEndDate.getMonth() + totalM - 1);
+  if (loanStart.getFullYear() > year) return null;
+  if (loanEndDate.getFullYear() < year) return null;
+  const startM = loanStart.getFullYear() < year ? 0 : loanStart.getMonth();
+  const endM   = loanEndDate.getFullYear() > year ? 11 : loanEndDate.getMonth();
+  return { start: startM, end: endM };
+}
+
+function isItemVisibleInMonth(item: BudgetItem, month: number, year: number): boolean {
+  if (item.is_loan) {
+    const scope = getLoanMonthScope(item, year);
+    if (!scope) return false;
+    return month >= scope.start && month <= scope.end;
+  }
+  if (!item.created_at) return true;
+  const created = new Date(item.created_at);
+  const createdYear  = created.getFullYear();
+  const createdMonth = created.getMonth();
+  if (item.status === 'Once') return createdYear === year && createdMonth === month;
+  if (year < createdYear) return false;
+  if (year === createdYear && month < createdMonth) return false;
+  return true;
+}
+
 function DashboardPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [settings,  setSettings]  = useState<UserSettings | null>(null);
   const [items,     setItems]     = useState<BudgetItem[]>([]);
-  const [payments,  setPayments]  = useState<Record<string, boolean[]>>({});
+  const [payments,  setPayments]  = useState<Record<string, Record<number, boolean>>>({});
   const [banks,     setBanks]     = useState<BankAccount[]>([]);
   const [banksMap,  setBanksMap]  = useState<Record<string, string>>({});
   const [loading,   setLoading]   = useState(true);
@@ -88,6 +124,7 @@ function DashboardPageInner() {
   const accountsScrollRef = useRef<HTMLDivElement>(null);
   const [payConfirmItem,  setPayConfirmItem]  = useState<BudgetItem | null>(null);
   const [paySelectedBank, setPaySelectedBank] = useState<string>("");
+  const [payAlreadyPaid,  setPayAlreadyPaid]  = useState<boolean | null>(null);
   const [openCardMenu, setOpenCardMenu] = useState<string | null>(null);
 
   // ── Data loading ─────────────────────────────────────────────────────────
@@ -115,10 +152,10 @@ function DashboardPageInner() {
     for (const b of banksList) bmap[b.id] = b.name;
     setBanksMap(bmap);
 
-    const map: Record<string, boolean[]> = {};
+    const map: Record<string, Record<number, boolean>> = {};
     for (const p of (payRes.data || [])) {
-      if (!map[p.budget_item_id]) map[p.budget_item_id] = Array(12).fill(false);
-      map[p.budget_item_id][p.month - 1] = p.paid;
+      if (!map[p.budget_item_id]) map[p.budget_item_id] = {};
+      map[p.budget_item_id][p.month] = p.paid;
     }
     setPayments(map);
 
@@ -168,13 +205,12 @@ function DashboardPageInner() {
   // ── Payment toggle ────────────────────────────────────────────────────────
   async function togglePayment(item: BudgetItem, bankAccountId: string) {
     if (!userId) return;
-    if (payments[item.id]?.[viewMonth]) return; // already paid
-    const newArr = [...(payments[item.id] || Array(12).fill(false))];
-    newArr[viewMonth] = true;
-    setPayments(prev => ({ ...prev, [item.id]: newArr }));
+    const month1 = viewMonth + 1;
+    if (payments[item.id]?.[month1]) return; // already paid
+    setPayments(prev => ({ ...prev, [item.id]: { ...(prev[item.id] || {}), [month1]: true } }));
     await supabase.from("monthly_payments").upsert({
       budget_item_id: item.id, user_id: userId,
-      year: viewYear, month: viewMonth + 1,
+      year: viewYear, month: month1,
       paid: true, paid_at: new Date().toISOString(),
     }, { onConflict: "budget_item_id,year,month" });
     
@@ -193,6 +229,7 @@ function DashboardPageInner() {
     
     setPayConfirmItem(null);
     setPaySelectedBank("");
+    setPayAlreadyPaid(null);
   }
 
   // ── Savings toggle ────────────────────────────────────────────────────────
@@ -264,7 +301,11 @@ function DashboardPageInner() {
   // ── Computed values ───────────────────────────────────────────────────────
   const netWorth      = (settings?.first_cutoff_salary || 0) + (settings?.second_cutoff_salary || 0);
   const mainBank      = banks.find(b => b.is_main_bank);
-  const cutoffItems   = items.filter(i => i.cutoff === activeTab && i.status !== 'Suspended');
+  const cutoffItems   = items.filter(i =>
+    i.cutoff === activeTab &&
+    i.status !== 'Suspended' &&
+    isItemVisibleInMonth(i, viewMonth, viewYear)
+  );
   const salary        = activeTab === "1st" ? (settings?.first_cutoff_salary || 0) : (settings?.second_cutoff_salary || 0);
   const extraIncome   = activeTab === "1st" ? (settings?.extra_income_1st || 0)    : (settings?.extra_income_2nd || 0);
   const totalIncome   = salary + extraIncome;
@@ -597,7 +638,7 @@ function DashboardPageInner() {
             No items yet — add them from the Budget page.
           </div>
         ) : cutoffItems.map(item => {
-          const isPaid  = payments[item.id]?.[viewMonth] ?? false;
+          const isPaid  = payments[item.id]?.[viewMonth + 1] ?? false;
           const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category);
           return (
             <div key={item.id} style={{
@@ -686,85 +727,105 @@ function DashboardPageInner() {
         </div>
       </div>
 
-      {/* ═══ PAY CONFIRM MODAL WITH BANK SELECTION ═════════════════════════════ */}
+      {/* ═══ PAY CONFIRM MODAL ═════════════════════════════════════════════ */}
       {payConfirmItem && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.45)", backdropFilter: "blur(8px)", padding: 16 }}>
           <div className="slide-up" style={{ width: "100%", maxWidth: 360, borderRadius: 20, overflow: "hidden", background: "white", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.18)" }}>
-            <div style={{ padding: "22px 20px 16px", textAlign: "center" }}>
+
+            {/* Header */}
+            <div style={{ padding: "22px 20px 14px", textAlign: "center" }}>
               <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", border: "2px solid #0f172a", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                 <Check size={22} color="var(--brand-dark)" strokeWidth={3} />
               </div>
-              <h2 style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>Mark as Paid?</h2>
+              <h2 style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
+                {payAlreadyPaid === null ? "Payment Status" : payAlreadyPaid ? "Mark as Paid" : "Mark as Paid"}
+              </h2>
               <p style={{ fontSize: 14, marginTop: 6, fontWeight: 600, color: "var(--text-secondary)" }}>
                 {payConfirmItem.name} — {formatCurrency(payConfirmItem.amount)}
               </p>
             </div>
-            
-            {/* Bank Selection */}
-            <div style={{ margin: "0 20px 16px" }}>
-              <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>
-                Deduct from which account?
-              </label>
-              <select
-                value={paySelectedBank}
-                onChange={(e) => setPaySelectedBank(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 12,
-                  fontSize: 14,
-                  border: "1.5px solid #0f172a",
-                  background: "var(--bg-subtle)",
-                  color: "var(--text-primary)",
-                  outline: "none",
-                }}
-              >
-                <option value="">Select bank account...</option>
-                {banks.map(bank => (
-                  <option key={bank.id} value={bank.id}>
-                    {bank.name} — {formatCurrency(bank.balance)}
-                  </option>
-                ))}
-              </select>
-              {payConfirmItem.bank_account_id && (
-                <p style={{ fontSize: 11, marginTop: 6, color: "var(--text-muted)" }}>
-                  Default: {banksMap[payConfirmItem.bank_account_id] || "Linked bank"}
-                </p>
-              )}
-            </div>
 
-            <div style={{ margin: "0 20px 16px", padding: "12px", borderRadius: 12, background: "#fef9c3", border: "1px solid #0f172a" }}>
-              <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>⚠️ This will deduct {formatCurrency(payConfirmItem.amount)} from the selected account</p>
-            </div>
-            <div style={{ padding: "0 20px 20px", display: "flex", gap: 12 }}>
-              <button onClick={() => { setPayConfirmItem(null); setPaySelectedBank(""); }} style={{ flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "var(--brand-pale)", color: "var(--brand-dark)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const bankId = paySelectedBank || payConfirmItem.bank_account_id;
-                  if (!bankId) {
-                    alert("Please select a bank account");
-                    return;
-                  }
-                  togglePayment(payConfirmItem, bankId);
-                }}
-                disabled={!paySelectedBank && !payConfirmItem.bank_account_id}
-                style={{ 
-                  flex: 1, 
-                  padding: "11px 0", 
-                  borderRadius: 12, 
-                  fontSize: 14, 
-                  fontWeight: 700, 
-                  background: "linear-gradient(135deg, var(--brand-dark), var(--brand-light))", 
-                  color: "white", 
-                  border: "none", 
-                  cursor: "pointer",
-                  opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1,
-                }}>
-                Yes, Mark as Paid
-              </button>
-            </div>
+            {/* STEP 1 — Already paid or for payment? */}
+            {payAlreadyPaid === null && (
+              <div style={{ padding: "0 20px 20px" }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textAlign: "center", marginBottom: 14 }}>
+                  Is this already paid or are you paying now?
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <button
+                    onClick={() => {
+                      // Already paid — mark immediately, no bank deduction
+                      const month1 = viewMonth + 1;
+                      setPayments(prev => ({ ...prev, [payConfirmItem.id]: { ...(prev[payConfirmItem.id] || {}), [month1]: true } }));
+                      supabase.from("monthly_payments").upsert({
+                        budget_item_id: payConfirmItem.id, user_id: userId,
+                        year: viewYear, month: month1,
+                        paid: true, paid_at: new Date().toISOString(),
+                      }, { onConflict: "budget_item_id,year,month" });
+                      setPayConfirmItem(null); setPaySelectedBank(""); setPayAlreadyPaid(null);
+                    }}
+                    style={{ width: "100%", padding: "13px 16px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #16a34a", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <Check size={15} /> Already Paid — just mark it
+                  </button>
+                  <button
+                    onClick={() => setPayAlreadyPaid(false)}
+                    style={{ width: "100%", padding: "13px 16px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    <CreditCard size={15} /> Pay Now — deduct from account
+                  </button>
+                  <button
+                    onClick={() => { setPayConfirmItem(null); setPaySelectedBank(""); setPayAlreadyPaid(null); }}
+                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, background: "transparent", color: "var(--text-muted)", border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 — Pay Now: pick bank + confirm deduction */}
+            {payAlreadyPaid === false && (
+              <>
+                <div style={{ margin: "0 20px 14px" }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>
+                    Deduct from which account?
+                  </label>
+                  <select
+                    value={paySelectedBank}
+                    onChange={(e) => setPaySelectedBank(e.target.value)}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontSize: 14, border: "1.5px solid #0f172a", background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }}>
+                    <option value="">Select bank account...</option>
+                    {banks.map(bank => (
+                      <option key={bank.id} value={bank.id}>{bank.name} — {formatCurrency(bank.balance)}</option>
+                    ))}
+                  </select>
+                  {payConfirmItem.bank_account_id && (
+                    <p style={{ fontSize: 11, marginTop: 6, color: "var(--text-muted)" }}>
+                      Default: {banksMap[payConfirmItem.bank_account_id] || "Linked bank"}
+                    </p>
+                  )}
+                </div>
+                <div style={{ margin: "0 20px 14px", padding: "11px", borderRadius: 12, background: "#fef9c3", border: "1px solid #0f172a" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>⚠️ This will deduct {formatCurrency(payConfirmItem.amount)} from the selected account</p>
+                </div>
+                <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+                  <button
+                    onClick={() => setPayAlreadyPaid(null)}
+                    style={{ flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, background: "var(--brand-pale)", color: "var(--brand-dark)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
+                    ← Back
+                  </button>
+                  <button
+                    onClick={() => {
+                      const bankId = paySelectedBank || payConfirmItem.bank_account_id;
+                      if (!bankId) { alert("Please select a bank account"); return; }
+                      togglePayment(payConfirmItem, bankId);
+                    }}
+                    disabled={!paySelectedBank && !payConfirmItem.bank_account_id}
+                    style={{ flex: 2, padding: "11px 0", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1 }}>
+                    Confirm & Deduct
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}
