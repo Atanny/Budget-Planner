@@ -23,8 +23,8 @@ export default function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-      style={{ background: 'rgba(13,40,24,0.45)', backdropFilter: 'blur(6px)' }}
+      className="fixed inset-0 z-[200] flex items-center justify-center modal-overlay p-4"
+      style={{}}
       onClick={onCancel}
     >
       <div
@@ -55,30 +55,29 @@ export default function ConfirmModal({
           <p className="text-sm text-center mt-2 leading-relaxed" style={{ color: 'var(--text-muted)' }}>{message}</p>
         </div>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--border)', margin: '0 0 0 0' }} />
+        <div style={{ height: 1, background: 'var(--border)' }} />
 
-        {/* Buttons */}
-        <div className="flex gap-0" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex gap-3 p-5" style={{ background: 'var(--bg-subtle)' }}>
           <button
             onClick={onCancel}
-            className="flex-1 py-4 text-sm font-semibold transition-colors"
+            className="flex-1 py-3 text-sm font-semibold transition-colors"
             style={{
-              color: 'var(--brand-dark)',
-              background: 'var(--brand-pale)',
-              borderRight: '1px solid var(--border)',
-              borderRadius: 0,
+              color: 'var(--text-secondary)',
+              background: 'white',
+              border: '1.5px solid var(--border-dark)',
+              borderRadius: 12,
             }}
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-4 text-sm font-bold transition-colors"
+            className="flex-1 py-3 text-sm font-bold transition-colors"
             style={{
-              color: 'var(--brand-dark)',
-              background: 'var(--brand-pale)',
-              borderRadius: 0,
+              color: danger ? '#ffffff' : 'white',
+              background: danger ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
+              border: 'none',
+              borderRadius: 12,
             }}
           >
             {confirmLabel}

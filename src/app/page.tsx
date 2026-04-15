@@ -23,8 +23,12 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  MoreVertical,
+  Upload,
+  ReceiptText,
 } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
+import FloatingMenu from "@/components/FloatingMenu";
 
 const MONTHS_LONG = [
   "January","February","March","April","May","June",
@@ -32,6 +36,8 @@ const MONTHS_LONG = [
 ];
 const CURRENT_MONTH = new Date().getMonth();
 const CURRENT_YEAR  = new Date().getFullYear();
+
+type PaymentState = Record<string, Record<number, { paid: boolean; receipt_url?: string }>>;
 
 function getLoanMonthScope(item: BudgetItem, year: number): { start: number; end: number } | null {
   if (!item.is_loan) return null;
@@ -75,7 +81,7 @@ function DashboardPageInner() {
 
   const [settings,  setSettings]  = useState<UserSettings | null>(null);
   const [items,     setItems]     = useState<BudgetItem[]>([]);
-  const [payments,  setPayments]  = useState<Record<string, Record<number, boolean>>>({});
+  const [payments,  setPayments]  = useState<PaymentState>({});
   const [banks,     setBanks]     = useState<BankAccount[]>([]);
   const [banksMap,  setBanksMap]  = useState<Record<string, string>>({});
   const [loading,   setLoading]   = useState(true);
@@ -123,56 +129,67 @@ function DashboardPageInner() {
   const [monthPickerPos, setMonthPickerPos] = useState({ top: 0, right: 0 });
   const accountsScrollRef = useRef<HTMLDivElement>(null);
   const [payConfirmItem,  setPayConfirmItem]  = useState<BudgetItem | null>(null);
+  const [openItemMenu, setOpenItemMenu] = useState<string | null>(null)
   const [paySelectedBank, setPaySelectedBank] = useState<string>("");
   const [payAlreadyPaid,  setPayAlreadyPaid]  = useState<boolean | null>(null);
+  const [payTransferFee,  setPayTransferFee]  = useState<string>("");
+  const [receiptFile,     setReceiptFile]     = useState<File | null>(null);
+  const [receiptPreview,  setReceiptPreview]  = useState<string | null>(null);
   const [openCardMenu, setOpenCardMenu] = useState<string | null>(null);
+
+  const isMonthPaid = (itemId: string, month: number) => payments[itemId]?.[month]?.paid ?? false;
+  const getMonthReceipt = (itemId: string, month: number) => payments[itemId]?.[month]?.receipt_url || '';
 
   // ── Data loading ─────────────────────────────────────────────────────────
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-    setUserId(user.id);
-    const meta = user.user_metadata as Record<string,string> | undefined;
-    setUserName(meta?.full_name || meta?.name || user.email?.split("@")[0] || "User");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) { setLoading(false); return; }
+  setUserId(user.id);
+  const meta = user.user_metadata as Record<string,string> | undefined;
+  setUserName(meta?.full_name || meta?.name || user.email?.split("@")[0] || "User");
 
-    const [settRes, itemRes, payRes, bankRes] = await Promise.all([
-      supabase.from("user_settings").select("*").eq("user_id", user.id).single(),
-      supabase.from("budget_items").select("*, loan_details(*)").eq("user_id", user.id).eq("is_active", true),
-      supabase.from("monthly_payments").select("*").eq("user_id", user.id).eq("year", viewYear),
-      supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_active", true).order("sort_order"),
-    ]);
+  const [settRes, itemRes, payRes, bankRes] = await Promise.all([
+    supabase.from("user_settings").select("*").eq("user_id", user.id).single(),
+    supabase.from("budget_items").select("*, loan_details(*)").eq("user_id", user.id).eq("is_active", true),
+    supabase.from("monthly_payments").select("*").eq("user_id", user.id).eq("year", viewYear),
+    supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_active", true).order("sort_order"),
+  ]);
 
-    setSettings(settRes.data);
-    setItems(itemRes.data || []);
-    
-    // Build banks map
-    const banksList = bankRes.data || [];
-    setBanks(banksList);
-    const bmap: Record<string, string> = {};
-    for (const b of banksList) bmap[b.id] = b.name;
-    setBanksMap(bmap);
+  setSettings(settRes.data);
+  setItems(itemRes.data || []);
+  
+  // Build banks map
+  const banksList = bankRes.data || [];
+  setBanks(banksList);
+  const bmap: Record<string, string> = {};
+  for (const b of banksList) bmap[b.id] = b.name;
+  setBanksMap(bmap);
 
-    const map: Record<string, Record<number, boolean>> = {};
-    for (const p of (payRes.data || [])) {
-      if (!map[p.budget_item_id]) map[p.budget_item_id] = {};
-      map[p.budget_item_id][p.month] = p.paid;
-    }
-    setPayments(map);
+  // UPDATED: Store receipt_url with payment status
+  const map: PaymentState = {};
+  for (const p of (payRes.data || [])) {
+    if (!map[p.budget_item_id]) map[p.budget_item_id] = {};
+    map[p.budget_item_id][p.month] = {
+      paid: p.paid,
+      receipt_url: p.receipt_url
+    };
+  }
+  setPayments(map);
 
-    const savGoal = settRes.data?.savings_goal || 0;
-    if (savGoal) {
-      const { data: savData } = await supabase
-        .from("monthly_savings").select("*")
-        .eq("user_id", user.id).eq("year", viewYear).eq("month", viewMonth + 1)
-        .maybeSingle();
-      setSavingsCheck1st((savData?.kinsenas || 0) >= savGoal);
-      setSavingsCheck2nd((savData?.atrenta || 0) >= savGoal);
-    } else {
-      setSavingsCheck1st(false);
-      setSavingsCheck2nd(false);
-    }
-    setLoading(false);
-  }, [viewYear, viewMonth]);
+  const savGoal = settRes.data?.savings_goal || 0;
+  if (savGoal) {
+    const { data: savData } = await supabase
+      .from("monthly_savings").select("*")
+      .eq("user_id", user.id).eq("year", viewYear).eq("month", viewMonth + 1)
+      .maybeSingle();
+    setSavingsCheck1st((savData?.kinsenas || 0) >= savGoal);
+    setSavingsCheck2nd((savData?.atrenta || 0) >= savGoal);
+  } else {
+    setSavingsCheck1st(false);
+    setSavingsCheck2nd(false);
+  }
+  setLoading(false);
+}, [viewYear, viewMonth]);
 
   useEffect(() => {
     if (!openCardMenu) return;
@@ -190,6 +207,15 @@ function DashboardPageInner() {
     }
   }, [searchParams, router]);
 
+
+  useEffect(() => {
+  if (!openItemMenu) return;
+  const handler = () => setOpenItemMenu(null);
+  document.addEventListener('click', handler);
+  return () => document.removeEventListener('click', handler);
+  }, [openItemMenu]);
+
+
   // ── Month nav ─────────────────────────────────────────────────────────────
   function goToPrevMonth() {
     setLoading(true);
@@ -203,34 +229,63 @@ function DashboardPageInner() {
   }
 
   // ── Payment toggle ────────────────────────────────────────────────────────
-  async function togglePayment(item: BudgetItem, bankAccountId: string) {
-    if (!userId) return;
-    const month1 = viewMonth + 1;
-    if (payments[item.id]?.[month1]) return; // already paid
-    setPayments(prev => ({ ...prev, [item.id]: { ...(prev[item.id] || {}), [month1]: true } }));
-    await supabase.from("monthly_payments").upsert({
-      budget_item_id: item.id, user_id: userId,
-      year: viewYear, month: month1,
-      paid: true, paid_at: new Date().toISOString(),
-    }, { onConflict: "budget_item_id,year,month" });
+  async function togglePayment(item: BudgetItem, bankAccountId: string, totalDeduct?: number, receiptFile?: File | null) {
+  if (!userId) return;
+  const month1 = viewMonth + 1;
+  
+  // Upload receipt if provided
+  let receiptUrl = null;
+  if (receiptFile) {
+    const fileExt = receiptFile.name.split('.').pop();
+    const fileName = `${userId}/${item.id}/${viewYear}-${month1}-${Date.now()}.${fileExt}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('receipts')
+      .upload(fileName, receiptFile);
     
-    // Deduct from selected bank
-    if (bankAccountId) {
-      await supabase.rpc("adjust_bank_balance", { p_id: bankAccountId, p_delta: -item.amount });
-      // Refresh banks to show updated balance
-      const { data: updatedBanks } = await supabase.from("bank_accounts").select("*").eq("user_id", userId).eq("is_active", true);
-      if (updatedBanks) {
-        setBanks(updatedBanks);
-        const bmap: Record<string, string> = {};
-        for (const b of updatedBanks) bmap[b.id] = b.name;
-        setBanksMap(bmap);
-      }
+    if (!uploadError && uploadData) {
+      const { data: urlData } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+      receiptUrl = urlData.publicUrl;
     }
-    
-    setPayConfirmItem(null);
-    setPaySelectedBank("");
-    setPayAlreadyPaid(null);
   }
+
+  setPayments(prev => ({
+    ...prev,
+    [item.id]: {
+      ...(prev[item.id] || {}),
+      [month1]: { paid: true, receipt_url: receiptUrl || undefined },
+    },
+  }));
+  
+  await supabase.from("monthly_payments").upsert({
+    budget_item_id: item.id, 
+    user_id: userId,
+    year: viewYear, 
+    month: month1,
+    paid: true, 
+    paid_at: new Date().toISOString(),
+    receipt_url: receiptUrl
+  }, { onConflict: "budget_item_id,year,month" });
+  
+  if (bankAccountId) {
+    const deduct = totalDeduct ?? item.amount;
+    await supabase.rpc("adjust_bank_balance", { p_id: bankAccountId, p_delta: -deduct });
+    const { data: updatedBanks } = await supabase.from("bank_accounts").select("*").eq("user_id", userId).eq("is_active", true);
+    if (updatedBanks) {
+      setBanks(updatedBanks);
+      const bmap: Record<string, string> = {};
+      for (const b of updatedBanks) bmap[b.id] = b.name;
+      setBanksMap(bmap);
+    }
+  }
+  
+  setPayConfirmItem(null);
+  setPaySelectedBank("");
+  setPayTransferFee("");
+  setReceiptFile(null);
+  setReceiptPreview(null);
+}
 
   // ── Savings toggle ────────────────────────────────────────────────────────
   async function toggleSavings() {
@@ -322,7 +377,7 @@ function DashboardPageInner() {
 
   /* ─────────────── shared button style ─────────────── */
   const sahodBtnStyle: React.CSSProperties = {
-    background: "#2563EB", color: "white", border: "none", borderRadius: 24,
+    background: "#2563EB", color: "white", border: "none", borderRadius: 10,
     padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer",
     display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
   };
@@ -441,33 +496,29 @@ function DashboardPageInner() {
       </div>
 
       {/* ═══ ACCOUNT CARDS (horizontal scroll) ════════════════════════════ */}
-      {openCardMenu && (() => {
-        const bank = banks.find(b => b.id === openCardMenu);
-        if (!bank) return null;
-        const btn = document.getElementById(`card-menu-btn-${bank.id}`);
-        const rect = btn?.getBoundingClientRect();
-        if (!rect) return null;
-        return (
-          <div style={{ position: "fixed", top: rect.bottom + 6, right: Math.max(8, window.innerWidth - rect.right), zIndex: 9999, background: "white", border: "1.5px solid #0f172a", borderRadius: 12, boxShadow: "0 8px 28px rgba(15,23,42,0.22)", overflow: "hidden", minWidth: 170 }}>
-            <button onClick={(e) => { e.stopPropagation(); setEditBank(bank); setShowBankForm(true); setOpenCardMenu(null); }}
-              style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9" }}>
-              <Edit2 size={13} color="#2563EB" /> Edit Account
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); router.push("/budget"); setOpenCardMenu(null); }}
-              style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9" }}>
-              <CreditCard size={13} color="#2563EB" /> Go to Budget
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); router.push("/loans"); setOpenCardMenu(null); }}
-              style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#7c3aed", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9" }}>
-              <Star size={13} color="#7c3aed" /> Go to Loans
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); askDeleteBank(bank.id, bank.name); setOpenCardMenu(null); }}
-              style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#dc2626", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-              <Trash2 size={13} color="#dc2626" /> Delete Account
-            </button>
-          </div>
-        );
-      })()}
+      <FloatingMenu
+        isOpen={!!openCardMenu}
+        anchorId={openCardMenu ? `card-menu-btn-${openCardMenu}` : 'dashboard-card-menu-anchor'}
+        minWidth={170}
+        onClose={() => setOpenCardMenu(null)}
+      >
+        {(() => {
+          const bank = banks.find(b => b.id === openCardMenu);
+          if (!bank) return null;
+          return (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); setEditBank(bank); setShowBankForm(true); setOpenCardMenu(null); }}
+                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9" }}>
+                <Edit2 size={13} color="#2563EB" /> Edit Account
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); askDeleteBank(bank.id, bank.name); setOpenCardMenu(null); }}
+                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#dc2626", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+                <Trash2 size={13} color="#dc2626" /> Delete Account
+              </button>
+            </>
+          );
+        })()}
+      </FloatingMenu>
       <div ref={accountsScrollRef} style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, marginBottom: 22, scrollbarWidth: "none" }}>
         {banks.map(bank => {
           const typeInfo = BANK_TYPES.find(t => t.value === bank.type);
@@ -635,115 +686,217 @@ function DashboardPageInner() {
           </button>
         </div>
 
-        {/* Rows */}
-        {cutoffItems.length === 0 ? (
-          <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 14, background: "white" }}>
-            No items yet — add them from the Budget page.
-          </div>
-        ) : cutoffItems.map(item => {
-          const isPaid  = payments[item.id]?.[viewMonth + 1] ?? false;
-          const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category);
-          return (
-            <div key={item.id} style={{
-              padding: "12px 16px", borderBottom: "1px solid var(--border)",
-              background: isPaid ? "#f0fdf4" : "white",
-              display: "flex", alignItems: "center", gap: 10,
-            }}>
-              {/* Colored dot */}
-              <div style={{
-                width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
-                background: isPaid ? "#16a34a"
-                  : item.is_loan && ((item.loan_details as any)?.total_months >= 9999) ? "#f97316"
-                  : item.is_loan ? "#7c3aed"
-                  : "#16a34a",
-              }} />
+       {/* Rows */}
+{cutoffItems.length === 0 ? (
+  <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 14, background: "white" }}>
+    No items yet — add them from the Budget page.
+  </div>
+) : cutoffItems.map(item => {
+  const isPaid  = isMonthPaid(item.id, viewMonth + 1);
+  const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category);
+  const isUnlimitedLoan = item.is_loan && ((item.loan_details as any)?.total_months >= 9999);
+  return (
+    <div key={item.id} style={{
+      padding: "12px 16px", borderBottom: "1px solid var(--border)",
+      background: isPaid ? "#f0fdf4" : "white",
+      display: "flex", alignItems: "center", gap: 10,
+    }}>
+      {/* Colored dot */}
+      <div style={{
+        width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
+        background: isPaid ? "#16a34a"
+          : isUnlimitedLoan ? "#f97316"
+          : item.is_loan ? "#7c3aed"
+          : "#16a34a",
+      }} />
 
-              {/* Name + category */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontWeight: 700, fontSize: 15, color: isPaid ? "var(--text-muted)" : "var(--brand)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.name}
-                </p>
-                <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
-                  {catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"}
-                </p>
-              </div>
-
-              {/* Amount — toggled by hide/show */}
-              <span style={{ color: paymentsHidden ? "var(--text-faint)" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0 }}>
-                {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
-              </span>
-
-              {/* Mark as Paid / Paid */}
-              <button
-                onClick={() => !isPaid && setPayConfirmItem(item)}
-                disabled={isPaid}
-                style={{
-                  flexShrink: 0,
-                  background: isPaid ? "rgba(22,163,74,0.1)" : "#2563EB",
-                  color: isPaid ? "#16a34a" : "white",
-                  border: isPaid ? "1.5px solid #16a34a" : "none",
-                  borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700,
-                  cursor: isPaid ? "default" : "pointer",
-                  display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap",
-                }}>
-                <Check size={12} /> {isPaid ? "Paid" : "Paid?"}
-              </button>
-            </div>
-          );
-        })}
-
-        {/* Savings check row */}
-        <div style={{
-          padding: "12px 16px", borderTop: "1px solid var(--border)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "white", flexWrap: "wrap", gap: 8,
-        }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
-            Do you have Saving for the cutoff Today?
-          </p>
-          <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
-            Deduct {formatCurrency(savingsGoal)} from Remaining
-            <input type="checkbox" checked={savingsChecked} onChange={toggleSavings}
-              style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#2563EB" }} />
-          </label>
-        </div>
-
-        {/* Income / Expenses / Savings / Remaining */}
-        {(() => {
-          const expensesPaid    = cutoffItems.filter(i => payments[i.id]?.[viewMonth + 1] ?? false).reduce((s, i) => s + i.amount, 0);
-          const expensesNotPaid = totalExpenses - expensesPaid;
-          const rows = [
-            { label: "Income",            value: totalIncome,                  color: "#2563EB",  show: true },
-            { label: "Expenses",          value: totalExpenses,                color: "#dc2626",  show: true },
-            { label: "Expenses Not Paid", value: expensesNotPaid,              color: "#f97316",  show: true, indent: true },
-            { label: "Expenses Paid",     value: expensesPaid,                 color: "#16a34a",  show: true, indent: true },
-            { label: "Savings",           value: savingsChecked ? savingsGoal : 0, color: "#f59e0b", show: savingsChecked },
-            { label: "Remaining",         value: afterSavings,                 color: afterSavings < 0 ? "#dc2626" : "#2563EB", show: true },
-          ].filter(r => r.show);
-          return (
-            <div style={{ borderTop: "2px solid #FFE0B2", background: "#FFF8F0" }}>
-              {rows.map((row, i) => (
-                <div key={row.label} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: (row as any).indent ? "9px 16px 9px 28px" : "12px 16px",
-                  borderBottom: i < rows.length - 1 ? "1px solid #FFE0B2" : "none",
-                  background: (row as any).indent ? "rgba(0,0,0,0.018)" : "transparent",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {(row as any).indent && <div style={{ width: 3, height: 14, borderRadius: 2, background: row.color, flexShrink: 0 }} />}
-                    <span style={{ fontWeight: (row as any).indent ? 600 : 700, fontSize: (row as any).indent ? 13 : 17, color: (row as any).indent ? "var(--text-secondary)" : "var(--brand)" }}>
-                      {row.label}
-                    </span>
-                  </div>
-                  <span style={{ fontWeight: 700, fontSize: (row as any).indent ? 13 : 16, color: row.color }}>
-                    {row.label === "Savings" ? `- ${formatCurrency(row.value)}` : formatCurrency(row.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+      {/* Name + category */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontWeight: 700, fontSize: 15, color: isPaid ? "var(--text-muted)" : "var(--brand)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {isUnlimitedLoan ? '♾️ ' : ''}{item.name}
+        </p>
+        <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
+          {item.is_loan ? 'Loan' : catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"} • {item.cutoff === '1st' ? '15th' : '30th'}
+        </p>
       </div>
+
+      {/* Amount */}
+      <span style={{ color: paymentsHidden ? "var(--text-faint)" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0 }}>
+        {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
+      </span>
+
+      {/* Paid? Button (only if not paid) */}
+      {!isPaid && (
+        <button
+          onClick={() => setPayConfirmItem(item)}
+          style={{
+            flexShrink: 0,
+            background: "#2563EB",
+            color: "white",
+            border: 'none',
+            borderRadius: 20, 
+            padding: "7px 14px", 
+            fontSize: 12, 
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex", 
+            alignItems: "center", 
+            gap: 4, 
+            whiteSpace: "nowrap",
+          }}>
+          <Check size={12} /> Paid?
+        </button>
+      )}
+
+      {/* Paid Badge (if paid) */}
+      {isPaid && (() => {
+        const rowReceipt = getMonthReceipt(item.id, viewMonth + 1);
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span style={{ 
+              background: "#dcfce7", 
+              color: "#16a34a", 
+              border: "1.5px solid #16a34a",
+              borderRadius: 999, 
+              padding: "7px 14px", 
+              fontSize: 12, 
+              fontWeight: 700,
+              display: "flex", 
+              alignItems: "center", 
+              gap: 4 
+            }}>
+              <Check size={12} /> Paid
+            </span>
+            {rowReceipt && (
+              <a href={rowReceipt} target="_blank" rel="noreferrer"
+                title="View Receipt"
+                style={{ width: 30, height: 30, borderRadius: '50%', background: '#fffbeb', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}>
+                <ReceiptText size={13} color="#d97706" />
+              </a>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 3-Dot Menu - Matches Loans Page Style */}
+<div style={{ position: 'relative' }}>
+  <button
+    id={`dashboard-item-menu-btn-${item.id}`}
+    onClick={(e) => { e.stopPropagation(); setOpenItemMenu(openItemMenu === item.id ? null : item.id) }}
+    style={{ 
+      background: '#F1F5F9', 
+      border: '1.5px solid #E2E8F0', 
+      borderRadius: '50%', 
+      width: 34, 
+      height: 34, 
+      cursor: 'pointer', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      gap: 2, 
+      flexShrink: 0 
+    }}
+  >
+    {[0,1,2].map(i => <span key={i} style={{ width: 3.5, height: 3.5, borderRadius: '50%', background: '#64748B', display: 'block' }} />)}
+  </button>
+</div>
+    </div>
+  );
+})}
+
+<FloatingMenu
+  isOpen={!!openItemMenu}
+  anchorId={openItemMenu ? `dashboard-item-menu-btn-${openItemMenu}` : 'dashboard-item-menu-anchor'}
+  minWidth={190}
+  onClose={() => setOpenItemMenu(null)}
+>
+  {(() => {
+    const activeItem = cutoffItems.find(item => item.id === openItemMenu)
+    if (!activeItem) return null
+    return (
+      <>
+        <button 
+          onClick={() => { 
+            setOpenItemMenu(null);
+            if (activeItem.is_loan) {
+              router.push(`/loans?action=edit&id=${activeItem.id}`);
+            } else {
+              router.push(`/budget?action=edit&id=${activeItem.id}`);
+            }
+          }}
+          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <Edit2 size={14} color="#2563EB" /> Edit {activeItem.is_loan ? 'Loan' : 'Expense'}
+        </button>
+        <button 
+          onClick={async () => {
+            setOpenItemMenu(null);
+            if (confirm(`Delete "${activeItem.name}"? This cannot be undone.`)) {
+              await supabase.from('budget_items').update({ is_active: false }).eq('id', activeItem.id);
+              setItems(prev => prev.filter(i => i.id !== activeItem.id));
+            }
+          }}
+          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <Trash2 size={14} color="#dc2626" /> Delete
+        </button>
+      </>
+    )
+  })()}
+</FloatingMenu>
+
+{/* Savings check row */}
+<div style={{
+  padding: "12px 16px", borderTop: "1px solid var(--border)",
+  display: "flex", alignItems: "center", justifyContent: "space-between",
+  background: "white", flexWrap: "wrap", gap: 8,
+}}>
+  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
+    Do you have Saving for the cutoff Today?
+  </p>
+  <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
+    Deduct {formatCurrency(savingsGoal)} from Remaining
+    <input type="checkbox" checked={savingsChecked} onChange={toggleSavings}
+      style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#2563EB" }} />
+  </label>
+</div>
+
+{/* Income / Expenses / Savings / Remaining */}
+{(() => {
+  const expensesPaid    = cutoffItems.filter(i => isMonthPaid(i.id, viewMonth + 1)).reduce((s, i) => s + i.amount, 0);
+  const expensesNotPaid = totalExpenses - expensesPaid;
+  const rows = [
+    { label: "Income",            value: totalIncome,                  color: "#2563EB",  show: true },
+    { label: "Expenses",          value: totalExpenses,                color: "#dc2626",  show: true },
+    { label: "Expenses Not Paid", value: expensesNotPaid,              color: "#f97316",  show: true, indent: true },
+    { label: "Expenses Paid",     value: expensesPaid,                 color: "#16a34a",  show: true, indent: true },
+    { label: "Savings",           value: savingsChecked ? savingsGoal : 0, color: "#f59e0b", show: savingsChecked },
+    { label: "Remaining",         value: afterSavings,                 color: afterSavings < 0 ? "#dc2626" : "#2563EB", show: true },
+  ].filter(r => r.show);
+  return (
+    <div style={{ borderTop: "2px solid #FFE0B2", background: "#FFF8F0" }}>
+      {rows.map((row, i) => (
+        <div key={row.label} style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: (row as any).indent ? "9px 16px 9px 28px" : "12px 16px",
+          borderBottom: i < rows.length - 1 ? "1px solid #FFE0B2" : "none",
+          background: (row as any).indent ? "rgba(0,0,0,0.018)" : "transparent",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {(row as any).indent && <div style={{ width: 3, height: 14, borderRadius: 2, background: row.color, flexShrink: 0 }} />}
+            <span style={{ fontWeight: (row as any).indent ? 600 : 700, fontSize: (row as any).indent ? 13 : 17, color: (row as any).indent ? "var(--text-secondary)" : "var(--brand)" }}>
+              {row.label}
+            </span>
+          </div>
+          <span style={{ fontWeight: 700, fontSize: (row as any).indent ? 13 : 16, color: paymentsHidden ? 'var(--text-faint)' : row.color }}>
+            {paymentsHidden ? '₱ ••••••' : row.label === "Savings" ? `- ${formatCurrency(row.value)}` : formatCurrency(row.value)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+})()}
+</div>
 
       {/* ═══ PAY CONFIRM MODAL ═════════════════════════════════════════════ */}
       {payConfirmItem && (
@@ -756,7 +909,7 @@ function DashboardPageInner() {
                 <Check size={22} color="var(--brand-dark)" strokeWidth={3} />
               </div>
               <h2 style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
-                {payAlreadyPaid === null ? "Payment Status" : payAlreadyPaid ? "Mark as Paid" : "Mark as Paid"}
+                {payAlreadyPaid === null ? "Payment Status" : "Mark as Paid"}
               </h2>
               <p style={{ fontSize: 14, marginTop: 6, fontWeight: 600, color: "var(--text-secondary)" }}>
                 {payConfirmItem.name} — {formatCurrency(payConfirmItem.amount)}
@@ -771,38 +924,76 @@ function DashboardPageInner() {
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <button
-                    onClick={() => {
-                      // Already paid — mark immediately, no bank deduction
-                      const month1 = viewMonth + 1;
-                      setPayments(prev => ({ ...prev, [payConfirmItem.id]: { ...(prev[payConfirmItem.id] || {}), [month1]: true } }));
-                      supabase.from("monthly_payments").upsert({
-                        budget_item_id: payConfirmItem.id, user_id: userId,
-                        year: viewYear, month: month1,
-                        paid: true, paid_at: new Date().toISOString(),
-                      }, { onConflict: "budget_item_id,year,month" });
-                      setPayConfirmItem(null); setPaySelectedBank(""); setPayAlreadyPaid(null);
-                    }}
-                    style={{ width: "100%", padding: "13px 16px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #16a34a", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    onClick={() => setPayAlreadyPaid(true)}
+                    style={{ width: "100%", padding: "13px 16px", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #16a34a", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     <Check size={15} /> Already Paid — just mark it
                   </button>
                   <button
                     onClick={() => setPayAlreadyPaid(false)}
-                    style={{ width: "100%", padding: "13px 16px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                    style={{ width: "100%", padding: "13px 16px", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                     <CreditCard size={15} /> Pay Now — deduct from account
                   </button>
                   <button
-                    onClick={() => { setPayConfirmItem(null); setPaySelectedBank(""); setPayAlreadyPaid(null); }}
-                    style={{ width: "100%", padding: "10px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, background: "transparent", color: "var(--text-muted)", border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
+                    onClick={() => { setPayConfirmItem(null); setPaySelectedBank(""); setPayAlreadyPaid(null); setPayTransferFee(""); setReceiptFile(null); setReceiptPreview(null); }}
+                    style={{ width: "100%", padding: "10px 0", borderRadius: 999, fontSize: 13, fontWeight: 600, background: "transparent", color: "var(--text-muted)", border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
                     Cancel
                   </button>
                 </div>
               </div>
             )}
 
-            {/* STEP 2 — Pay Now: pick bank + confirm deduction */}
+            {/* STEP 2a — Already Paid: upload receipt */}
+            {payAlreadyPaid === true && (
+              <div style={{ padding: "0 20px 20px" }}>
+                {/* Receipt upload */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>
+                    Upload Receipt <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>(optional)</span>
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: receiptPreview ? 6 : "14px 12px", borderRadius: 12, border: `2px dashed ${receiptPreview ? '#16a34a' : '#93c5fd'}`, background: receiptPreview ? '#f0fdf4' : '#f8faff', cursor: "pointer", minHeight: receiptPreview ? 'auto' : 72 }}>
+                    {receiptPreview ? (
+                      <img src={receiptPreview} alt="Receipt" style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 8, objectFit: 'contain' }} />
+                    ) : (
+                      <>
+                        <Upload size={20} color="#93c5fd" />
+                        <span style={{ fontSize: 12, color: "#93c5fd", fontWeight: 600 }}>Tap to upload receipt photo</span>
+                      </>
+                    )}
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) { setReceiptFile(f); const url = URL.createObjectURL(f); setReceiptPreview(url) }
+                    }} />
+                  </label>
+                  {receiptPreview && (
+                    <button onClick={() => { setReceiptFile(null); setReceiptPreview(null) }}
+                      style={{ marginTop: 6, fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                      ✕ Remove photo
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    onClick={() => setPayAlreadyPaid(null)}
+                    style={{ flex: 1, padding: "11px 0", borderRadius: 999, fontSize: 13, fontWeight: 600, background: "var(--brand-pale)", color: "var(--brand-dark)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
+                    ← Back
+                  </button>
+                  <button
+                    onClick={() => {
+                      const month1 = viewMonth + 1;
+                      void togglePayment(payConfirmItem, '', undefined, receiptFile);
+                      setPayAlreadyPaid(null);
+                    }}
+                    style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", border: "none", cursor: "pointer" }}>
+                    ✓ Mark as Paid
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2b — Pay Now: pick bank + transfer fee + receipt + confirm deduction */}
             {payAlreadyPaid === false && (
               <>
-                <div style={{ margin: "0 20px 14px" }}>
+                <div style={{ margin: "0 20px 12px" }}>
                   <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>
                     Deduct from which account?
                   </label>
@@ -815,29 +1006,57 @@ function DashboardPageInner() {
                       <option key={bank.id} value={bank.id}>{bank.name} — {formatCurrency(bank.balance)}</option>
                     ))}
                   </select>
-                  {payConfirmItem.bank_account_id && (
-                    <p style={{ fontSize: 11, marginTop: 6, color: "var(--text-muted)" }}>
-                      Default: {banksMap[payConfirmItem.bank_account_id] || "Linked bank"}
+                </div>
+                <div style={{ margin: "0 20px 12px" }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>
+                    Transfer Fee <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>(optional)</span>
+                  </label>
+                  <input type="number" value={payTransferFee} onChange={e => setPayTransferFee(e.target.value)} placeholder="0.00"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1.5px solid #0f172a", background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }} />
+                  {payTransferFee && parseFloat(payTransferFee) > 0 && (
+                    <p style={{ fontSize: 11, marginTop: 5, color: "#854d0e", fontWeight: 600 }}>
+                      💡 Total: {formatCurrency(payConfirmItem.amount + (parseFloat(payTransferFee)||0))}
                     </p>
                   )}
                 </div>
+                {/* Receipt upload */}
+                <div style={{ margin: "0 20px 12px" }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>
+                    Upload Receipt <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>(optional)</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, padding: receiptPreview ? 6 : "10px 12px", borderRadius: 10, border: `2px dashed ${receiptPreview ? '#16a34a' : '#93c5fd'}`, background: receiptPreview ? '#f0fdf4' : '#f8faff', cursor: "pointer" }}>
+                    {receiptPreview ? (
+                      <img src={receiptPreview} alt="Receipt" style={{ height: 48, borderRadius: 6, objectFit: 'contain' }} />
+                    ) : (
+                      <><Upload size={16} color="#93c5fd" /><span style={{ fontSize: 12, color: "#93c5fd", fontWeight: 600 }}>Tap to attach receipt</span></>
+                    )}
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) { setReceiptFile(f); setReceiptPreview(URL.createObjectURL(f)) }
+                    }} />
+                  </label>
+                  {receiptPreview && <button onClick={() => { setReceiptFile(null); setReceiptPreview(null) }} style={{ marginTop: 4, fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>✕ Remove</button>}
+                </div>
                 <div style={{ margin: "0 20px 14px", padding: "11px", borderRadius: 12, background: "#fef9c3", border: "1px solid #0f172a" }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>⚠️ This will deduct {formatCurrency(payConfirmItem.amount)} from the selected account</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>
+                    ⚠️ This will deduct {formatCurrency(payConfirmItem.amount + (parseFloat(payTransferFee)||0))} from the selected account
+                  </p>
                 </div>
                 <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
                   <button
                     onClick={() => setPayAlreadyPaid(null)}
-                    style={{ flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 600, background: "var(--brand-pale)", color: "var(--brand-dark)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "11px 0", borderRadius: 999, fontSize: 13, fontWeight: 600, background: "var(--brand-pale)", color: "var(--brand-dark)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
                     ← Back
                   </button>
                   <button
                     onClick={() => {
                       const bankId = paySelectedBank || payConfirmItem.bank_account_id;
                       if (!bankId) { alert("Please select a bank account"); return; }
-                      togglePayment(payConfirmItem, bankId);
+                      const fee = parseFloat(payTransferFee) || 0;
+                      void togglePayment(payConfirmItem, bankId, payConfirmItem.amount + fee, receiptFile);
                     }}
                     disabled={!paySelectedBank && !payConfirmItem.bank_account_id}
-                    style={{ flex: 2, padding: "11px 0", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1 }}>
+                    style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1 }}>
                     Confirm & Deduct
                   </button>
                 </div>
@@ -848,38 +1067,36 @@ function DashboardPageInner() {
         </div>
       )}
 
-      {/* ═══ SAHOD MODAL ═══════════════════════════════════════════════════ */}
       {showSahod && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center modal-overlay" style={{ padding: "0" }}>
-          <div className="w-full max-w-sm slide-up rounded-t-2xl" style={{ background: "var(--bg-surface)", border: "1.5px solid #0f172a", borderBottom: "none", boxShadow: "0 -8px 32px rgba(15,23,42,0.16)", display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
+        <div className="fixed inset-0 z-50 grid place-items-center modal-overlay p-4">
+          <div className="w-full max-w-md mx-auto slide-up rounded-2xl overflow-hidden" style={{ background: "var(--bg-surface)", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.16)", display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
             {/* Fixed header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "#93c5fd", background: "#eff6ff", borderRadius: "16px 16px 0 0" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #93c5fd", background: "#eff6ff", flexShrink: 0 }}>
               <div>
-                <h2 className="font-bold" style={{ color: "#1e3a5f" }}>💸 May Sahod Na!</h2>
-                <p className="text-xs mt-0.5" style={{ color: "#3b82f6" }}>Choose where to add your salary</p>
+                <h2 style={{ fontWeight: 700, color: "#1e3a5f", margin: 0 }}>💸 May Sahod Na!</h2>
+                <p style={{ fontSize: 12, marginTop: 2, color: "#3b82f6", margin: "2px 0 0" }}>Choose where to add your salary</p>
               </div>
-              <button onClick={() => setShowSahod(false)} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
+              <button onClick={() => setShowSahod(false)} style={{ padding: 6, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={17} />
               </button>
             </div>
             {/* Scrollable content */}
-            <div className="p-5 space-y-4 overflow-y-auto flex-1" style={{ overscrollBehavior: "contain" }}>
+            <div style={{ padding: 20, overflowY: "auto", flex: 1, overscrollBehavior: "contain", display: "flex", flexDirection: "column", gap: 16, alignItems: "stretch" }}>
               <div>
-                <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-secondary)" }}>Which Cutoff?</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>Which Cutoff?</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {[{ label: "1st Cutoff (15th)", val: "1st" as const, salary: settings?.first_cutoff_salary || 0 },
                     { label: "2nd Cutoff (30th)", val: "2nd" as const, salary: settings?.second_cutoff_salary || 0 }].map(opt => (
                     <button key={opt.val} onClick={() => { setSahodCutoff(opt.val); setSahodAmount(opt.salary.toString()); }}
-                      className="p-2.5 rounded-xl text-center transition-all"
-                      style={{ background: sahodCutoff === opt.val ? "#dbeafe" : "var(--bg-subtle)", border: `1.5px solid ${sahodCutoff === opt.val ? "#93c5fd" : "var(--border)"}` }}>
-                      <p className="text-xs font-bold" style={{ color: "#1d4ed8" }}>{opt.label}</p>
-                      <p className="text-sm font-bold font-mono" style={{ color: "#2563eb" }}>{formatCurrency(opt.salary)}</p>
+                      style={{ padding: "10px 8px", borderRadius: 12, textAlign: "center", cursor: "pointer", background: sahodCutoff === opt.val ? "#dbeafe" : "var(--bg-subtle)", border: `1.5px solid ${sahodCutoff === opt.val ? "#93c5fd" : "var(--border)"}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>{opt.label}</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "#2563eb", margin: 0 }}>{formatCurrency(opt.salary)}</p>
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-secondary)" }}>Add to Account</label>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>Add to Account</label>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {banks.map(b => {
                     const selected = sahodBankId ? sahodBankId === b.id : b.is_main_bank;
@@ -888,8 +1105,8 @@ function DashboardPageInner() {
                         style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${selected ? "#2563EB" : "var(--border)"}`, background: selected ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", transition: "all 0.15s", textAlign: "left" }}>
                         <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: selected ? "#1d4ed8" : "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.name}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-faint)" }}>{b.type} {b.is_main_bank ? "· Main" : ""}</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: selected ? "#1d4ed8" : "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>{b.name}</p>
+                          <p style={{ fontSize: 11, color: "var(--text-faint)", margin: 0 }}>{b.type} {b.is_main_bank ? "· Main" : ""}</p>
                         </div>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", fontFamily: "monospace" }}>{formatCurrency(b.balance)}</span>
                         {selected && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />}
@@ -899,21 +1116,21 @@ function DashboardPageInner() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-secondary)" }}>Salary Amount (₱)</label>
-                <input type="number" value={sahodAmount} onChange={e => setSahodAmount(e.target.value)} placeholder="Enter sahod amount..." className="w-full px-3 py-2.5 text-sm" autoFocus />
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>Salary Amount (₱)</label>
+                <input type="number" value={sahodAmount} onChange={e => setSahodAmount(e.target.value)} placeholder="Enter sahod amount..." className="w-full px-3 py-2.5 text-sm" autoFocus style={{ textAlign: "center" }} />
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-secondary)" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>
                   Extra Income (₱) <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>— optional</span>
                 </label>
-                <input type="number" value={sahodExtra} onChange={e => setSahodExtra(e.target.value)} placeholder="Bonus, allowance, etc..." className="w-full px-3 py-2.5 text-sm" />
+                <input type="number" value={sahodExtra} onChange={e => setSahodExtra(e.target.value)} placeholder="Bonus, allowance, etc..." className="w-full px-3 py-2.5 text-sm" style={{ textAlign: "center" }} />
               </div>
               {(parseFloat(sahodAmount) > 0 || parseFloat(sahodExtra) > 0) && (() => {
                 const targetBank = banks.find(b => b.id === sahodBankId) || banks.find(b => b.is_main_bank);
                 return (
-                  <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs" style={{ background: "var(--bg-subtle)", border: "1.5px solid #0f172a" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, background: "var(--bg-subtle)", border: "1.5px solid #0f172a", fontSize: 12 }}>
                     <span style={{ color: "var(--text-muted)" }}>Total adding to <strong>{targetBank?.name || "account"}</strong></span>
-                    <span className="font-bold font-mono" style={{ color: "#2563eb" }}>
+                    <span style={{ fontWeight: 700, fontFamily: "monospace", color: "#2563eb" }}>
                       {formatCurrency((parseFloat(sahodAmount) || 0) + (parseFloat(sahodExtra) || 0))}
                     </span>
                   </div>
@@ -921,11 +1138,11 @@ function DashboardPageInner() {
               })()}
             </div>
             {/* Fixed footer buttons */}
-            <div className="px-5 pb-5 pt-3 flex gap-3 flex-shrink-0" style={{ borderTop: "1px solid var(--border)", background: "var(--bg-surface)" }}>
-              <button onClick={() => setShowSahod(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--bg-subtle)", color: "var(--text-muted)", border: "1.5px solid #0f172a" }}>
+            <div style={{ padding: "12px 20px 20px", display: "flex", gap: 12, flexShrink: 0, borderTop: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+              <button onClick={() => setShowSahod(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 600, background: "var(--bg-subtle)", color: "var(--text-muted)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
                 Cancel
               </button>
-              <button onClick={handleSahod} disabled={!sahodAmount || sahodSaving} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50" style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}>
+              <button onClick={handleSahod} disabled={!sahodAmount || sahodSaving} style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #2563eb, #1d4ed8)", border: "none", cursor: "pointer", opacity: (!sahodAmount || sahodSaving) ? 0.5 : 1 }}>
                 {sahodSaving ? "Adding..." : "Add Sahod 💸"}
               </button>
             </div>
@@ -969,9 +1186,9 @@ function BankFormModal({ bank, onClose, onSave }: {
   const COLORS = ["#881520","#1a3a8f","#1a5c3a","#1a4a6e","#6b1a6e","#7a4000","#1a3a5c","#2d6a2d","#b45309","#0f4c75","#3d3d3d","#1e3a4a"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
-      <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden" style={{ background: "var(--bg-surface)", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.16)" }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "#0f172a", background: "var(--brand-pale)" }}>
+    <div className="fixed inset-0 z-50 grid place-items-center modal-overlay p-4">
+      <div className="w-full max-w-md mx-auto slide-up rounded-2xl overflow-hidden" style={{ background: "var(--bg-surface)", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.16)" }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "#93c5fd", background: "#eff6ff" }}>
           <h2 className="font-bold" style={{ color: "var(--text-primary)" }}>{bank ? "Edit Account" : "Add Account"}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}><X size={17} /></button>
         </div>

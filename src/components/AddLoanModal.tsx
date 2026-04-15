@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, BankAccount, Cutoff, PaymentStatus, EXPENSE_CATEGORIES } from '@/lib/types'
+import { BudgetItem, Cutoff, PaymentStatus, EXPENSE_CATEGORIES } from '@/lib/types'
 import { X, ChevronDown, ChevronUp, CreditCard } from 'lucide-react'
 
 interface Props {
@@ -50,9 +50,9 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
   const [name,          setName]          = useState(editItem?.name || '')
   const [amount,        setAmount]        = useState(editItem?.amount?.toString() || '')
+  // REMOVED: transfer fee state
   const [cutoff,        setCutoff]        = useState<Cutoff>(editItem?.cutoff || '1st')
   const [category,      setCategory]      = useState(editItem?.category || 'Loan')
-  // REMOVED: bankId state - no longer needed for loans
   const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>('Required')
   const UNLIMITED_MONTHS = 9999
   const isExistingUnlimited = existingLD?.total_months >= UNLIMITED_MONTHS
@@ -68,7 +68,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [totalLoan,     setTotalLoan]     = useState('')
   const [showSched,     setShowSched]     = useState(Object.keys(existingMA).length > 0)
   const [saving,        setSaving]        = useState(false)
-  // REMOVED: banks state - no longer needed
   const [showPrevMonthConfirm, setShowPrevMonthConfirm] = useState(false)
 
   const numMonths = parseInt(totalMonths) || 0
@@ -80,8 +79,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     }
     return Array.from({ length: 12 }, () => '')
   })
-
-  // REMOVED: useEffect that fetched banks
 
   useEffect(() => {
     const n = parseInt(totalMonths) || 0
@@ -115,7 +112,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
   async function handleSave() {
     if (!name.trim() || !amount) return
-    // For new loans, check if there are months already passed
     if (!editItem) {
       const start = new Date(startDate)
       const now = new Date()
@@ -142,10 +138,14 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
 
     const effectiveMonths = isUnlimited ? UNLIMITED_MONTHS : parseInt(totalMonths)
 
-    // REMOVED: bank_account_id from payload - loans don't have bank at creation
+    // REMOVED: No transfer fee calculation - using raw amount
     const payload: any = {
-      name, amount: parseFloat(amount), cutoff, status: isUnlimited ? 'Required' : computedStatus,
-      is_loan: true, category,
+      name, 
+      amount: parseFloat(amount), 
+      cutoff, 
+      status: isUnlimited ? 'Required' : computedStatus,
+      is_loan: true, 
+      category,
       bank_account_id: null // Always null for loans - bank selected when paying
     }
 
@@ -231,7 +231,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 transition: 'all 0.2s',
               }}
             >
-              {/* Toggle knob */}
               <div style={{
                 width: 38, height: 22, borderRadius: 'var(--radius-md)', flexShrink: 0, position: 'relative',
                 background: isUnlimited ? 'var(--brand)' : '#CBD5E1',
@@ -279,6 +278,15 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
                 ))}
               </div>
             </div>
+
+            {computeMode === 'none' && (
+              <div className="slide-up space-y-2">
+                <label style={{ ...labelStyle, color: '#6d28d9' }}>Monthly Amount *</label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd' }} />
+              </div>
+            )}
 
             {computeMode === 'flat' && (
               <div className="slide-up space-y-2">
@@ -337,6 +345,18 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               </div>
             )}
 
+            {computeMode !== 'none' && (
+              <div className="slide-up space-y-2">
+                <label style={{ ...labelStyle, color: '#6d28d9' }}>
+                  {computeMode === 'reducing' ? "Current Month's Amount *" : "Monthly Amount *"}
+                </label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  readOnly={computeMode === 'flat'}
+                  style={{ ...inputStyle, background: 'white', border: '1.5px solid #93c5fd', opacity: computeMode === 'flat' ? 0.6 : 1, cursor: computeMode === 'flat' ? 'not-allowed' : 'text' }} />
+              </div>
+            )}
+
             <div>
               <label style={{ ...labelStyle, color: '#6d28d9' }}>Notes (optional)</label>
               <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
@@ -345,24 +365,13 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             </div>
           </div>
 
-          {/* Amount & Cutoff */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label style={labelStyle}>
-                {computeMode === 'reducing' ? "Current Month's Amount *" : "Monthly Amount *"}
-              </label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)}
-                placeholder="0.00"
-                readOnly={computeMode === 'flat'}
-                style={{ ...inputStyle, opacity: computeMode === 'flat' ? 0.6 : 1, cursor: computeMode === 'flat' ? 'not-allowed' : 'text' }} />
-            </div>
-            <div>
-              <label style={labelStyle}>Cutoff</label>
-              <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} style={inputStyle}>
-                <option value="1st">1st Cutoff (15th)</option>
-                <option value="2nd">2nd Cutoff (30th)</option>
-              </select>
-            </div>
+          {/* Cutoff - Monthly Amount now inside Loan Details */}
+          <div>
+            <label style={labelStyle}>Cutoff</label>
+            <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} style={inputStyle}>
+              <option value="1st">1st Cutoff (15th)</option>
+              <option value="2nd">2nd Cutoff (30th)</option>
+            </select>
           </div>
 
           {/* Category */}
@@ -384,8 +393,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               ))}
             </div>
           </div>
-
-          {/* REMOVED: Bank Account section - no longer needed for loans */}
 
           {/* Priority — always Required */}
           <div>
@@ -422,20 +429,20 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
         <div className="px-5 py-4 border-t flex gap-3 shrink-0"
           style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
+            className="flex-1 py-2.5 text-sm font-semibold transition"
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 999 }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))' }}>
+            className="flex-1 py-2.5 text-sm font-bold text-white transition disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))', borderRadius: 999 }}>
             {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Loan'}
           </button>
         </div>
       </div>
     </div>
 
-    {/* ── Previous Months Confirmation Modal ── */}
+    {/* Previous Months Confirmation Modal */}
     {showPrevMonthConfirm && <PrevMonthConfirmModal
       startDate={startDate}
       onNo={async () => { setShowPrevMonthConfirm(false); await doSave() }}
@@ -449,10 +456,11 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
           maObj = {}
           monthlyAmounts.slice(0, numMonths).forEach((v, i) => { maObj![String(i + 1)] = parseFloat(v) })
         }
+        // REMOVED: No transfer fee in payload
         const payload: any = {
           name, amount: parseFloat(amount), cutoff, status: computedStatus,
           is_loan: true, category,
-          bank_account_id: null // Always null for loans
+          bank_account_id: null
         }
         const { data: newItem } = await supabase.from('budget_items')
           .insert({ user_id: user.id, ...payload }).select().single()
@@ -503,7 +511,6 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
     <div className="fixed inset-0 z-[60] flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden"
         style={{ background: 'var(--bg-surface)', border: '1.5px solid #93c5fd', boxShadow: '0 8px 32px rgba(13,40,24,0.20)' }}>
-        {/* Header */}
         <div className="px-5 py-4 border-b" style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
           <div className="flex items-center gap-2.5 mb-1">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#dbeafe' }}>
@@ -515,7 +522,6 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
             This loan started <strong>{elapsed} month{elapsed !== 1 ? 's' : ''} ago</strong>. Were those already paid?
           </p>
         </div>
-        {/* Body */}
         <div className="px-5 py-4">
           <p className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
             Is the new loan already paid on the previous months passed?
@@ -533,18 +539,17 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
             Tap <strong>No</strong> to save the loan without marking them.
           </p>
         </div>
-        {/* Actions */}
         <div className="px-5 pb-5 flex gap-3">
           <button
             onClick={onNo}
-            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)' }}>
+            className="flex-1 py-2.5 text-sm font-semibold transition"
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 999 }}>
             No, skip
           </button>
           <button
             onClick={onYes}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition"
-            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}>
+            className="flex-1 py-2.5 text-sm font-bold text-white transition"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderRadius: 999 }}>
             Yes, mark paid ✓
           </button>
         </div>

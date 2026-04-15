@@ -5,10 +5,11 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, MONTHS } from '@/lib/types'
 import { formatCurrency, getLoanProgress } from '@/lib/utils'
-import { CreditCard, CheckCircle2, Clock, Edit2, Trash2, Check, TrendingDown, RefreshCw, ChevronLeft, ChevronRight, EyeOff, Eye, Download, PauseCircle, PlayCircle } from 'lucide-react'
+import { CreditCard, CheckCircle2, Clock, Edit2, Trash2, Check, TrendingDown, RefreshCw, ChevronLeft, ChevronRight, EyeOff, Eye, Download, PauseCircle, PlayCircle, ReceiptText, X as XIcon, ExternalLink } from 'lucide-react'
 import AddLoanModal from '@/components/AddLoanModal'
 import ConfirmModal from '@/components/ConfirmModal'
 import ExtendLoanModal from '@/components/ExtendLoanModal'
+import FloatingMenu from '@/components/FloatingMenu'
 
 const MONTHS_SHORT   = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 const MONTHS_LONG    = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -64,7 +65,7 @@ function LoansPageInner() {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const [loans,         setLoans]         = useState<BudgetItem[]>([])
-  const [payments,      setPayments]      = useState<Record<string, Record<number, boolean>>>({})
+  const [payments,      setPayments]      = useState<Record<string, Record<number, { paid: boolean; receipt_url?: string }>>>({})
   const [showAdd,       setShowAdd]       = useState(false)
   const [editLoan,      setEditLoan]      = useState<BudgetItem | null>(null)
   const [loading,       setLoading]       = useState(true)
@@ -79,6 +80,7 @@ function LoansPageInner() {
   const [monthPickerPos, setMonthPickerPos] = useState({ top: 0, right: 0 })
   const [extendLoan,    setExtendLoan]    = useState<BudgetItem | null>(null)
   const [openLoanMenu,  setOpenLoanMenu]  = useState<string | null>(null)
+  const [receiptViewLoan, setReceiptViewLoan] = useState<BudgetItem | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -89,10 +91,10 @@ function LoansPageInner() {
       supabase.from('monthly_payments').select('*').eq('user_id', user.id).eq('year', CURRENT_YEAR),
     ])
     setLoans(loanRes.data || [])
-    const map: Record<string, Record<number, boolean>> = {}
+    const map: Record<string, Record<number, { paid: boolean; receipt_url?: string }>> = {}
     for (const p of (payRes.data || [])) {
       if (!map[p.budget_item_id]) map[p.budget_item_id] = {}
-      map[p.budget_item_id][p.month] = p.paid
+      map[p.budget_item_id][p.month] = { paid: p.paid, receipt_url: p.receipt_url }
     }
     setPayments(map)
     setLoading(false)
@@ -150,7 +152,7 @@ function LoansPageInner() {
       ['Name', 'Monthly Amount', 'Start Date', 'Total Months', 'Paid Months', 'Status'],
       ...loans.map(l => {
         const detail = l.loan_details as any
-        const paidCount = Object.values(payments[l.id] || {}).filter(Boolean).length
+        const paidCount = Object.values(payments[l.id] || {}).filter(p => p.paid).length
         return [l.name, l.amount.toFixed(2), detail?.start_date || '', String(detail?.total_months || ''), String(paidCount), l.status]
       })
     ]
@@ -171,10 +173,10 @@ function LoansPageInner() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', marginBottom: 20, gap: 12 }}>
         <h1 style={{ fontSize: 28, fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, color: 'var(--text-primary)' }}>Loans</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 24, background: 'white', border: '1.5px solid #CBD5E1', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
+          <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 999, background: 'white', border: '1.5px solid #CBD5E1', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
             <Download size={13} /><span className="hide-on-small"> Download {MONTHS_LONG[viewMonth]} Loans</span>
           </button>
-          <button onClick={() => { setEditLoan(null); setShowAdd(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 24, background: '#2563EB', border: '1.5px solid #2563EB', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
+          <button onClick={() => { setEditLoan(null); setShowAdd(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 999, background: '#2563EB', border: '1.5px solid #2563EB', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
             <CreditCard size={13} /><span className="hide-on-small"> Add Loan</span>
           </button>
         </div>
@@ -262,7 +264,7 @@ function LoansPageInner() {
         <div style={{ background: '#1a237e', padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10 }}>
           <span style={{ color: 'white', fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15 }}>All Loans — {MONTHS_LONG[viewMonth]}</span>
           <span style={{ background: 'rgba(255,255,255,0.18)', color: 'white', borderRadius: 20, padding: '3px 13px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: 'Helvetica, Arial, sans-serif' }}>{loans.length} Items</span>
-          <button onClick={() => setHidePayments(h => !h)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#2563EB', border: 'none', borderRadius: 20, padding: '7px 14px', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Helvetica, Arial, sans-serif' }}>
+          <button onClick={() => setHidePayments(h => !h)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#2563EB', border: 'none', borderRadius: 999, padding: '7px 14px', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Helvetica, Arial, sans-serif' }}>
             {hidePayments ? <Eye size={12} /> : <EyeOff size={12} />}
             {hidePayments ? 'Show All' : 'Hide All'}
           </button>
@@ -297,9 +299,10 @@ function LoansPageInner() {
 
   const isFullyPaid = !isUnlimited && estimatedPaid >= totalMonths
   const isSuspended = loan.status === 'Suspended'
-  const isPaidMonth = payments[loan.id]?.[viewMonth + 1] ?? false
+  const isPaidMonth = payments[loan.id]?.[viewMonth + 1]?.paid ?? false
+  const loanMonthReceipt = payments[loan.id]?.[viewMonth + 1]?.receipt_url || ''
   const isExpanded = expandedId === loan.id
-  const monthsPaidThisYear = Object.values(payments[loan.id] || {}).filter(Boolean).length
+  const monthsPaidThisYear = Object.values(payments[loan.id] || {}).filter(p => p.paid).length
 
   return (
     <div
@@ -383,7 +386,7 @@ function LoansPageInner() {
           <button
             id={`loan-menu-btn-${loan.id}`}
             onClick={() => setOpenLoanMenu(openLoanMenu === loan.id ? null : loan.id)}
-            style={{ background: '#F1F5F9', border: '1.5px solid #E2E8F0', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
+            style={{ background: '#F1F5F9', border: '1.5px solid #E2E8F0', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
             {[0,1,2].map(i => <span key={i} style={{ width: 3.5, height: 3.5, borderRadius: '50%', background: '#64748B', display: 'block' }} />)}
           </button>
         </div>
@@ -452,7 +455,8 @@ function LoansPageInner() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
             {MONTHS_SHORT.map((m, i) => {
-  const paid      = payments[loan.id]?.[i + 1] ?? false
+  const paid      = payments[loan.id]?.[i + 1]?.paid ?? false
+  const monthReceipt = payments[loan.id]?.[i + 1]?.receipt_url || ''
   const isCurrent = i === CURRENT_MONTH
   const isFuture  = i > CURRENT_MONTH
   const loanStart = new Date(startDate)
@@ -463,7 +467,7 @@ function LoansPageInner() {
   const isOverdue = !isFuture && !outScope && !paid && !isCurrent && !isScoped
   
   return (
-    <div key={m}>
+    <div key={m} style={{ position: 'relative' }}>
       <div style={{
         height: 32, borderRadius: 6, display: 'grid', placeItems: 'center',
         background: paid ? '#3D52D5' : isOverdue ? '#FFF7ED' : isCurrent ? '#EEF2FF' : isScoped ? '#DBEAFE' : outScope ? '#F1F5F9' : '#EEF2FF',
@@ -476,6 +480,9 @@ function LoansPageInner() {
           : <span style={{ fontSize: 8, fontWeight: isScoped ? 800 : 700, color: isOverdue ? '#E07A00' : isCurrent ? '#3D52D5' : isScoped ? '#1D4ED8' : '#94A3B8' }}>{m.slice(0, 1)}</span>
         }
       </div>
+      {paid && monthReceipt && (
+        <div style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', border: '1px solid white' }} />
+      )}
     </div>
   )
 })}
@@ -529,7 +536,8 @@ function LoansPageInner() {
                   const totalM = ld?.total_months || 12
                   const isUnlimitedRow = totalM >= 9999
                   const startD = ld?.start_date || ''
-                  const monthPaid = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1] ?? false)
+                  const monthPaid = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1]?.paid ?? false)
+                  const monthReceipts = Array.from({ length: 12 }, (_, i) => payments[loan.id]?.[i + 1]?.receipt_url || '')
                   const paidCount = monthPaid.filter(Boolean).length
                   const pct = CURRENT_MONTH > 0 ? Math.round((paidCount / (CURRENT_MONTH + 1)) * 100) : 0
                   const rowBg = idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'
@@ -548,11 +556,13 @@ function LoansPageInner() {
                         if (loanEndD) loanEndD.setMonth(loanEndD.getMonth() + totalM - 1)
                         const isAfterL = !isUnlimitedRow && loanEndD ? calDate > new Date(loanEndD.getFullYear(), loanEndD.getMonth(), 1) : false
                         const outScope = isBeforeL || isAfterL
+                        const hasReceipt = paid && !!monthReceipts[i]
                         return (
                           <td key={i} style={{ textAlign: 'center', padding: '6px 2px' }}>
                             {outScope ? <div style={{ width: 24, height: 24, borderRadius: 6, background: '#F1F5F9', margin: '0 auto', opacity: 0.3 }} /> : (
-                              <div style={{ width: 24, height: 24, borderRadius: 6, display: 'grid', placeItems: 'center', margin: '0 auto', background: paid ? '#EEF2FF' : isCurrent ? '#FFF8F0' : 'transparent', border: `1.5px solid ${paid ? '#C7D2FE' : isCurrent ? '#FFE0B2' : '#E2E8F0'}`, opacity: isFuture ? 0.3 : 1 }}>
+                              <div style={{ position: 'relative', width: 24, height: 24, borderRadius: 6, display: 'grid', placeItems: 'center', margin: '0 auto', background: paid ? '#EEF2FF' : isCurrent ? '#FFF8F0' : 'transparent', border: `1.5px solid ${paid ? '#C7D2FE' : isCurrent ? '#FFE0B2' : '#E2E8F0'}`, opacity: isFuture ? 0.3 : 1 }}>
                                 {paid ? <Check size={9} style={{ color: '#3D52D5' }} /> : <span style={{ width: 4, height: 4, borderRadius: '50%', background: isCurrent ? '#FF8B00' : '#CBD5E1', display: 'block' }} />}
+                                {hasReceipt && <div style={{ position: 'absolute', top: -3, right: -3, width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', border: '1px solid white' }} />}
                               </div>
                             )}
                           </td>
@@ -575,40 +585,112 @@ function LoansPageInner() {
         </div>
       )}
 
-      {/* Fixed-position loan action menu portal */}
-      {openLoanMenu && (() => {
-        const loan = loans.find(l => l.id === openLoanMenu)
-        if (!loan) return null
-        const isSusp = loan.status === 'Suspended'
-        const btn = document.getElementById(`loan-menu-btn-${loan.id}`)
-        const rect = btn?.getBoundingClientRect()
-        if (!rect) return null
-        return (
-          <div style={{ position: 'fixed', top: rect.bottom + 6, right: Math.max(8, window.innerWidth - rect.right), zIndex: 9999, background: 'white', border: '1.5px solid #0f172a', borderRadius: 12, boxShadow: '0 8px 28px rgba(15,23,42,0.22)', overflow: 'hidden', minWidth: 180 }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={() => { toggleSuspend(loan); setOpenLoanMenu(null) }}
-              style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: isSusp ? '#d97706' : '#64748b', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
-              {isSusp ? <PlayCircle size={14} color="#d97706" /> : <PauseCircle size={14} color="#64748b" />}
-              {isSusp ? 'Unsuspend' : 'Suspend'}
-            </button>
-            <button onClick={() => { setExtendLoan(loan); setOpenLoanMenu(null) }}
-              style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#16a34a', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
-              <RefreshCw size={14} color="#16a34a" /> Renew Loan
-            </button>
-            <button onClick={() => { setEditLoan(loan); setShowAdd(true); setOpenLoanMenu(null) }}
-              style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
-              <Edit2 size={14} color="#2563EB" /> Edit Loan
-            </button>
-            <button onClick={() => { setConfirmLoan(loan); setConfirmOpen(true); setOpenLoanMenu(null) }}
-              style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
-              <Trash2 size={14} color="#dc2626" /> Delete Loan
-            </button>
-          </div>
-        )
-      })()}
+      <FloatingMenu
+        isOpen={!!openLoanMenu}
+        anchorId={openLoanMenu ? `loan-menu-btn-${openLoanMenu}` : 'loan-menu-anchor'}
+        minWidth={180}
+        onClose={() => setOpenLoanMenu(null)}
+      >
+        {(() => {
+          const loan = loans.find(l => l.id === openLoanMenu)
+          if (!loan) return null
+          const isSusp = loan.status === 'Suspended'
+          const menuReceipt = payments[loan.id]?.[viewMonth + 1]?.receipt_url || ''
+          return (
+            <>
+              <button onClick={() => { setReceiptViewLoan(loan); setOpenLoanMenu(null) }}
+                disabled={!menuReceipt}
+                style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: menuReceipt ? '#d97706' : 'var(--text-faint)', background: 'white', border: 'none', cursor: menuReceipt ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', opacity: menuReceipt ? 1 : 0.5, fontFamily: "'Poppins', sans-serif" }}>
+                <ReceiptText size={14} color={menuReceipt ? '#d97706' : '#94a3b8'} /> View Receipt
+              </button>
+              <button onClick={() => { toggleSuspend(loan); setOpenLoanMenu(null) }}
+                style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: isSusp ? '#d97706' : '#64748b', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
+                {isSusp ? <PlayCircle size={14} color="#d97706" /> : <PauseCircle size={14} color="#64748b" />}
+                {isSusp ? 'Unsuspend' : 'Suspend'}
+              </button>
+              <button onClick={() => { setExtendLoan(loan); setOpenLoanMenu(null) }}
+                style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#16a34a', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
+                <RefreshCw size={14} color="#16a34a" /> Renew Loan
+              </button>
+              <button onClick={() => { setEditLoan(loan); setShowAdd(true); setOpenLoanMenu(null) }}
+                style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
+                <Edit2 size={14} color="#2563EB" /> Edit Loan
+              </button>
+              <button onClick={() => { setConfirmLoan(loan); setConfirmOpen(true); setOpenLoanMenu(null) }}
+                style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
+                <Trash2 size={14} color="#dc2626" /> Delete Loan
+              </button>
+            </>
+          )
+        })()}
+      </FloatingMenu>
       {showAdd && <AddLoanModal editItem={editLoan} onClose={() => { setShowAdd(false); setEditLoan(null) }} onSave={() => { setShowAdd(false); setEditLoan(null); load() }} />}
       {extendLoan && <ExtendLoanModal loan={extendLoan} onClose={() => setExtendLoan(null)} onSave={async () => { setExtendLoan(null); await load() }} />}
       <ConfirmModal isOpen={confirmOpen} title="Delete Loan" message={`Remove "${confirmLoan?.name}" from your loans? This cannot be undone.`} confirmLabel="Delete" onConfirm={doDeleteLoan} onCancel={() => { setConfirmOpen(false); setConfirmLoan(null) }} />
+
+      {/* Receipt Viewer Modal */}
+      {receiptViewLoan && (() => {
+        const allReceipts: { loan: BudgetItem; month: number; url: string }[] = []
+        loans.forEach(l => {
+          const lp = payments[l.id] || {}
+          Object.entries(lp).forEach(([m, v]) => {
+            if (v.receipt_url) allReceipts.push({ loan: l, month: parseInt(m), url: v.receipt_url })
+          })
+        })
+        allReceipts.sort((a, b) => {
+          if (a.loan.id === receiptViewLoan.id && b.loan.id !== receiptViewLoan.id) return -1
+          if (b.loan.id === receiptViewLoan.id && a.loan.id !== receiptViewLoan.id) return 1
+          return a.loan.name.localeCompare(b.loan.name)
+        })
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
+            <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.2)', maxHeight: '88vh' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1.5px solid #d97706', background: '#fffbeb', flexShrink: 0 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ReceiptText size={15} color="#d97706" />
+                    </div>
+                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Loan Receipts</h2>
+                  </div>
+                  <p style={{ fontSize: 12, color: '#d97706', margin: '4px 0 0 40px' }}>All uploaded payment receipts</p>
+                </div>
+                <button onClick={() => setReceiptViewLoan(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <XIcon size={15} color="#d97706" />
+                </button>
+              </div>
+              <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {allReceipts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)' }}>
+                    <ReceiptText size={32} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipts uploaded yet</p>
+                  </div>
+                ) : allReceipts.map(({ loan: l, month, url }, idx) => (
+                  <div key={idx} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${l.id === receiptViewLoan.id ? '#d97706' : 'var(--border)'}`, background: 'white', boxShadow: l.id === receiptViewLoan.id ? '0 0 0 3px rgba(217,119,6,0.1)' : 'none' }}>
+                    <div style={{ padding: '10px 14px', background: l.id === receiptViewLoan.id ? '#fffbeb' : 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{l.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{MONTHS_LONG[month - 1]} {CURRENT_YEAR}</p>
+                      </div>
+                      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>
+                        <ExternalLink size={11} /> Open
+                      </a>
+                    </div>
+                    <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                      <img src={url} alt={`${l.name} receipt`} style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                <button onClick={() => setReceiptViewLoan(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

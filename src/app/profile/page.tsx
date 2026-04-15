@@ -91,7 +91,7 @@ export default function ProfilePage() {
         <div>
           <p className="text-sm font-bold" style={{ color: '#92400e' }}>Install as App</p>
           <p className="text-xs mt-0.5" style={{ color: '#a16207' }}>
-            Tap the Share button in your browser and choose "Add to Home Screen" to use BudgetPH like a native app.
+            Tap the Share button in your browser and choose &quot;Add to Home Screen&quot; to use BudgetPH like a native app.
           </p>
         </div>
       </div>

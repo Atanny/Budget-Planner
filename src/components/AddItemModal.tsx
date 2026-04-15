@@ -1,8 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, BankAccount, Cutoff, EXPENSE_CATEGORIES } from '@/lib/types'
-import { X, ShoppingBag, Check } from 'lucide-react'
+import { X, ShoppingBag, Check, CreditCard, Upload, ReceiptText } from 'lucide-react'
 
 interface Props {
   defaultCutoff: Cutoff
@@ -12,82 +13,159 @@ interface Props {
   onSave: (savedItem?: BudgetItem) => void
 }
 
-const btnPrimaryStyle: React.CSSProperties = {
-  background: '#2563EB',
+const primaryButtonStyle: CSSProperties = {
+  background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
   color: 'white',
   border: 'none',
-  borderRadius: 8,
-  padding: '10px 20px',
+  borderRadius: 12,
+  padding: '12px 18px',
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const secondaryButtonStyle: CSSProperties = {
+  background: 'var(--bg-subtle)',
+  color: 'var(--text-secondary)',
+  border: '1.5px solid var(--border)',
+  borderRadius: 12,
+  padding: '12px 18px',
   fontSize: 14,
   fontWeight: 600,
   cursor: 'pointer',
 }
 
-const btnSecondaryStyle: React.CSSProperties = {
-  background: 'white',
-  color: '#374151',
-  border: '1px solid #d1d5db',
-  borderRadius: 8,
-  padding: '10px 20px',
+const inputStyle: CSSProperties = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: 12,
+  border: '1.5px solid var(--border)',
   fontSize: 14,
-  fontWeight: 600,
-  cursor: 'pointer',
 }
 
-// Auto-detect which cutoff period we're currently in
+const labelStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  color: 'var(--text-secondary)',
+  marginBottom: 8,
+  display: 'block',
+}
+
 function getAutoCutoff(): Cutoff {
-  const d = new Date().getDate()
-  return d <= 15 ? '1st' : '2nd'
+  const day = new Date().getDate()
+  return day <= 15 ? '1st' : '2nd'
 }
 
-export default function AddItemModal({ defaultCutoff, editItem, banks, onClose, onSave }: Props) {
+export default function AddItemModal({ editItem, banks, onClose, onSave }: Props) {
   const autoCutoff = editItem ? editItem.cutoff : getAutoCutoff()
 
-  const [name,     setName]     = useState(editItem?.name || '')
-  const [amount,   setAmount]   = useState(editItem?.amount?.toString() || '')
+  const [name, setName] = useState(editItem?.name || '')
+  const [amount, setAmount] = useState(editItem?.amount?.toString() || '')
   const [category, setCategory] = useState(editItem?.category || 'Food')
-  const [bankId,   setBankId]   = useState<string>(editItem?.bank_account_id || '')
-  const [saving,   setSaving]   = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [step, setStep] = useState<'form' | 'confirm' | 'pay_now'>('form')
+  const [payNowBank, setPayNowBank] = useState<string>('')
+  const [transferFee, setTransferFee] = useState('')
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null)
 
-  const selCat  = EXPENSE_CATEGORIES.find(c => c.value === category)
-  const selBank = banks.find(b => b.id === bankId)
+  const selectedCategory = useMemo(
+    () => EXPENSE_CATEGORIES.find(item => item.value === category),
+    [category]
+  )
 
-  async function handleSave() {
-    if (!name.trim() || !amount) return
+  const feeAmount = parseFloat(transferFee) || 0
+  const numericAmount = parseFloat(amount) || 0
+  const totalDeduct = numericAmount + feeAmount
+  const cutoffLabel = autoCutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview?.startsWith('blob:')) URL.revokeObjectURL(receiptPreview)
+    }
+  }, [receiptPreview])
+
+  function handleReceiptChange(file: File | null) {
+    if (receiptPreview?.startsWith('blob:')) URL.revokeObjectURL(receiptPreview)
+    if (!file) {
+      setReceiptFile(null)
+      setReceiptPreview(null)
+      return
+    }
+
+    setReceiptFile(file)
+    setReceiptPreview(URL.createObjectURL(file))
+  }
+
+  async function uploadReceipt(userId: string, itemId: string) {
+    if (!receiptFile) return null
+
+    const fileExt = receiptFile.name.split('.').pop() || 'jpg'
+    const fileName = `${userId}/${itemId}/${Date.now()}.${fileExt}`
+    const { error } = await supabase.storage.from('receipts').upload(fileName, receiptFile)
+
+    if (error) return null
+
+    const { data } = supabase.storage.from('receipts').getPublicUrl(fileName)
+    return data.publicUrl
+  }
+
+  async function doSave(isPaid: boolean, deductBankId?: string, fee?: number) {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
+    if (!user) {
+      setSaving(false)
+      return
+    }
 
-    const payload: any = {
+    const payload: Partial<BudgetItem> & Record<string, unknown> = {
       name,
-      amount: parseFloat(amount),
+      amount: numericAmount,
       cutoff: autoCutoff,
-      status: 'Once' as const,
+      status: 'Once',
       is_loan: false,
       category,
-      bank_account_id: bankId || null,
+      bank_account_id: deductBankId || editItem?.bank_account_id || null,
     }
 
     let savedItem: BudgetItem | undefined
 
     if (editItem) {
-      const { data: updated } = await supabase.from('budget_items')
-        .update(payload).eq('id', editItem.id).select().single()
+      const { data: updated } = await supabase
+        .from('budget_items')
+        .update(payload)
+        .eq('id', editItem.id)
+        .select()
+        .single()
+
       savedItem = updated ?? undefined
     } else {
-      const { data: newItem } = await supabase.from('budget_items')
-        .insert({ user_id: user.id, ...payload }).select().single()
+      const { data: newItem } = await supabase
+        .from('budget_items')
+        .insert({ user_id: user.id, ...payload })
+        .select()
+        .single()
+
       savedItem = newItem ?? undefined
 
-      if (newItem && bankId) {
-        const amt = parseFloat(amount)
-        await supabase.rpc('adjust_bank_balance', { p_id: bankId, p_delta: -amt })
+      if (newItem && isPaid) {
+        const receiptUrl = await uploadReceipt(user.id, newItem.id)
         const now = new Date()
+
         await supabase.from('monthly_payments').upsert({
-          budget_item_id: newItem.id, user_id: user.id,
-          year: now.getFullYear(), month: now.getMonth() + 1,
-          paid: true, paid_at: now.toISOString(),
+          budget_item_id: newItem.id,
+          user_id: user.id,
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          paid: true,
+          paid_at: now.toISOString(),
+          receipt_url: receiptUrl,
         }, { onConflict: 'budget_item_id,year,month' })
+
+        if (deductBankId) {
+          const total = numericAmount + (fee || 0)
+          await supabase.rpc('adjust_bank_balance', { p_id: deductBankId, p_delta: -total })
+        }
       }
     }
 
@@ -95,116 +173,298 @@ export default function AddItemModal({ defaultCutoff, editItem, banks, onClose, 
     onSave(savedItem)
   }
 
-  const cutoffLabel = autoCutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'
+  function handleContinue() {
+    if (!name.trim() || !amount) return
+
+    if (editItem) {
+      void doSave(true)
+      return
+    }
+
+    setStep('confirm')
+  }
+
+  function renderReceiptUploader(compact = false) {
+    return (
+      <div style={{ marginBottom: compact ? 12 : 18 }}>
+        <label style={labelStyle}>
+          Upload Receipt <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>(optional)</span>
+        </label>
+        <label
+          style={{
+            display: 'flex',
+            flexDirection: compact ? 'row' : 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: receiptPreview ? 8 : compact ? '12px 14px' : '18px 14px',
+            borderRadius: 14,
+            border: `2px dashed ${receiptPreview ? '#16a34a' : 'var(--accent-muted)'}`,
+            background: receiptPreview ? '#f0fdf4' : '#f8fbff',
+            cursor: 'pointer',
+            minHeight: compact ? 'auto' : 92,
+          }}
+        >
+          {receiptPreview ? (
+            <img
+              src={receiptPreview}
+              alt="Receipt preview"
+              style={{
+                maxHeight: compact ? 58 : 130,
+                maxWidth: '100%',
+                borderRadius: 10,
+                objectFit: 'contain',
+              }}
+            />
+          ) : (
+            <>
+              <Upload size={compact ? 16 : 20} color="#2563EB" />
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#2563EB', margin: 0 }}>Tap to upload receipt image</p>
+                {!compact && <p style={{ fontSize: 11, color: 'var(--text-faint)', margin: '4px 0 0' }}>JPG, PNG, or HEIC screenshot/photo</p>}
+              </div>
+            </>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={event => handleReceiptChange(event.target.files?.[0] || null)}
+          />
+        </label>
+        {receiptPreview && (
+          <button
+            type="button"
+            onClick={() => handleReceiptChange(null)}
+            style={{ marginTop: 6, fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✕ Remove photo
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 420, background: 'white', borderRadius: 16, overflow: 'hidden' }}>
-        
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: selCat ? `${selCat.color}20` : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShoppingBag size={20} style={{ color: selCat?.color || '#2563EB' }} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+      <div
+        className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4 border-b shrink-0"
+          style={{ borderColor: '#93c5fd', background: '#eff6ff' }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: selectedCategory ? `${selectedCategory.color}18` : 'var(--accent-pale)' }}>
+              <ShoppingBag size={18} style={{ color: selectedCategory?.color || 'var(--accent)' }} />
             </div>
             <div>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1f2937', margin: 0 }}>{editItem ? 'Edit Expense' : 'Add Paid Expense'}</h2>
-              <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Auto-assigned to <strong>{cutoffLabel}</strong></p>
+              <h2 className="font-bold" style={{ color: 'var(--text-primary)', margin: 0 }}>
+                {editItem ? 'Edit Expense' : step === 'confirm' ? 'Payment Status' : step === 'pay_now' ? 'Pay Now' : 'Add Expense'}
+              </h2>
+              <p style={{ fontSize: 12, color: 'var(--accent)', margin: '4px 0 0' }}>
+                Auto-assigned to <strong>{cutoffLabel}</strong>
+              </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}>
-            <X size={20} color="#6b7280" />
+          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'var(--text-muted)' }}>
+            <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: 24 }}>
-          {/* Name */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6, display: 'block' }}>What did you pay for? *</label>
-            <input 
-              value={name} 
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Groceries, Netflix, Electric Bill..."
-              style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
-              autoFocus 
-            />
-          </div>
-
-          {/* Amount */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6, display: 'block' }}>Amount *</label>
-            <input 
-              type="number" 
-              value={amount} 
-              onChange={e => setAmount(e.target.value)}
-              placeholder="0.00" 
-              style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
-            />
-          </div>
-
-          {/* Category */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8, display: 'block' }}>Category</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {EXPENSE_CATEGORIES.filter(c => c.value !== 'Loan').map(c => (
-                <button 
-                  key={c.value} 
-                  onClick={() => setCategory(c.value)}
-                  style={{
-                    padding: 12,
-                    borderRadius: 8,
-                    border: `1.5px solid ${category === c.value ? c.color : '#e5e7eb'}`,
-                    background: category === c.value ? `${c.color}15` : 'white',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <p style={{ fontSize: 13, fontWeight: 600, color: category === c.value ? c.color : '#374151', margin: 0 }}>{c.label.split(' ')[0]}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Bank */}
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6, display: 'block' }}>Paid via</label>
-            <select 
-              value={bankId} 
-              onChange={e => setBankId(e.target.value)} 
-              style={{ width: '100%', padding: 12, borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14 }}
-            >
-              <option value="">— Cash / None —</option>
-              {banks.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            {bankId && amount && (
-              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <p style={{ fontSize: 13, color: '#1d4ed8', margin: 0, fontWeight: 500 }}>
-                  💸 ₱{parseFloat(amount || '0').toLocaleString('en-PH', { minimumFractionDigits: 2 })} will be deducted from <strong>{selBank?.name}</strong> immediately
-                </p>
+        {step === 'confirm' && (
+          <div style={{ padding: 20, overflowY: 'auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+              <div style={{ width: 54, height: 54, borderRadius: 16, background: 'var(--accent-pale)', border: '1.5px solid var(--accent-muted)', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
+                <ReceiptText size={24} color="#2563EB" />
               </div>
-            )}
-          </div>
+              <p style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>{name}</p>
+              <p style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', margin: 0 }}>
+                ₱{numericAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>Is this expense already paid?</p>
+            </div>
 
-          {/* Auto paid badge */}
-          <div style={{ padding: 12, borderRadius: 8, background: '#dcfce7', border: '1px solid #86efac', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Check size={16} color="#16a34a" />
-            <p style={{ fontSize: 13, color: '#166534', margin: 0, fontWeight: 500 }}>
-              Paid Expense — recorded as paid for {cutoffLabel}
-            </p>
-          </div>
-        </div>
+            {renderReceiptUploader()}
 
-        {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', gap: 12 }}>
-          <button onClick={onClose} style={{ ...btnSecondaryStyle, flex: 1 }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={saving || !name || !amount} style={{ ...btnPrimaryStyle, flex: 1, opacity: (saving || !name || !amount) ? 0.5 : 1 }}>
-            {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Expense'}
-          </button>
-        </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => void doSave(true)}
+                disabled={saving}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  borderRadius: 14,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  background: '#f0fdf4',
+                  color: '#16a34a',
+                  border: '1.5px solid #16a34a',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Check size={16} /> Yes, Already Paid
+                <span style={{ fontWeight: 500, fontSize: 12, color: '#15803d' }}>— save with receipt</span>
+              </button>
+              <button
+                onClick={() => setStep('pay_now')}
+                disabled={saving}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  borderRadius: 14,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <CreditCard size={16} /> Pay Now — Deduct from Account
+              </button>
+              <button onClick={() => setStep('form')} style={{ ...secondaryButtonStyle, width: '100%' }}>
+                ← Back to Edit
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'pay_now' && (
+          <div style={{ padding: 20, overflowY: 'auto' }}>
+            <div style={{ marginBottom: 18, padding: '12px 16px', background: '#eff6ff', borderRadius: 14, border: '1.5px solid #bfdbfe' }}>
+              <p style={{ fontSize: 12, color: '#2563EB', fontWeight: 700, margin: '0 0 4px' }}>Payment Amount</p>
+              <p style={{ fontSize: 20, fontWeight: 800, color: '#dc2626', margin: 0 }}>
+                ₱{numericAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Select Account *</label>
+              <select value={payNowBank} onChange={event => setPayNowBank(event.target.value)} style={inputStyle}>
+                <option value="">Choose account...</option>
+                {banks.map(bank => (
+                  <option key={bank.id} value={bank.id}>
+                    {bank.name} — ₱{bank.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>
+                Transfer Fee <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>(optional)</span>
+              </label>
+              <input
+                type="number"
+                value={transferFee}
+                onChange={event => setTransferFee(event.target.value)}
+                placeholder="0.00"
+                style={inputStyle}
+              />
+              {feeAmount > 0 && (
+                <p style={{ fontSize: 11, marginTop: 6, color: '#854d0e', fontWeight: 700 }}>
+                  Total deduction: ₱{totalDeduct.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                </p>
+              )}
+            </div>
+
+            {renderReceiptUploader(true)}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setStep('confirm')} style={{ ...secondaryButtonStyle, flex: 1 }}>
+                ← Back
+              </button>
+              <button
+                onClick={() => void doSave(true, payNowBank, feeAmount)}
+                disabled={!payNowBank || saving}
+                style={{ ...primaryButtonStyle, flex: 2, opacity: (!payNowBank || saving) ? 0.5 : 1 }}
+              >
+                {saving ? 'Processing...' : `Confirm & Pay ₱${totalDeduct.toFixed(2)}`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'form' && (
+          <>
+            <div style={{ padding: 20, overflowY: 'auto' }}>
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>What did you pay for? *</label>
+                <input
+                  value={name}
+                  onChange={event => setName(event.target.value)}
+                  placeholder="e.g. Groceries, Netflix, Electric Bill..."
+                  style={inputStyle}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Amount *</label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={event => setAmount(event.target.value)}
+                  placeholder="0.00"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ marginBottom: 8 }}>
+                <label style={labelStyle}>Category</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {EXPENSE_CATEGORIES.filter(item => item.value !== 'Loan').map(item => {
+                    const parts = item.label.split(' ')
+                    const emoji = parts[0]
+                    const main = parts[1] || item.value
+                    const sub = parts.slice(2).join(' ')
+                    const isSelected = category === item.value
+
+                    return (
+                      <button
+                        type="button"
+                        key={item.value}
+                        onClick={() => setCategory(item.value)}
+                        className="p-2.5 rounded-xl text-center transition-all"
+                        style={{
+                          background: isSelected ? `${item.color}18` : 'var(--bg-subtle)',
+                          border: `1.5px solid ${isSelected ? item.color : 'var(--border)'}`,
+                        }}
+                      >
+                        <p style={{ fontSize: 16, margin: 0 }}>{emoji}</p>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: isSelected ? item.color : 'var(--text-primary)', margin: '4px 0 0', lineHeight: 1.25 }}>{main}</p>
+                        <p style={{ fontSize: 9, fontWeight: 600, color: isSelected ? item.color : 'var(--text-faint)', margin: '2px 0 0', lineHeight: 1.2 }}>{sub || 'Expense'}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 12, background: 'var(--bg-subtle)' }}>
+              <button onClick={onClose} style={{ ...secondaryButtonStyle, flex: 1 }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleContinue}
+                disabled={saving || !name.trim() || !amount}
+                style={{ ...primaryButtonStyle, flex: 1, opacity: (saving || !name.trim() || !amount) ? 0.5 : 1 }}
+              >
+                {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Continue →'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
