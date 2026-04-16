@@ -1,35 +1,58 @@
 'use client'
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getDaysUntilCutoff, getNextCutoffDate, sendBrowserNotification } from '@/lib/utils'
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = atob(base64)
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)))
+}
 
 export default function NotificationInit() {
   useEffect(() => {
-    // Check if we should fire a cutoff notification today
-    async function checkNotifications() {
-      if (typeof window === 'undefined' || Notification?.permission !== 'granted') return
+    async function init() {
+      if (typeof window === 'undefined') return
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+      if (Notification.permission !== 'granted') return
 
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const days = getDaysUntilCutoff()
-      const nextCutoff = getNextCutoffDate()
-      const cutoffLabel = nextCutoff.getDate() === 15 ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'
+      try {
+        // Register service worker
+        const reg = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
 
-      // Only fire once per day - check localStorage
-      const lastKey = `notif_shown_${new Date().toDateString()}`
-      if (typeof window !== 'undefined' && !localStorage.getItem(lastKey)) {
-        if (days <= 1) {
-          sendBrowserNotification(`⚠️ ${cutoffLabel} is TODAY!`, 'Make sure all payments are ready. Check your budget planner.')
-          localStorage.setItem(lastKey, '1')
-        } else if (days <= 3) {
-          sendBrowserNotification(`🔔 ${cutoffLabel} in ${days} days`, 'Reminder to prepare your payments.')
-          localStorage.setItem(lastKey, '1')
+        // Check if already subscribed
+        let sub = await reg.pushManager.getSubscription()
+
+        if (!sub) {
+          // Subscribe to push
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          })
         }
+
+        const subJson = sub.toJSON()
+
+        // Save subscription to Supabase
+        await supabase.from('push_subscriptions').upsert({
+          user_id: user.id,
+          endpoint: subJson.endpoint!,
+          p256dh: (subJson.keys as any).p256dh,
+          auth: (subJson.keys as any).auth,
+        }, { onConflict: 'user_id,endpoint' })
+
+      } catch (err) {
+        console.error('Push registration failed:', err)
       }
     }
 
-    checkNotifications()
+    init()
   }, [])
 
   return null

@@ -276,124 +276,167 @@ function LoansPageInner() {
 
 </div>
       {/* Legend + Month Nav — stacked full width */}
-      <div className="flex flex-col gap-2 mb-3">
+    <div className="flex flex-col gap-2 mb-3">
 
-  <div className="flex items-center justify-end gap-2 relative overflow-visible">
+  <div className="flex items-center justify-between relative overflow-visible">
+  <h2
+    style={{
+      fontSize: 22,
+      fontFamily: "Helvetica, Arial, sans-serif",
+      fontWeight: 700,
+      color: "var(--text-primary)",
+      margin: 0
+    }}
+  >
+    All Loans
+  </h2>
+   
 
-    {/* Month Button (fixed) */}
-    <button
-      ref={monthBtnRef}
-      onClick={() => {
-        if (!showMonthPicker && monthBtnRef.current) {
-          const r = monthBtnRef.current.getBoundingClientRect()
-          setMonthPickerPos({
-            top: r.bottom + 8,
-            right: Math.max(8, window.innerWidth - r.right)
-          })
-        }
-        setShowMonthPicker(v => !v)
-      }}
-      className={`
-        inline-flex items-center
-        px-3 py-2
-        rounded-lg
-        font-bold text-[15px]
-        font-['Poppins']
-        bg-white
-        border
-        transition-all duration-150
-        hover:bg-slate-50
-        active:scale-[0.98]
-        ${showMonthPicker ? 'border-blue-600' : 'border-slate-200'}
-      `}
-    >
-      {MONTHS_LONG[viewMonth]}
-    </button>
+    {/* RIGHT: Month + chevrons */}
+    <div className="flex items-center gap-2 flex-shrink-0">
 
-    {/* 🔥 KEEP YOUR CHEVRON BUTTONS EXACTLY AS-IS */}
-    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-      <button onClick={() => { setLoading(true); if (viewMonth === 0) setViewMonth(11); else setViewMonth(m => m - 1); }}
-        style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-        <ChevronLeft size={16} color="white" />
-      </button>
-      <button onClick={() => { setLoading(true); if (viewMonth === 11) setViewMonth(0); else setViewMonth(m => m + 1); }}
-        style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-        <ChevronRight size={16} color="white" />
-      </button>
-    </div>
+      {/* Month Button */}
+      <button
+        ref={monthBtnRef}
+        onClick={() => {
+          if (!showMonthPicker && monthBtnRef.current) {
+            const r = monthBtnRef.current.getBoundingClientRect()
 
-    {/* Dropdown (fixed only) */}
-    {showMonthPicker && (
-      <div
-        style={{
-          position: 'fixed',
-          top: monthPickerPos.top,
-          right: monthPickerPos.right,
-          zIndex: 9999
+            setMonthPickerPos({
+              top: r.bottom + 8,
+              right: Math.max(8, window.innerWidth - r.right)
+            })
+          }
+
+          setShowMonthPicker(v => !v)
         }}
+        className={`
+          inline-flex items-center
+          whitespace-nowrap
+          px-[14px] py-[7px]
+          rounded-full
+          font-bold text-[12px]
+          font-['Poppins']
+          bg-white
+          border
+          transition-all duration-150
+          hover:bg-slate-50
+          active:scale-[0.98]
+          ${showMonthPicker ? 'border-blue-600' : 'border-slate-200'}
+        `}
       >
-        <div className="inline-block bg-white border border-slate-200 rounded-xl shadow-xl p-2">
+        {MONTHS_LONG[viewMonth]}
+      </button>
 
-          <div className="grid grid-cols-3 gap-2 w-fit">
+      {/* Chevrons */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          onClick={() => {
+            setLoading(true)
+            setViewMonth(viewMonth === 0 ? 11 : viewMonth - 1)
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: '50%',
+            background: '#2563EB',
+            border: 'none',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <ChevronLeft size={16} color="white" />
+        </button>
 
-            {MONTHS_LONG.map((m, i) => (
-              <button
-                key={m}
-                onClick={() => {
-                  setLoading(true)
-                  setViewMonth(i)
-                  setShowMonthPicker(false)
-                }}
-                className={`
-                  px-4 py-2
-                  text-[13px]
-                  font-['Poppins']
-                  rounded-lg
-                  whitespace-nowrap
-                  transition-all duration-150
-                  border
-
-                  ${i === viewMonth
-                    ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                    : 'bg-white text-[var(--text-primary)] border-slate-100 hover:bg-blue-50'
-                  }
-                `}
-              >
-                {m.slice(0, 3)}
-              </button>
-            ))}
-
-          </div>
-
-        </div>
+        <button
+          onClick={() => {
+            setLoading(true)
+            setViewMonth(viewMonth === 11 ? 0 : viewMonth + 1)
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: '50%',
+            background: '#2563EB',
+            border: 'none',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <ChevronRight size={16} color="white" />
+        </button>
       </div>
-    )}
 
+      {/* Dropdown */}
+      {showMonthPicker && (
+        <MonthPickerDropdown
+          top={monthPickerPos.top}
+          right={monthPickerPos.right}
+          viewMonth={viewMonth}
+          onSelect={(i) => {
+            setLoading(true)
+            setViewMonth(i)
+            setShowMonthPicker(false)
+          }}
+          onClose={() => setShowMonthPicker(false)}
+        />
+      )}
+
+    </div>
   </div>
 </div>
 
       {/* Loans Table */}
       <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A', marginBottom: 22 }}>
         {/* Header */}
-        <div style={{ background: '#1a237e', padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: 'white', fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15 }}>All Loans — {MONTHS_LONG[viewMonth]}</span>
-          <span style={{ background: 'rgba(255,255,255,0.18)', color: 'white', borderRadius: 20, padding: '3px 13px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', fontFamily: 'Helvetica, Arial, sans-serif' }}>{loans.length} Items</span>
-          <button onClick={() => setHidePayments(h => !h)} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#2563EB', border: 'none', borderRadius: 999, padding: '7px 14px', color: 'white', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Helvetica, Arial, sans-serif' }}>
-            {hidePayments ? <Eye size={12} /> : <EyeOff size={12} />}
-            {hidePayments ? 'Show All' : 'Hide All'}
-          </button>
-        </div>
-           <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'start' }}>
-          {[
-            { label: 'Loan',        color: '#7c3aed' },
-            { label: 'Maintenance', color: '#f97316' },
-          ].map(f => (
-            <div className="my-3 mx-5" key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.color }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>{f.label}</span>
-            </div>
-          ))}
-        </div>
+        {/* Header */}
+<div className="bg-[#1a237e] px-5 py-[14px] flex items-center justify-between">
+
+  <span className="bg-white/20 text-white rounded-full px-[13px] py-[3px] text-[11px] font-bold whitespace-nowrap font-[Helvetica,Arial,sans-serif]">
+    {loans.length} Items
+  </span>
+
+  <button
+    onClick={() => setHidePayments(h => !h)}
+    className="
+      inline-flex items-center gap-[5px]
+      bg-[#2563EB]
+      text-white
+      rounded-full
+      px-[14px] py-[7px]
+      text-[11px]
+      font-bold
+      whitespace-nowrap
+      font-[Helvetica,Arial,sans-serif]
+      hover:bg-blue-700
+      transition-all
+    "
+  >
+    {hidePayments ? <Eye size={12} /> : <EyeOff size={12} />}
+    {hidePayments ? 'Show All' : 'Hide All'}
+  </button>
+
+</div>
+
+{/* Legend */}
+<div className="flex items-center gap-4 my-3 mx-5">
+  {[
+    { label: 'Loan', color: '#7c3aed' },
+    { label: 'Maintenance', color: '#f97316' },
+  ].map(f => (
+    <div key={f.label} className="flex items-center gap-1.5">
+      <div
+        className="w-[10px] h-[10px] rounded-full"
+        style={{ background: f.color }}
+      />
+      <span className="text-[13px] font-medium text-[var(--text-secondary)] font-['Poppins']">
+        {f.label}
+      </span>
+    </div>
+  ))}
+</div>
         {/* Rows */}
         {loans.length === 0 ? (
   <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, background: 'white' }}>
@@ -754,18 +797,7 @@ function LoansPageInner() {
 
       {/* Receipt Viewer Modal */}
       {receiptViewLoan && (() => {
-        const allReceipts: { loan: BudgetItem; month: number; url: string }[] = []
-        loans.forEach(l => {
-          const lp = payments[l.id] || {}
-          Object.entries(lp).forEach(([m, v]) => {
-            if (v.receipt_url) allReceipts.push({ loan: l, month: parseInt(m), url: v.receipt_url })
-          })
-        })
-        allReceipts.sort((a, b) => {
-          if (a.loan.id === receiptViewLoan.id && b.loan.id !== receiptViewLoan.id) return -1
-          if (b.loan.id === receiptViewLoan.id && a.loan.id !== receiptViewLoan.id) return 1
-          return a.loan.name.localeCompare(b.loan.name)
-        })
+        const receiptUrl = payments[receiptViewLoan.id]?.[viewMonth + 1]?.receipt_url || '';
         return (
           <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
             <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.2)', maxHeight: '88vh' }}>
@@ -775,36 +807,36 @@ function LoansPageInner() {
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <ReceiptText size={15} color="#d97706" />
                     </div>
-                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Loan Receipts</h2>
+                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Receipt</h2>
                   </div>
-                  <p style={{ fontSize: 12, color: '#d97706', margin: '4px 0 0 40px' }}>All uploaded payment receipts</p>
+                  <p style={{ fontSize: 12, color: '#d97706', margin: '4px 0 0 40px' }}>{receiptViewLoan.name} • {MONTHS_LONG[viewMonth]} {CURRENT_YEAR}</p>
                 </div>
                 <button onClick={() => setReceiptViewLoan(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <XIcon size={15} color="#d97706" />
                 </button>
               </div>
               <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {allReceipts.length === 0 ? (
+                {!receiptUrl ? (
                   <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)' }}>
                     <ReceiptText size={32} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
-                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipts uploaded yet</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipt uploaded for this month</p>
                   </div>
-                ) : allReceipts.map(({ loan: l, month, url }, idx) => (
-                  <div key={idx} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${l.id === receiptViewLoan.id ? '#d97706' : 'var(--border)'}`, background: 'white', boxShadow: l.id === receiptViewLoan.id ? '0 0 0 3px rgba(217,119,6,0.1)' : 'none' }}>
-                    <div style={{ padding: '10px 14px', background: l.id === receiptViewLoan.id ? '#fffbeb' : 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                ) : (
+                  <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid #d97706', background: 'white', boxShadow: '0 0 0 3px rgba(217,119,6,0.1)' }}>
+                    <div style={{ padding: '10px 14px', background: '#fffbeb', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{l.name}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{MONTHS_LONG[month - 1]} {CURRENT_YEAR}</p>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{receiptViewLoan.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{MONTHS_LONG[viewMonth]} {CURRENT_YEAR}</p>
                       </div>
-                      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>
+                      <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>
                         <ExternalLink size={11} /> Open
                       </a>
                     </div>
-                    <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
-                      <img src={url} alt={`${l.name} receipt`} style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                      <img src={receiptUrl} alt={`${receiptViewLoan.name} receipt`} style={{ width: '100%', maxHeight: 400, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
                     </a>
                   </div>
-                ))}
+                )}
               </div>
               <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
                 <button onClick={() => setReceiptViewLoan(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', border: 'none', cursor: 'pointer' }}>
@@ -815,6 +847,69 @@ function LoansPageInner() {
           </div>
         )
       })()}
+    </div>
+  )
+}
+
+
+// Month Picker Dropdown Component - styled like 3-dot menu
+function MonthPickerDropdown({ top, right, viewMonth, onSelect, onClose }: { 
+  top: number; 
+  right: number; 
+  viewMonth: number; 
+  onSelect: (month: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const closeMenu = () => onClose()
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
+    return () => {
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: top,
+        right: right,
+        zIndex: 9999,
+      }}
+    >
+      <div style={{
+        background: 'white',
+        border: '1.5px solid #0f172a',
+        borderRadius: 12,
+        boxShadow: '0 8px 28px rgba(15,23,42,0.22)',
+        padding: 8,
+        minWidth: 200,
+      }}>
+        <div className="grid grid-cols-3 gap-1">
+          {MONTHS_LONG.map((m, i) => (
+            <button
+              key={m}
+              onClick={() => onSelect(i)}
+              style={{
+                padding: '10px 8px',
+                fontSize: 13,
+                fontFamily: 'Poppins, sans-serif',
+                borderRadius: 8,
+                border: i === viewMonth ? '1.5px solid #2563EB' : '1.5px solid transparent',
+                background: i === viewMonth ? '#eff6ff' : 'white',
+                color: i === viewMonth ? '#2563EB' : '#0f172a',
+                fontWeight: i === viewMonth ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {m.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

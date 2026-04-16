@@ -3,7 +3,7 @@ import './globals.css'
 import ClientLayout from '@/components/ClientLayout'
 
 export const metadata: Metadata = {
-  title: 'BudgetPH — Sahod Tracker',
+  title: 'Sahod - Loan & Expense Tracker',
   description: 'Advanced budget planner with cutoff tracking, loans, and savings',
   manifest: '/manifest.json',
 }

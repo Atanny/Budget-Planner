@@ -1,6 +1,6 @@
 {
-  "name": "BudgetPH - Sahod Tracker",
-  "short_name": "BudgetPH",
+  "name": "Sahod - Loan & Expense Tracker",
+  "short_name": "Sahod",
   "description": "Advanced budget planner with cutoff tracking, loans, and savings",
   "start_url": "/",
   "display": "standalone",

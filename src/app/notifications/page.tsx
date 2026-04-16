@@ -3,8 +3,11 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, UserSettings } from '@/lib/types'
-import { formatCurrency, requestNotificationPermission, sendBrowserNotification, getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
+import { formatCurrency, getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
 import { Bell, BellOff, Send, Calendar, Clock, CheckCircle, Trash2, Plus, Check } from 'lucide-react'
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+const SEND_PUSH_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-push`
 
 interface NotifTemplate {
   id: string
@@ -21,17 +24,26 @@ const inputStyle: React.CSSProperties = {
   color: 'var(--text-primary)', outline: 'none', fontFamily: "'Poppins', sans-serif",
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const rawData = atob(base64)
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)))
+}
+
 export default function NotificationsPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [items, setItems] = useState<BudgetItem[]>([])
   const [notifs, setNotifs] = useState<NotifTemplate[]>([])
   const [permGranted, setPermGranted] = useState(false)
+  const [pushReady, setPushReady] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [customTitle, setCustomTitle] = useState('')
   const [customBody, setCustomBody] = useState('')
   const [customCutoff, setCustomCutoff] = useState<'1st' | '2nd' | 'general'>('general')
   const [sending, setSending] = useState<string | null>(null)
+  const [enableLoading, setEnableLoading] = useState(false)
 
   useEffect(() => {
     setPermGranted(typeof window !== 'undefined' && Notification?.permission === 'granted')
@@ -47,22 +59,82 @@ export default function NotificationsPage() {
       setSettings(settRes.data)
       setItems(itemRes.data || [])
       setNotifs(notifRes.data || [])
+
+      // Check if already subscribed to push
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+        if (reg) {
+          const sub = await reg.pushManager.getSubscription()
+          setPushReady(!!sub)
+        }
+      }
+
       setLoading(false)
     }
     load()
   }, [])
 
   async function enableNotifications() {
-    const granted = await requestNotificationPermission()
-    setPermGranted(granted)
-    if (granted && userId) {
-      await supabase.from('user_settings').upsert({ user_id: userId, notifications_enabled: true }, { onConflict: 'user_id' })
+    setEnableLoading(true)
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setEnableLoading(false); return }
+      setPermGranted(true)
+
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setEnableLoading(false)
+        return
+      }
+
+      const reg = await navigator.serviceWorker.register('/sw.js')
+      await navigator.serviceWorker.ready
+
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        })
+      }
+
+      const subJson = sub.toJSON()
+      if (userId) {
+        await supabase.from('push_subscriptions').upsert({
+          user_id: userId,
+          endpoint: subJson.endpoint!,
+          p256dh: (subJson.keys as any).p256dh,
+          auth: (subJson.keys as any).auth,
+        }, { onConflict: 'user_id,endpoint' })
+
+        await supabase.from('user_settings').upsert(
+          { user_id: userId, notifications_enabled: true },
+          { onConflict: 'user_id' }
+        )
+      }
+      setPushReady(true)
+    } catch (err) {
+      console.error('Enable push failed:', err)
     }
+    setEnableLoading(false)
+  }
+
+  // Call Supabase Edge Function to send the push
+  async function triggerPush(title: string, body: string, url?: string) {
+    if (!userId) return
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch(SEND_PUSH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({ user_id: userId, title, body, url }),
+    })
   }
 
   async function sendNotif(id: string, title: string, body: string) {
     setSending(id)
-    sendBrowserNotification(title, body)
+    await triggerPush(title, body)
     if (userId) {
       await supabase.from('notifications').update({ sent: true, sent_at: new Date().toISOString() }).eq('id', id)
       setNotifs(prev => prev.map(n => n.id === id ? { ...n, sent: true } : n))
@@ -73,7 +145,7 @@ export default function NotificationsPage() {
   async function sendCustom() {
     if (!customTitle || !customBody || !userId) return
     setSending('custom')
-    sendBrowserNotification(customTitle, customBody)
+    await triggerPush(customTitle, customBody)
     const { data } = await supabase.from('notifications').insert({
       user_id: userId, title: customTitle, body: customBody,
       cutoff: customCutoff, sent: true, sent_at: new Date().toISOString()
@@ -104,6 +176,7 @@ export default function NotificationsPage() {
 
   const nextCutoff = getNextCutoffDate()
   const daysUntil = getDaysUntilCutoff()
+  const isReady = permGranted && pushReady
 
   if (loading) return (
     <div style={{ display: 'grid', placeItems: 'center', height: 256 }}><div className="spinner" /></div>
@@ -119,7 +192,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Permission Banner */}
-      {!permGranted && (
+      {!isReady && (
         <div style={{ borderRadius: 16, border: '1.5px solid #0f172a', background: '#FFF7ED', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: '#FFE0B2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -127,22 +200,22 @@ export default function NotificationsPage() {
             </div>
             <div>
               <p style={{ fontSize: 13, fontWeight: 700, color: '#92400e', fontFamily: "'Poppins', sans-serif" }}>Enable Push Notifications</p>
-              <p style={{ fontSize: 11, color: '#b45309', marginTop: 2, fontFamily: "'Poppins', sans-serif" }}>Get reminded when cutoff is near</p>
+              <p style={{ fontSize: 11, color: '#b45309', marginTop: 2, fontFamily: "'Poppins', sans-serif" }}>Get reminded even when the app is closed</p>
             </div>
           </div>
-          <button onClick={enableNotifications}
-            style={{ padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif" }}>
-            Enable
+          <button onClick={enableNotifications} disabled={enableLoading}
+            style={{ padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif", opacity: enableLoading ? 0.6 : 1 }}>
+            {enableLoading ? 'Setting up...' : 'Enable'}
           </button>
         </div>
       )}
 
-      {permGranted && (
+      {isReady && (
         <div style={{ borderRadius: 16, border: '1.5px solid #0f172a', background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <CheckCircle size={16} color="white" />
           </div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Push notifications enabled!</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'white', fontFamily: "'Poppins', sans-serif" }}>Push notifications active — works even when closed!</p>
         </div>
       )}
 
@@ -195,12 +268,15 @@ export default function NotificationsPage() {
               <option value="1st">1st Cutoff</option>
               <option value="2nd">2nd Cutoff</option>
             </select>
-            <button onClick={sendCustom} disabled={!permGranted || !customTitle || !customBody || sending === 'custom'}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', opacity: (!permGranted || !customTitle || !customBody) ? 0.5 : 1, fontFamily: "'Poppins', sans-serif" }}>
+            <button onClick={sendCustom} disabled={!isReady || !customTitle || !customBody || sending === 'custom'}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', opacity: (!isReady || !customTitle || !customBody) ? 0.5 : 1, fontFamily: "'Poppins', sans-serif" }}>
               <Send size={13} />
               {sending === 'custom' ? 'Sending...' : 'Send Now'}
             </button>
           </div>
+          {!isReady && (
+            <p style={{ fontSize: 11, color: '#b45309', fontFamily: "'Poppins', sans-serif" }}>Enable push notifications above to send alerts.</p>
+          )}
         </div>
       </div>
 
@@ -236,7 +312,7 @@ export default function NotificationsPage() {
                     <Check size={10} /> Sent
                   </span>
                 ) : (
-                  <button onClick={() => sendNotif(n.id, n.title, n.body)} disabled={!permGranted || sending === n.id}
+                  <button onClick={() => sendNotif(n.id, n.title, n.body)} disabled={!isReady || sending === n.id}
                     style={{ fontSize: 11, fontWeight: 700, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'Poppins', sans-serif" }}>
                     <Send size={10} /> {sending === n.id ? 'Sending...' : 'Send Now'}
                   </button>

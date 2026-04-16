@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Wallet, CreditCard, PiggyBank, Bell, User, Plus, Banknote, ShoppingCart, History, ChevronRight, Settings } from 'lucide-react'
+import { LayoutDashboard, Wallet, CreditCard, PiggyBank, Bell, User, Plus, Banknote, ShoppingCart, History, ChevronRight, Settings, LogOut } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
@@ -30,7 +30,10 @@ const FAB_ACTIONS = [
 
 const SEPERATE_ACTION = [
     { key: 'sahod',   label: 'May Sahod Na!', icon: Banknote,  bg: 'white', border: '#ffb733' },
+]
 
+const SIGN_OUT = [
+    { key: 'signout', label: 'Sign Out',      icon: LogOut,     bg: '#eff6ff', border: '#93c5fd', color: '#dc2626', glow: true },
 ]
 
 export default function Navbar() {
@@ -38,6 +41,7 @@ export default function Navbar() {
   const router = useRouter()
   const [authed,  setAuthed]  = useState<boolean | null>(null)
   const [fabOpen, setFabOpen] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
   const days        = getDaysUntilCutoff()
   const next        = getNextCutoffDate()
   const cutoffLabel = next.getDate() === 15 ? '15th' : '30th'
@@ -65,6 +69,13 @@ export default function Navbar() {
     if (action === 'loan')    router.push('/loans?action=add')
   }
 
+  async function handleLogout() {
+    setFabOpen(false)
+    setConfirmLogout(false)
+    await supabase.auth.signOut()
+    router.push('/auth')
+  }
+
   function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: any }) {
     const active = path === href
     return (
@@ -73,8 +84,8 @@ export default function Navbar() {
         alignItems: 'center', justifyContent: 'center',
         gap: 3, flex: 1, padding: '6px 8px',
         borderRadius: 'var(--radius-lg)', textDecoration: 'none',
-        color: active ? 'var(--brand)' : 'var(--text-faint)',
-        background: active ? 'var(--brand-pale)' : 'transparent',
+        color: active ? 'var(--primary)' : 'var(--text-faint)',
+        background: active ? 'transparent' : 'transparent',
         minWidth: 48,
         transition: 'background 0.15s ease, color 0.15s ease',
       }}>
@@ -102,9 +113,7 @@ export default function Navbar() {
           style={{ maxWidth: 1024, margin: '0 auto', padding: '0 14px', height: 56 }}>
           <div className="flex items-center gap-2.5">
             
-            <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              SAHOOOD
-            </span>
+            <img className='w-20' src="../Logo.png" alt="" />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {/* Cutoff badge */}
@@ -127,7 +136,7 @@ export default function Navbar() {
 
       {/* Backdrop */}
       {fabOpen && (
-        <div onClick={() => setFabOpen(false)} style={{
+        <div onClick={() => { setFabOpen(false); setConfirmLogout(false) }} style={{
           position: 'fixed', inset: 0, zIndex: 48,
           background: 'rgba(0,0,0,0.3)',
           backdropFilter: 'blur(3px)',
@@ -253,6 +262,71 @@ export default function Navbar() {
                 
               </button>
             ))}
+
+
+           
+          </div>
+          <div style={{
+            width: '100%',
+            background: 'white',
+            borderRadius: 'var(--radius-lg)',
+            border: '1.5px solid #0f172a',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+            overflow: 'hidden',
+          }}>
+            {!confirmLogout ? (
+              <button
+                onClick={() => setConfirmLogout(true)}
+                onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')}
+                onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '11px 16px',
+                  background: '#dc2626',
+                  border: 'none',
+                  cursor: 'pointer',
+                  width: '100%',
+                  animation: 'slideUp 0.18s ease',
+                  transition: 'background 0.15s ease',
+                }}
+              >
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'white', textAlign: 'center' }}>Sign Out</span>
+              </button>
+            ) : (
+              <div style={{ animation: 'slideUp 0.18s ease' }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textAlign: 'center', padding: '10px 16px 8px', margin: 0 }}>
+                  Are you sure you want to sign out?
+                </p>
+                <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => setConfirmLogout(false)}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                    style={{
+                      flex: 1, padding: '11px 16px',
+                      background: 'white', border: 'none', borderRight: '1px solid var(--border)',
+                      cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                      color: 'var(--text-primary)', transition: 'background 0.15s ease',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#b91c1c')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#dc2626')}
+                    style={{
+                      flex: 1, padding: '11px 16px',
+                      background: '#dc2626', border: 'none',
+                      cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                      color: 'white', transition: 'background 0.15s ease',
+                    }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -280,7 +354,7 @@ export default function Navbar() {
 
           {/* Center FAB */}
           <button
-            onClick={() => setFabOpen(o => !o)}
+            onClick={() => { setFabOpen(o => { if (o) setConfirmLogout(false); return !o }) }}
             style={{
               width: 46, height: 46,
               borderRadius: '50%',

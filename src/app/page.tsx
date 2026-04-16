@@ -677,111 +677,118 @@ function DashboardPageInner() {
       </div>
 
       {/* ═══ FILTER ROW + MONTH NAV ════════════════════════════════════════ */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
-        {/* Category legend dots — centered */}
-        
-        {/* Month navigator — month label left, chevrons grouped right */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative", overflow: "visible", justifyContent:'end' }}>
-          <button
-  ref={monthBtnRef}
-  onClick={() => {
-    if (!showMonthPicker && monthBtnRef.current) {
-      const r = monthBtnRef.current.getBoundingClientRect()
-
-      setMonthPickerPos({
-        top: r.bottom + 8,
-        right: Math.max(8, window.innerWidth - r.right)
-      })
-    }
-    setShowMonthPicker(v => !v)
-  }}
+    <div
   style={{
-    display: "inline-flex",   // ✅ hug content
+    display: "flex",
     alignItems: "center",
-    fontWeight: 700,
-    fontSize: 16,
-    color: "var(--text-primary)",
-    textAlign: "left",
-
-    background: "#fff",       // ✅ always white bg
-    border: showMonthPicker
-      ? "1.5px solid #2563EB"
-      : "1.5px solid #E5E7EB",
-
-    borderRadius: 12,
-    padding: "8px 12px",
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-
-    width: "fit-content",     // ✅ hug content
-    whiteSpace: "nowrap",
-    gap: 6
+    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 14
   }}
 >
-  {MONTHS_LONG[viewMonth]}{" "}
-  {viewYear !== CURRENT_YEAR ? viewYear : ""}
-</button>
-          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-            <button onClick={goToPrevMonth} style={{ width: 34, height: 34, borderRadius: "50%", background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ChevronLeft size={17} />
-            </button>
-            <button onClick={goToNextMonth} style={{ width: 34, height: 34, borderRadius: "50%", background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <ChevronRight size={17} />
-            </button>
-          </div>
-          {/* Month picker dropdown */}
-          {showMonthPicker && (
-            <div
-  style={{
-    position: "fixed",
-    top: monthPickerPos.top,
-    right: monthPickerPos.right,
-    zIndex: 9999
-  }}
->
-  <div
-    className="
-      inline-block
-      bg-white
-      border border-slate-200
-      rounded-xl
-      shadow-xl
-      p-2
-    "
+  {/* LEFT: TITLE */}
+  <h2
+    style={{
+      fontSize: 22,
+      fontFamily: "Helvetica, Arial, sans-serif",
+      fontWeight: 700,
+      color: "var(--text-primary)",
+      margin: 0
+    }}
   >
-    <div className="grid grid-cols-3 gap-2 w-fit">
-      {MONTHS_LONG.map((m, i) => (
-        <button
-          key={m}
-          onClick={() => {
-            setLoading(true)
-            setViewMonth(i)
-            setShowMonthPicker(false)
-          }}
-          className={`
-            px-4 py-2
-            text-[13px]
-            font-['Poppins']
-            rounded-lg
-            whitespace-nowrap
-            transition-all duration-150
-            border
+    Cutoff Payments
+  </h2>
 
-            ${i === viewMonth
-              ? 'bg-blue-600 text-white border-blue-600 font-bold'
-              : 'bg-white text-[var(--text-primary)] border-slate-100 hover:bg-blue-50'
-            }
-          `}
-        >
-          {m.slice(0, 3)}
-        </button>
-      ))}
+  {/* RIGHT: CONTROLS */}
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+    <button
+      ref={monthBtnRef}
+      onClick={() => {
+        if (!showMonthPicker && monthBtnRef.current) {
+          const r = monthBtnRef.current.getBoundingClientRect();
+
+          setMonthPickerPos({
+            top: r.bottom + 8,
+            right: Math.max(8, window.innerWidth - r.right)
+          });
+        }
+        setShowMonthPicker(v => !v);
+      }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        fontWeight: 700,
+        fontSize: 12,
+        color: "var(--text-primary)",
+        background: "#fff",
+        border: showMonthPicker ? "1px solid #2563EB" : "1px solid #E5E7EB",
+        borderRadius: 20,
+        padding: "7px 14px",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+        width: "fit-content",
+        whiteSpace: "nowrap",
+        gap: 6
+      }}
+    >
+      {MONTHS_LONG[viewMonth]}{" "}
+      {viewYear !== CURRENT_YEAR ? viewYear : ""}
+    </button>
+
+    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+      <button
+        onClick={goToPrevMonth}
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: "#2563EB",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        <ChevronLeft size={17} />
+      </button>
+
+      <button
+        onClick={goToNextMonth}
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: "#2563EB",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        <ChevronRight size={17} />
+      </button>
     </div>
+
+    {showMonthPicker && (
+      <MonthPickerDropdown
+        top={monthPickerPos.top}
+        right={monthPickerPos.right}
+        viewMonth={viewMonth}
+        onSelect={(i) => {
+          setLoading(true);
+          setViewMonth(i);
+          setShowMonthPicker(false);
+        }}
+        onClose={() => setShowMonthPicker(false)}
+      />
+    )}
   </div>
 </div>
-          )}
-        </div>
-      </div>
 
       {/* ═══ CUTOFF TABS ═══════════════════════════════════════════════════ */}
       <div style={{ display: "flex", borderRadius: 12, border: "1.5px solid #0f172a", overflow: "hidden", marginBottom: 14 }}>
@@ -804,17 +811,40 @@ function DashboardPageInner() {
       <div style={{ borderRadius: 18, border: "1.5px solid #0f172a", overflow: "hidden", marginBottom: 14, boxShadow: "0 2px 14px rgba(15,23,42,0.07)" }}>
 
         {/* Header */}
-        <div style={{ background: "#1a237e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Payments</span>
+        <div style={{ background: "#1a237e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent:'space-between'}}>
+         
           <span style={{ background: "rgba(255,255,255,0.18)", color: "white", borderRadius: 20, padding: "3px 13px", fontSize: 12, fontWeight: 700 }}>
             {cutoffItems.length} Items
           </span>
           <button
-            onClick={() => setPaymentsHidden(v => { const next = !v; try { localStorage.setItem("paymentsHidden", String(next)); } catch {} return next; })}
-            style={{ background: "#2563EB", color: "white", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-            {paymentsHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-            {paymentsHidden ? "Show All" : "Hide All"}
-          </button>
+  onClick={() =>
+    setPaymentsHidden(v => {
+      const next = !v
+      try {
+        localStorage.setItem("paymentsHidden", String(next))
+      } catch {}
+      return next
+    })
+  }
+  style={{
+    background: "#2563EB",
+    color: "#fff",
+    borderRadius: 20,
+    padding: "7px 14px",
+    fontSize: 12,
+    fontWeight: 700,
+    border: "none",
+    cursor: "pointer",
+    display: "inline-flex",   // ✅ hug content
+    alignItems: "center",
+    gap: 6,
+    whiteSpace: "nowrap",     // ✅ prevent wrap
+    transition: "all 0.15s ease"
+  }}
+>
+  {paymentsHidden ? <Eye size={12} /> : <EyeOff size={12} />}
+  {paymentsHidden ? "Show All Payments" : "Hide All Payments"}
+</button>
         </div>
 
        {/* Rows */}
@@ -1299,10 +1329,7 @@ function DashboardPageInner() {
 
       {/* ═══ DASHBOARD RECEIPT MODAL ══════════════════════════════════════ */}
       {dashReceiptItem && (() => {
-        const allReceipts = items
-          .map(item => ({ item, url: getMonthReceipt(item.id, viewMonth + 1) }))
-          .filter(e => e.url)
-          .sort((a, b) => (a.item.id === dashReceiptItem.id ? -1 : b.item.id === dashReceiptItem.id ? 1 : a.item.name.localeCompare(b.item.name)))
+        const receiptUrl = getMonthReceipt(dashReceiptItem.id, viewMonth + 1);
         return (
           <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
             <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.2)', maxHeight: '88vh' }}>
@@ -1312,8 +1339,8 @@ function DashboardPageInner() {
                     <ReceiptText size={16} color="#d97706" />
                   </div>
                   <div>
-                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Receipts</h2>
-                    <p style={{ fontSize: 11, color: '#d97706', margin: '2px 0 0' }}>All uploaded receipts</p>
+                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Receipt</h2>
+                    <p style={{ fontSize: 11, color: '#d97706', margin: '2px 0 0' }}>{dashReceiptItem.name} • {MONTHS_LONG[viewMonth]} {viewYear}</p>
                   </div>
                 </div>
                 <button onClick={() => setDashReceiptItem(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -1321,25 +1348,25 @@ function DashboardPageInner() {
                 </button>
               </div>
               <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {allReceipts.length === 0 ? (
+                {!receiptUrl ? (
                   <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)' }}>
                     <ReceiptText size={32} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
-                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipts uploaded yet</p>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipt uploaded</p>
                   </div>
-                ) : allReceipts.map(({ item, url }) => (
-                  <div key={item.id} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${item.id === dashReceiptItem.id ? '#d97706' : 'var(--border)'}`, background: 'white', boxShadow: item.id === dashReceiptItem.id ? '0 0 0 3px rgba(217,119,6,0.1)' : 'none' }}>
-                    <div style={{ padding: '10px 14px', background: item.id === dashReceiptItem.id ? '#fffbeb' : 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                ) : (
+                  <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid #d97706', background: 'white', boxShadow: '0 0 0 3px rgba(217,119,6,0.1)' }}>
+                    <div style={{ padding: '10px 14px', background: '#fffbeb', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
-                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{item.name}</p>
-                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{formatCurrency(item.amount)}</p>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{dashReceiptItem.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{formatCurrency(dashReceiptItem.amount)}</p>
                       </div>
-                      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>Open ↗</a>
+                      <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>Open ↗</a>
                     </div>
-                    <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
-                      <img src={url} alt={`${item.name} receipt`} style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                      <img src={receiptUrl} alt={`${dashReceiptItem.name} receipt`} style={{ width: '100%', maxHeight: 400, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
                     </a>
                   </div>
-                ))}
+                )}
               </div>
               <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
                 <button onClick={() => setDashReceiptItem(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', border: 'none', cursor: 'pointer' }}>Close</button>
@@ -1426,6 +1453,69 @@ function BankFormModal({ bank, onClose, onSave }: {
       </div>
     </div>
   );
+}
+
+
+// Month Picker Dropdown Component - styled like 3-dot menu
+function MonthPickerDropdown({ top, right, viewMonth, onSelect, onClose }: { 
+  top: number; 
+  right: number; 
+  viewMonth: number; 
+  onSelect: (month: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const closeMenu = () => onClose()
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
+    return () => {
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: top,
+        right: right,
+        zIndex: 9999,
+      }}
+    >
+      <div style={{
+        background: 'white',
+        border: '1.5px solid #0f172a',
+        borderRadius: 12,
+        boxShadow: '0 8px 28px rgba(15,23,42,0.22)',
+        padding: 8,
+        minWidth: 200,
+      }}>
+        <div className="grid grid-cols-3 gap-1">
+          {MONTHS_LONG.map((m, i) => (
+            <button
+              key={m}
+              onClick={() => onSelect(i)}
+              style={{
+                padding: '10px 8px',
+                fontSize: 13,
+                fontFamily: 'Poppins, sans-serif',
+                borderRadius: 8,
+                border: i === viewMonth ? '1.5px solid #2563EB' : '1.5px solid transparent',
+                background: i === viewMonth ? '#eff6ff' : 'white',
+                color: i === viewMonth ? '#2563EB' : '#0f172a',
+                fontWeight: i === viewMonth ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {m.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function DashboardPage() {
