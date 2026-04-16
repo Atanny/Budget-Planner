@@ -485,7 +485,7 @@ function DashboardPageInner() {
             Welcome Back, {userName}
           </p>
           <div style={{ borderBottom: "1.5px solid rgba(255,255,255,0.35)", marginBottom: 12 }} />
-          <h2 style={{ color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1.1, marginBottom: 3 }}>
+          <h2 style={{ color: "white", fontSize: 30, marginBottom: 3, letterSpacing:1 }}>
             Networth
           </h2>
           <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginBottom: 14 }}>
