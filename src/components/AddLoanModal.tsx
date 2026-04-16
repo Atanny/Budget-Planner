@@ -155,6 +155,33 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
         budget_item_id: editItem.id, user_id: user.id,
         total_months: effectiveMonths, start_date: startDate, notes, monthly_amounts: maObj
       }, { onConflict: 'budget_item_id' })
+
+      // Clear paid months that fall outside the new date scope
+      if (!isUnlimited && startDate) {
+        const scopeStart = new Date(startDate)
+        const scopeEnd = new Date(startDate)
+        scopeEnd.setMonth(scopeEnd.getMonth() + effectiveMonths - 1)
+
+        // Fetch all paid months for this loan
+        const { data: allPaid } = await supabase
+          .from('monthly_payments')
+          .select('id, year, month')
+          .eq('budget_item_id', editItem.id)
+          .eq('paid', true)
+
+        const toUnpay = (allPaid || []).filter(p => {
+          const d = new Date(p.year, p.month - 1, 1)
+          return d < new Date(scopeStart.getFullYear(), scopeStart.getMonth(), 1) ||
+                 d > new Date(scopeEnd.getFullYear(), scopeEnd.getMonth(), 1)
+        })
+
+        if (toUnpay.length > 0) {
+          await supabase
+            .from('monthly_payments')
+            .update({ paid: false, paid_at: null })
+            .in('id', toUnpay.map(p => p.id))
+        }
+      }
     } else {
       const { data: newItem } = await supabase.from('budget_items')
         .insert({ user_id: user.id, ...payload }).select().single()

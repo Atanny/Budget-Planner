@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BudgetItem, BankAccount, Cutoff, EXPENSE_CATEGORIES } from '@/lib/types'
-import { X, ShoppingBag, Check, CreditCard, Upload, ReceiptText } from 'lucide-react'
+import { X, ShoppingBag, Check, CreditCard, Upload, ReceiptText, Clock } from 'lucide-react'
 
 interface Props {
   defaultCutoff: Cutoff
@@ -275,7 +275,7 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
 
         {step === 'confirm' && (
           <div style={{ padding: 20, overflowY: 'auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: 18 }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <div style={{ width: 54, height: 54, borderRadius: 16, background: 'var(--accent-pale)', border: '1.5px solid var(--accent-muted)', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
                 <ReceiptText size={24} color="#2563EB" />
               </div>
@@ -283,56 +283,26 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
               <p style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', margin: 0 }}>
                 ₱{numericAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
               </p>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6 }}>Is this expense already paid?</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>What is the current payment status?</p>
             </div>
-
-            {renderReceiptUploader()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
-                onClick={() => void doSave(true)}
+                onClick={() => void doSave(false)}
                 disabled={saving}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  borderRadius: 14,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  background: '#f0fdf4',
-                  color: '#16a34a',
-                  border: '1.5px solid #16a34a',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
-                <Check size={16} /> Yes, Already Paid
-                <span style={{ fontWeight: 500, fontSize: 12, color: '#15803d' }}>— save with receipt</span>
+                <Clock size={16} color="#64748b" /> Not Yet Paid
+                <span style={{ fontWeight: 500, fontSize: 12, color: '#94a3b8' }}>— save without paying</span>
               </button>
               <button
                 onClick={() => setStep('pay_now')}
                 disabled={saving}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  borderRadius: 14,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
-                  color: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <CreditCard size={16} /> Pay Now — Deduct from Account
               </button>
-              <button onClick={() => setStep('form')} style={{ ...secondaryButtonStyle, width: '100%' }}>
+              <button onClick={() => setStep('form')} style={{ ...secondaryButtonStyle, width: '100%', borderRadius: 999 }}>
                 ← Back to Edit
               </button>
             </div>
@@ -350,14 +320,29 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
 
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Select Account *</label>
-              <select value={payNowBank} onChange={event => setPayNowBank(event.target.value)} style={inputStyle}>
+              <select value={payNowBank} onChange={event => setPayNowBank(event.target.value)}
+                style={{ ...inputStyle, border: `1.5px solid ${payNowBank && banks.find(b => b.id === payNowBank) && banks.find(b => b.id === payNowBank)!.balance < numericAmount ? '#dc2626' : '#0f172a'}` }}>
                 <option value="">Choose account...</option>
                 {banks.map(bank => (
-                  <option key={bank.id} value={bank.id}>
-                    {bank.name} — ₱{bank.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                  <option key={bank.id} value={bank.id} disabled={bank.balance < numericAmount}>
+                    {bank.name} — ₱{bank.balance.toLocaleString('en-PH', { minimumFractionDigits: 2 })}{bank.balance < numericAmount ? ' ⚠️ Low balance' : ''}
                   </option>
                 ))}
               </select>
+              {payNowBank && (() => {
+                const sel = banks.find(b => b.id === payNowBank)
+                if (sel && sel.balance < numericAmount) {
+                  return (
+                    <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>⚠️</span>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', margin: 0 }}>
+                        Your balance is low. Please choose an account that is not below the required amount.
+                      </p>
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </div>
 
             <div style={{ marginBottom: 16 }}>

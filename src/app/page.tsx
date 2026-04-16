@@ -110,6 +110,7 @@ function DashboardPageInner() {
   const [sahodExtra,   setSahodExtra]   = useState("");
   const [sahodSaving,  setSahodSaving]  = useState(false);
   const [sahodBankId,  setSahodBankId]  = useState<string>("");
+  const [dashReceiptItem, setDashReceiptItem] = useState<BudgetItem | null>(null);
 
   // Bank modal
   const [showBankForm,    setShowBankForm]    = useState(false);
@@ -159,7 +160,26 @@ function DashboardPageInner() {
   setItems(itemRes.data || []);
   
   // Build banks map
-  const banksList = bankRes.data || [];
+  let banksList = bankRes.data || [];
+
+  // Auto-create CASH account if not present
+  const hasCash = banksList.some(b => b.type === 'cash' && b.name === 'Cash');
+  if (!hasCash) {
+    const { data: cashAcct } = await supabase.from('bank_accounts').insert({
+      user_id: user.id,
+      name: 'Cash',
+      type: 'cash',
+      balance: 0,
+      color: '#16a34a',
+      category: 'Cash',
+      is_active: true,
+      sort_order: 0,
+      is_main_bank: false,
+      is_required: true,
+    }).select().single();
+    if (cashAcct) banksList = [cashAcct, ...banksList];
+  }
+
   setBanks(banksList);
   const bmap: Record<string, string> = {};
   for (const b of banksList) bmap[b.id] = b.name;
@@ -342,6 +362,11 @@ function DashboardPageInner() {
   }
 
   function askDeleteBank(id: string, name: string) {
+    const bank = banks.find(b => b.id === id);
+    if (bank?.is_required || bank?.name === 'Cash') {
+      alert('The Cash account is required and cannot be deleted.');
+      return;
+    }
     setConfirmBankId(id); setConfirmBankName(name); setConfirmBankOpen(true);
   }
 
@@ -377,7 +402,7 @@ function DashboardPageInner() {
 
   /* ─────────────── shared button style ─────────────── */
   const sahodBtnStyle: React.CSSProperties = {
-    background: "#2563EB", color: "white", border: "none", borderRadius: 10,
+    background: "#2563EB", color: "white", border: "none", borderRadius: 999,
     padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer",
     display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
   };
@@ -505,16 +530,19 @@ function DashboardPageInner() {
         {(() => {
           const bank = banks.find(b => b.id === openCardMenu);
           if (!bank) return null;
+          const isCashRequired = bank.is_required || bank.name === 'Cash';
           return (
             <>
               <button onClick={(e) => { e.stopPropagation(); setEditBank(bank); setShowBankForm(true); setOpenCardMenu(null); }}
-                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9" }}>
+                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: isCashRequired ? "none" : "1px solid #f1f5f9", fontFamily: "'Poppins', sans-serif" }}>
                 <Edit2 size={13} color="#2563EB" /> Edit Account
               </button>
-              <button onClick={(e) => { e.stopPropagation(); askDeleteBank(bank.id, bank.name); setOpenCardMenu(null); }}
-                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#dc2626", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                <Trash2 size={13} color="#dc2626" /> Delete Account
-              </button>
+              {!isCashRequired && (
+                <button onClick={(e) => { e.stopPropagation(); askDeleteBank(bank.id, bank.name); setOpenCardMenu(null); }}
+                  style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#dc2626", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, fontFamily: "'Poppins', sans-serif" }}>
+                  <Trash2 size={13} color="#dc2626" /> Delete Account
+                </button>
+              )}
             </>
           );
         })()}
@@ -674,7 +702,7 @@ function DashboardPageInner() {
 
         {/* Header */}
         <div style={{ background: "#1a237e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Monthly Payments</span>
+          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Cutoff Payments</span>
           <span style={{ background: "rgba(255,255,255,0.18)", color: "white", borderRadius: 20, padding: "3px 13px", fontSize: 12, fontWeight: 700 }}>
             {cutoffItems.length} Items
           </span>
@@ -682,7 +710,7 @@ function DashboardPageInner() {
             onClick={() => setPaymentsHidden(v => { const next = !v; try { localStorage.setItem("paymentsHidden", String(next)); } catch {} return next; })}
             style={{ background: "#2563EB", color: "white", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
             {paymentsHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-            {paymentsHidden ? "Show All Payments" : "Hide All Payments"}
+            {paymentsHidden ? "Show All" : "Hide All"}
           </button>
         </div>
 
@@ -725,78 +753,19 @@ function DashboardPageInner() {
         {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
       </span>
 
-      {/* Paid? Button (only if not paid) */}
-      {!isPaid && (
-        <button
-          onClick={() => setPayConfirmItem(item)}
-          style={{
-            flexShrink: 0,
-            background: "#2563EB",
-            color: "white",
-            border: 'none',
-            borderRadius: 20, 
-            padding: "7px 14px", 
-            fontSize: 12, 
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex", 
-            alignItems: "center", 
-            gap: 4, 
-            whiteSpace: "nowrap",
-          }}>
-          <Check size={12} /> Paid?
-        </button>
+      {/* Paid badge (if paid) */}
+      {isPaid && (
+        <span style={{ background: "#dcfce7", color: "#16a34a", border: "1.5px solid #16a34a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <Check size={11} /> Paid
+        </span>
       )}
 
-      {/* Paid Badge (if paid) */}
-      {isPaid && (() => {
-        const rowReceipt = getMonthReceipt(item.id, viewMonth + 1);
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <span style={{ 
-              background: "#dcfce7", 
-              color: "#16a34a", 
-              border: "1.5px solid #16a34a",
-              borderRadius: 999, 
-              padding: "7px 14px", 
-              fontSize: 12, 
-              fontWeight: 700,
-              display: "flex", 
-              alignItems: "center", 
-              gap: 4 
-            }}>
-              <Check size={12} /> Paid
-            </span>
-            {rowReceipt && (
-              <a href={rowReceipt} target="_blank" rel="noreferrer"
-                title="View Receipt"
-                style={{ width: 30, height: 30, borderRadius: '50%', background: '#fffbeb', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}>
-                <ReceiptText size={13} color="#d97706" />
-              </a>
-            )}
-          </div>
-        );
-      })()}
-
-      {/* 3-Dot Menu - Matches Loans Page Style */}
+      {/* 3-Dot Menu */}
 <div style={{ position: 'relative' }}>
   <button
     id={`dashboard-item-menu-btn-${item.id}`}
     onClick={(e) => { e.stopPropagation(); setOpenItemMenu(openItemMenu === item.id ? null : item.id) }}
-    style={{ 
-      background: '#F1F5F9', 
-      border: '1.5px solid #E2E8F0', 
-      borderRadius: '50%', 
-      width: 34, 
-      height: 34, 
-      cursor: 'pointer', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      gap: 2, 
-      flexShrink: 0 
-    }}
-  >
+    style={{ background: '#F1F5F9', border: '1.5px solid #E2E8F0', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
     {[0,1,2].map(i => <span key={i} style={{ width: 3.5, height: 3.5, borderRadius: '50%', background: '#64748B', display: 'block' }} />)}
   </button>
 </div>
@@ -813,22 +782,33 @@ function DashboardPageInner() {
   {(() => {
     const activeItem = cutoffItems.find(item => item.id === openItemMenu)
     if (!activeItem) return null
+    const activeIsPaid = isMonthPaid(activeItem.id, viewMonth + 1)
+    const activeReceipt = getMonthReceipt(activeItem.id, viewMonth + 1)
     return (
       <>
-        <button 
-          onClick={() => { 
+        {!activeIsPaid && (
+          <button
+            onClick={() => { setOpenItemMenu(null); setPayConfirmItem(activeItem); }}
+            style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 700, color: '#2563EB', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
+            <Check size={14} color="#2563EB" /> Mark as Paid
+          </button>
+        )}
+        <button
+          onClick={() => { setOpenItemMenu(null); setDashReceiptItem(activeItem); }}
+          disabled={!activeReceipt}
+          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: activeReceipt ? '#d97706' : 'var(--text-faint)', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: activeReceipt ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, opacity: activeReceipt ? 1 : 0.5, fontFamily: "'Poppins', sans-serif" }}>
+          <ReceiptText size={14} color={activeReceipt ? '#d97706' : '#94a3b8'} /> View Receipt
+        </button>
+        <button
+          onClick={() => {
             setOpenItemMenu(null);
-            if (activeItem.is_loan) {
-              router.push(`/loans?action=edit&id=${activeItem.id}`);
-            } else {
-              router.push(`/budget?action=edit&id=${activeItem.id}`);
-            }
+            if (activeItem.is_loan) router.push(`/loans?action=edit&id=${activeItem.id}`);
+            else router.push(`/budget?action=edit&id=${activeItem.id}`);
           }}
-          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
-        >
+          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#2563EB', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
           <Edit2 size={14} color="#2563EB" /> Edit {activeItem.is_loan ? 'Loan' : 'Expense'}
         </button>
-        <button 
+        <button
           onClick={async () => {
             setOpenItemMenu(null);
             if (confirm(`Delete "${activeItem.name}"? This cannot be undone.`)) {
@@ -836,8 +816,7 @@ function DashboardPageInner() {
               setItems(prev => prev.filter(i => i.id !== activeItem.id));
             }
           }}
-          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8 }}
-        >
+          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
           <Trash2 size={14} color="#dc2626" /> Delete
         </button>
       </>
@@ -1000,12 +979,28 @@ function DashboardPageInner() {
                   <select
                     value={paySelectedBank}
                     onChange={(e) => setPaySelectedBank(e.target.value)}
-                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontSize: 14, border: "1.5px solid #0f172a", background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }}>
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontSize: 14, border: `1.5px solid ${paySelectedBank && banks.find(b => b.id === paySelectedBank) && banks.find(b => b.id === paySelectedBank)!.balance < payConfirmItem.amount ? '#dc2626' : '#0f172a'}`, background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }}>
                     <option value="">Select bank account...</option>
                     {banks.map(bank => (
-                      <option key={bank.id} value={bank.id}>{bank.name} — {formatCurrency(bank.balance)}</option>
+                      <option key={bank.id} value={bank.id} disabled={bank.balance < payConfirmItem.amount}>
+                        {bank.name} — {formatCurrency(bank.balance)}{bank.balance < payConfirmItem.amount ? ' ⚠️ Low balance' : ''}
+                      </option>
                     ))}
                   </select>
+                  {paySelectedBank && (() => {
+                    const sel = banks.find(b => b.id === paySelectedBank);
+                    if (sel && sel.balance < payConfirmItem.amount) {
+                      return (
+                        <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                          <span style={{ fontSize: 16, lineHeight: 1, marginTop: 1 }}>⚠️</span>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', margin: 0 }}>
+                            Your balance is low. Please choose an account that is not below the required amount.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div style={{ margin: "0 20px 12px" }}>
                   <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>
@@ -1052,11 +1047,13 @@ function DashboardPageInner() {
                     onClick={() => {
                       const bankId = paySelectedBank || payConfirmItem.bank_account_id;
                       if (!bankId) { alert("Please select a bank account"); return; }
+                      const sel = banks.find(b => b.id === bankId);
+                      if (sel && sel.balance < payConfirmItem.amount) { return; }
                       const fee = parseFloat(payTransferFee) || 0;
                       void togglePayment(payConfirmItem, bankId, payConfirmItem.amount + fee, receiptFile);
                     }}
-                    disabled={!paySelectedBank && !payConfirmItem.bank_account_id}
-                    style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1 }}>
+                    disabled={!paySelectedBank && !payConfirmItem.bank_account_id || !!(() => { const sel = banks.find(b => b.id === (paySelectedBank || payConfirmItem.bank_account_id)); return sel && sel.balance < payConfirmItem.amount; })()}
+                    style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) || (() => { const sel = banks.find(b => b.id === (paySelectedBank || payConfirmItem.bank_account_id)); return !!(sel && sel.balance < payConfirmItem.amount); })() ? 0.4 : 1 }}>
                     Confirm & Deduct
                   </button>
                 </div>
@@ -1167,6 +1164,58 @@ function DashboardPageInner() {
         onConfirm={doDeleteBank}
         onCancel={() => { setConfirmBankOpen(false); setConfirmBankId(null); }}
       />
+
+      {/* ═══ DASHBOARD RECEIPT MODAL ══════════════════════════════════════ */}
+      {dashReceiptItem && (() => {
+        const allReceipts = items
+          .map(item => ({ item, url: getMonthReceipt(item.id, viewMonth + 1) }))
+          .filter(e => e.url)
+          .sort((a, b) => (a.item.id === dashReceiptItem.id ? -1 : b.item.id === dashReceiptItem.id ? 1 : a.item.name.localeCompare(b.item.name)))
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
+            <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.2)', maxHeight: '88vh' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1.5px solid #d97706', background: '#fffbeb', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ReceiptText size={16} color="#d97706" />
+                  </div>
+                  <div>
+                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Receipts</h2>
+                    <p style={{ fontSize: 11, color: '#d97706', margin: '2px 0 0' }}>All uploaded receipts</p>
+                  </div>
+                </div>
+                <button onClick={() => setDashReceiptItem(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={15} color="#d97706" />
+                </button>
+              </div>
+              <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {allReceipts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)' }}>
+                    <ReceiptText size={32} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipts uploaded yet</p>
+                  </div>
+                ) : allReceipts.map(({ item, url }) => (
+                  <div key={item.id} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${item.id === dashReceiptItem.id ? '#d97706' : 'var(--border)'}`, background: 'white', boxShadow: item.id === dashReceiptItem.id ? '0 0 0 3px rgba(217,119,6,0.1)' : 'none' }}>
+                    <div style={{ padding: '10px 14px', background: item.id === dashReceiptItem.id ? '#fffbeb' : 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{item.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{formatCurrency(item.amount)}</p>
+                      </div>
+                      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>Open ↗</a>
+                    </div>
+                    <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                      <img src={url} alt={`${item.name} receipt`} style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                <button onClick={() => setDashReceiptItem(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', border: 'none', cursor: 'pointer' }}>Close</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   );
 }

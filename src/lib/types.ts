@@ -150,4 +150,5 @@ export interface BankAccount {
   is_active: boolean
   sort_order: number
   is_main_bank: boolean
+  is_required?: boolean
 }

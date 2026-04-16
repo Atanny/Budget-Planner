@@ -453,12 +453,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
           </span>
           {(() => {
             const rowReceipt = getMonthReceipt(item.id, viewMonth1);
-            return rowReceipt ? (
-              <a href={rowReceipt} target="_blank" rel="noreferrer" title="View Receipt"
-                style={{ width: 30, height: 30, borderRadius: '50%', background: '#fffbeb', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}>
-                <ReceiptText size={13} color="#d97706" />
-              </a>
-            ) : null;
+            return rowReceipt ? null : null; // receipt now shown via 3-dot menu
           })()}
           <div style={{ position: 'relative' }}>
             <button
@@ -484,20 +479,20 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
           {(() => {
             const activeItem = sortedItems.find(item => item.id === openItemMenu)
             if (!activeItem) return null
-            const hasMonthReceipts = allItems.some(item => !!getMonthReceipt(item.id, viewMonth1))
+            const itemReceipt = getMonthReceipt(activeItem.id, viewMonth1)
             return (
               <>
                 <button onClick={() => { setReceiptModalItem(activeItem); setOpenItemMenu(null) }}
-                  disabled={!hasMonthReceipts}
-                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: hasMonthReceipts ? '#16a34a' : 'var(--text-faint)', background: 'white', border: 'none', cursor: hasMonthReceipts ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', opacity: hasMonthReceipts ? 1 : 0.65 }}>
-                  <Eye size={13} color={hasMonthReceipts ? '#16a34a' : '#94a3b8'} /> View Receipts
+                  disabled={!itemReceipt}
+                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: itemReceipt ? '#d97706' : 'var(--text-faint)', background: 'white', border: 'none', cursor: itemReceipt ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', opacity: itemReceipt ? 1 : 0.5, fontFamily: "'Poppins', sans-serif" }}>
+                  <ReceiptText size={13} color={itemReceipt ? '#d97706' : '#94a3b8'} /> View Receipt
                 </button>
                 <button onClick={() => { setEditItem(activeItem); setEditCutoff(activeItem.cutoff); setShowAdd(true); setOpenItemMenu(null) }}
-                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#1e40af', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9' }}>
+                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#1e40af', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}>
                   <Edit2 size={13} color="#2563EB" /> Edit
                 </button>
                 <button onClick={() => { askDeleteItem(activeItem); setOpenItemMenu(null) }}
-                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: "'Poppins', sans-serif" }}>
                   <Trash2 size={13} color="#dc2626" /> Delete
                 </button>
               </>
@@ -613,48 +608,60 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
       {extendLoan && <ExtendLoanModal loan={extendLoan} onClose={() => setExtendLoan(null)} onSave={async () => { setExtendLoan(null); await load() }} />}
       <ConfirmModal isOpen={confirmOpen} title="Delete Item" message={`Remove "${confirmItem?.name}" from your budget? This cannot be undone.`} confirmLabel="Delete" onConfirm={doDeleteItem} onCancel={() => { setConfirmOpen(false); setConfirmItem(null) }} />
 
-      {receiptModalItem && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
-          <div className="w-full max-w-2xl slide-up rounded-2xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
-            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: '#93c5fd', background: '#eff6ff' }}>
-              <div>
-                <h2 className="font-bold" style={{ color: 'var(--text-primary)', margin: 0 }}>Receipts · {MONTHS_LONG[viewMonth]} {viewYear}</h2>
-                <p style={{ fontSize: 12, color: 'var(--accent)', margin: '4px 0 0' }}>Showing all uploaded receipts for this month.</p>
-              </div>
-              <button onClick={() => setReceiptModalItem(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#dbeafe', border: '1.5px solid #93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#1d4ed8', fontSize: 16, fontWeight: 700, flexShrink: 0 }}>✕</button>
-            </div>
-            <div style={{ padding: 20, maxHeight: '72vh', overflowY: 'auto' }}>
-              <div className="grid gap-4 md:grid-cols-2">
-                {allItems
-                  .map(item => ({ item, receiptUrl: getMonthReceipt(item.id, viewMonth1) }))
-                  .filter(entry => entry.receiptUrl)
-                  .sort((a, b) => (a.item.id === receiptModalItem.id ? -1 : b.item.id === receiptModalItem.id ? 1 : a.item.name.localeCompare(b.item.name)))
-                  .map(({ item, receiptUrl }) => (
-                    <div key={item.id} style={{ border: `1.5px solid ${item.id === receiptModalItem.id ? '#2563EB' : 'var(--border)'}`, borderRadius: 16, overflow: 'hidden', background: 'white', boxShadow: item.id === receiptModalItem.id ? '0 0 0 3px rgba(37,99,235,0.08)' : 'none' }}>
-                      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', background: item.id === receiptModalItem.id ? '#eff6ff' : 'var(--bg-subtle)' }}>
-                        <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{item.name}</p>
-                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{formatCurrency(item.amount)}</p>
-                      </div>
-                      <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ display: 'block', background: '#f8fafc' }}>
-                        <img src={receiptUrl} alt={`${item.name} receipt`} style={{ width: '100%', height: 220, objectFit: 'contain', background: 'white' }} />
-                      </a>
-                      <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Receipt attached</span>
-                        <a href={receiptUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 700, color: '#2563EB' }}>Open full image</a>
-                      </div>
-                    </div>
-                  ))}
-                {!allItems.some(item => !!getMonthReceipt(item.id, viewMonth1)) && (
-                  <div style={{ gridColumn: '1 / -1', padding: '28px 18px', borderRadius: 16, border: '1.5px dashed var(--border-strong)', background: 'var(--bg-subtle)', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>No receipts uploaded for {MONTHS_LONG[viewMonth]} yet.</p>
-                    <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>Receipts added when marking an expense as paid will appear here.</p>
+      {receiptModalItem && (() => {
+        const allReceipts = allItems
+          .map(item => ({ item, url: getMonthReceipt(item.id, viewMonth1) }))
+          .filter(e => e.url)
+          .sort((a, b) => (a.item.id === receiptModalItem.id ? -1 : b.item.id === receiptModalItem.id ? 1 : a.item.name.localeCompare(b.item.name)))
+        return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center modal-overlay p-4">
+            <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.2)', maxHeight: '88vh' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1.5px solid #d97706', background: '#fffbeb', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ReceiptText size={16} color="#d97706" />
                   </div>
-                )}
+                  <div>
+                    <h2 style={{ fontWeight: 700, fontSize: 15, color: '#92400e', margin: 0 }}>Receipts</h2>
+                    <p style={{ fontSize: 11, color: '#d97706', margin: '2px 0 0' }}>{MONTHS_LONG[viewMonth]} {viewYear}</p>
+                  </div>
+                </div>
+                <button onClick={() => setReceiptModalItem(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', border: '1.5px solid #d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <span style={{ fontSize: 16, color: '#d97706', fontWeight: 700, lineHeight: 1 }}>✕</span>
+                </button>
+              </div>
+              <div style={{ overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {allReceipts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-faint)' }}>
+                    <ReceiptText size={32} style={{ margin: '0 auto 10px', opacity: 0.3 }} />
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>No receipts uploaded yet</p>
+                  </div>
+                ) : allReceipts.map(({ item, url }) => (
+                  <div key={item.id} style={{ borderRadius: 14, overflow: 'hidden', border: `1.5px solid ${item.id === receiptModalItem.id ? '#d97706' : 'var(--border)'}`, background: 'white', boxShadow: item.id === receiptModalItem.id ? '0 0 0 3px rgba(217,119,6,0.1)' : 'none' }}>
+                    <div style={{ padding: '10px 14px', background: item.id === receiptModalItem.id ? '#fffbeb' : 'var(--bg-subtle)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', margin: 0 }}>{item.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>{formatCurrency(item.amount)}</p>
+                      </div>
+                      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#2563eb', textDecoration: 'none', padding: '5px 10px', borderRadius: 999, background: '#eff6ff', border: '1px solid #93c5fd' }}>
+                        Open ↗
+                      </a>
+                    </div>
+                    <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                      <img src={url} alt={`${item.name} receipt`} style={{ width: '100%', maxHeight: 200, objectFit: 'contain', background: '#f8fafc', display: 'block' }} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                <button onClick={() => setReceiptModalItem(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Close
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {payConfirmItem && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(8px)' }}>
@@ -668,10 +675,26 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
             </div>
             <div style={{ margin: '0 20px 12px' }}>
               <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: 'block', color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Deduct from which account?</label>
-              <select value={paySelectedBank} onChange={e => setPaySelectedBank(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 12, fontSize: 14, border: '1.5px solid #0f172a', background: 'var(--bg-subtle)', color: 'var(--text-primary)', outline: 'none' }}>
+              <select value={paySelectedBank} onChange={e => setPaySelectedBank(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 12, fontSize: 14, border: `1.5px solid ${paySelectedBank && banks.find(b => b.id === paySelectedBank) && banks.find(b => b.id === paySelectedBank)!.balance < payConfirmItem.amount ? '#dc2626' : '#0f172a'}`, background: 'var(--bg-subtle)', color: 'var(--text-primary)', outline: 'none' }}>
                 <option value="">Select bank account...</option>
-                {banks.map(bank => <option key={bank.id} value={bank.id}>{bank.name} — {formatCurrency(bank.balance)}</option>)}
+                {banks.map(bank => (
+                  <option key={bank.id} value={bank.id} disabled={bank.balance < payConfirmItem.amount}>
+                    {bank.name} — {formatCurrency(bank.balance)}{bank.balance < payConfirmItem.amount ? ' ⚠️ Low balance' : ''}
+                  </option>
+                ))}
               </select>
+              {paySelectedBank && (() => {
+                const sel = banks.find(b => b.id === paySelectedBank)
+                if (sel && sel.balance < payConfirmItem.amount) {
+                  return (
+                    <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <span style={{ fontSize: 16, lineHeight: 1, marginTop: 1 }}>⚠️</span>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#dc2626', margin: 0 }}>Your balance is low. Please choose an account that is not below the required amount.</p>
+                    </div>
+                  )
+                }
+                return null
+              })()}
             </div>
             <div style={{ margin: '0 20px 12px' }}>
               <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: 'block', color: 'var(--text-secondary)' }}>Transfer Fee <span style={{ fontWeight: 400, color: 'var(--text-faint)' }}>(optional)</span></label>
@@ -713,13 +736,15 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
                 const item = payConfirmItem
                 const bankId = paySelectedBank || item.bank_account_id
                 if (!bankId) { alert('Please select a bank account'); return }
+                const sel = banks.find(b => b.id === bankId)
+                if (sel && sel.balance < item.amount) { return }
                 const fee = parseFloat(payTransferFee) || 0
                 const totalDeduct = item.amount + fee
                 const rf = payReceiptFile
                 setPayConfirmItem(null); setPaySelectedBank(''); setPayTransferFee(''); setPayReceiptFile(null); setPayReceiptPreview(null)
                 await toggleCurrentMonthWithFee(item, bankId, totalDeduct, rf)
-              }} disabled={!paySelectedBank && !payConfirmItem.bank_account_id}
-                style={{ padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #2563EB, #1d4ed8)', color: 'white', border: 'none', cursor: 'pointer', opacity: (!paySelectedBank && !payConfirmItem.bank_account_id) ? 0.5 : 1, fontFamily: "'Poppins', sans-serif" }}>Yes, Mark Paid</button>
+              }} disabled={(!paySelectedBank && !payConfirmItem.bank_account_id) || !!(() => { const sel = banks.find(b => b.id === (paySelectedBank || payConfirmItem.bank_account_id)); return sel && sel.balance < payConfirmItem.amount; })()}
+                style={{ padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #2563EB, #1d4ed8)', color: 'white', border: 'none', cursor: 'pointer', opacity: ((!paySelectedBank && !payConfirmItem.bank_account_id) || !!(() => { const sel = banks.find(b => b.id === (paySelectedBank || payConfirmItem.bank_account_id)); return sel && sel.balance < payConfirmItem.amount; })()) ? 0.4 : 1, fontFamily: "'Poppins', sans-serif" }}>Yes, Mark Paid</button>
             </div>
           </div>
         </div>
