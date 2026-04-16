@@ -1,6 +1,18 @@
 export type Cutoff = '1st' | '2nd'
 export type PaymentStatus = 'Required' | 'Optional' | 'First Payment' | 'Last Payment' | 'Once' | 'Suspended' | 'Paid'
 
+export interface SalaryHistory {
+  id: string
+  user_id: string
+  year: number
+  month: number   // 1-12
+  first_cutoff_salary: number
+  second_cutoff_salary: number
+  extra_income_1st: number
+  extra_income_2nd: number
+  savings_goal: number
+}
+
 export interface UserSettings {
   extra_income_1st: number
   extra_income_2nd: number

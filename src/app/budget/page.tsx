@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRef } from "react";
 import { useSearchParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { BudgetItem, Cutoff, UserSettings, TransactionLog, EXPENSE_CATEGORIES, BankAccount, MONTHS } from '@/lib/types'
+import { BudgetItem, Cutoff, UserSettings, SalaryHistory, TransactionLog, EXPENSE_CATEGORIES, BankAccount, MONTHS } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
 import { Edit2, Trash2, Check, PiggyBank, CreditCard, TrendingUp, RefreshCw, ChevronLeft, ChevronRight, EyeOff, Eye, Download, ReceiptText, Upload } from 'lucide-react'
 import AddItemModal from '@/components/AddItemModal'
@@ -122,6 +122,7 @@ function BudgetPageInner() {
   const [extendLoan,     setExtendLoan]     = useState<BudgetItem | null>(null)
   const [showEditLoan,   setShowEditLoan]   = useState(false)
   const [editLoanItem,   setEditLoanItem]   = useState<BudgetItem | null>(null)
+  const [salaryHistory,  setSalaryHistory]  = useState<SalaryHistory | null>(null)
   const [savingsCheck1st, setSavingsCheck1st] = useState(false)
   const [savingsCheck2nd, setSavingsCheck2nd] = useState(false)
   const [confirmOpen,    setConfirmOpen]    = useState(false)
@@ -150,15 +151,18 @@ function BudgetPageInner() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
     setUserId(user.id)
-    const [itemRes, payRes, settRes, logRes, bankRes] = await Promise.all([
+    const [itemRes, payRes, settRes, logRes, bankRes, salHistRes] = await Promise.all([
       supabase.from('budget_items').select('*, loan_details(*)').eq('user_id', user.id).eq('is_active', true).order('sort_order'),
       supabase.from('monthly_payments').select('*').eq('user_id', user.id).eq('year', viewYear),
       supabase.from('user_settings').select('*').eq('user_id', user.id).single(),
       supabase.from('transaction_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50),
       supabase.from('bank_accounts').select('*').eq('user_id', user.id).eq('is_active', true),
+      supabase.from('salary_history').select('*').eq('user_id', user.id).eq('year', viewYear).eq('month', viewMonth + 1).maybeSingle(),
     ])
     setItems(itemRes.data || [])
     setSettings(settRes.data)
+    // Use month-specific salary if exists, otherwise fall back to user_settings
+    setSalaryHistory(salHistRes.data ?? null)
     setLogs(logRes.data || [])
     const bmap: Record<string, string> = {}
     const banksList: BankAccount[] = bankRes.data || []
@@ -282,13 +286,15 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
     const bLabel = EXPENSE_CATEGORIES.find(c => c.value === b.category)?.label || b.category
     return aLabel.localeCompare(bLabel)
   })
-  const salary1st   = settings?.first_cutoff_salary  || 0
-  const salary2nd   = settings?.second_cutoff_salary || 0
-  const extra1st    = settings?.extra_income_1st || 0
-  const extra2nd    = settings?.extra_income_2nd || 0
+  // Use month-specific salary if saved, otherwise fall back to global user_settings
+  const activeSalary = salaryHistory ?? settings
+  const salary1st   = activeSalary?.first_cutoff_salary  || 0
+  const salary2nd   = activeSalary?.second_cutoff_salary || 0
+  const extra1st    = activeSalary?.extra_income_1st || 0
+  const extra2nd    = activeSalary?.extra_income_2nd || 0
+  const savingsGoal = activeSalary?.savings_goal || 0
   const totalIncome = (salary1st + extra1st) + (salary2nd + extra2nd)
   const totalExpenses = allItems.reduce((s, i) => s + i.amount, 0)
-  const savingsGoal = settings?.savings_goal || 0
   const totalSavings = (savingsCheck1st ? savingsGoal : 0) + (savingsCheck2nd ? savingsGoal : 0)
   const remaining   = totalIncome - totalExpenses - totalSavings
 
@@ -603,7 +609,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
 
       {/* Modals */}
       {showAdd && <AddItemModal defaultCutoff={editCutoff} editItem={editItem} banks={banks} onClose={() => { setShowAdd(false); setEditItem(null) }} onSave={async (savedItem?: BudgetItem) => { setShowAdd(false); setEditItem(null); await load(); if (savedItem && userId) { const action = editItem ? 'edit' : 'add'; const payMethod = savedItem.bank_account_id ? banksMap[savedItem.bank_account_id] : undefined; await logAction(action, savedItem, payMethod); const { data } = await supabase.from('transaction_logs').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(50); setLogs(data || []) } }} />}
-      {showSalary && <EditSalaryModal settings={settings} onClose={() => setShowSalary(false)} onSave={s => { setSettings(s); setShowSalary(false) }} />}
+      {showSalary && <EditSalaryModal settings={settings} salaryHistory={salaryHistory} viewMonth={viewMonth} viewYear={viewYear} onClose={() => setShowSalary(false)} onSave={(hist) => { setSalaryHistory(hist); setShowSalary(false) }} />}
       {showEditLoan && <AddLoanModal editItem={editLoanItem} onClose={() => { setShowEditLoan(false); setEditLoanItem(null) }} onSave={() => { setShowEditLoan(false); setEditLoanItem(null); load() }} />}
       {extendLoan && <ExtendLoanModal loan={extendLoan} onClose={() => setExtendLoan(null)} onSave={async () => { setExtendLoan(null); await load() }} />}
       <ConfirmModal isOpen={confirmOpen} title="Delete Item" message={`Remove "${confirmItem?.name}" from your budget? This cannot be undone.`} confirmLabel="Delete" onConfirm={doDeleteItem} onCancel={() => { setConfirmOpen(false); setConfirmItem(null) }} />

@@ -168,11 +168,11 @@ export default function SavingsPage() {
                 <div style={{ display: 'flex', gap: 6 }}>
                   {isEditing ? (
                     <>
-                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: "50%", background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
-                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: "50%", background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
+                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
+                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
                     </>
                   ) : (
-                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: "50%", background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
+                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
                   )}
                 </div>
               </div>

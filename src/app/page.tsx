@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import {
   BudgetItem,
   UserSettings,
+  SalaryHistory,
   BankAccount,
   BANK_TYPES,
   Cutoff,
@@ -79,8 +80,9 @@ function DashboardPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [settings,  setSettings]  = useState<UserSettings | null>(null);
-  const [items,     setItems]     = useState<BudgetItem[]>([]);
+  const [settings,      setSettings]      = useState<UserSettings | null>(null);
+  const [salaryHistory, setSalaryHistory] = useState<SalaryHistory | null>(null);
+  const [items,         setItems]         = useState<BudgetItem[]>([]);
   const [payments,  setPayments]  = useState<PaymentState>({});
   const [banks,     setBanks]     = useState<BankAccount[]>([]);
   const [banksMap,  setBanksMap]  = useState<Record<string, string>>({});
@@ -149,14 +151,16 @@ function DashboardPageInner() {
   const meta = user.user_metadata as Record<string,string> | undefined;
   setUserName(meta?.full_name || meta?.name || user.email?.split("@")[0] || "User");
 
-  const [settRes, itemRes, payRes, bankRes] = await Promise.all([
+  const [settRes, itemRes, payRes, bankRes, salHistRes] = await Promise.all([
     supabase.from("user_settings").select("*").eq("user_id", user.id).single(),
     supabase.from("budget_items").select("*, loan_details(*)").eq("user_id", user.id).eq("is_active", true),
     supabase.from("monthly_payments").select("*").eq("user_id", user.id).eq("year", viewYear),
     supabase.from("bank_accounts").select("*").eq("user_id", user.id).eq("is_active", true).order("sort_order"),
+    supabase.from("salary_history").select("*").eq("user_id", user.id).eq("year", viewYear).eq("month", viewMonth + 1).maybeSingle(),
   ]);
 
   setSettings(settRes.data);
+  setSalaryHistory(salHistRes.data ?? null);
   setItems(itemRes.data || []);
   
   // Build banks map
@@ -328,24 +332,75 @@ function DashboardPageInner() {
     const amt   = parseFloat(sahodAmount);
     const extra = parseFloat(sahodExtra) || 0;
     const total = amt + extra;
+
+    // Determine target bank — default to main bank if none selected
     const targetBank = banks.find(b => b.id === sahodBankId) || banks.find(b => b.is_main_bank);
     if (targetBank) {
       const newBal = targetBank.balance + total;
       await supabase.from("bank_accounts").update({ balance: newBal }).eq("id", targetBank.id);
       setBanks(prev => prev.map(b => b.id === targetBank.id ? { ...b, balance: newBal } : b));
     }
-    const prevTotal = settings?.total_salary_received || 0;
-    const salaryField = sahodCutoff === "1st" ? "first_cutoff_salary" : "second_cutoff_salary";
-    const extraField  = sahodCutoff === "1st" ? "extra_income_1st"    : "extra_income_2nd";
-    await supabase.from("user_settings").update({
-      total_salary_received: prevTotal + total, [salaryField]: amt, [extraField]: extra,
-    }).eq("user_id", userId);
-    setSettings(prev => prev ? { ...prev, total_salary_received: prevTotal + total, [salaryField]: amt, [extraField]: extra } : prev);
-    setSahodSaving(false); setShowSahod(false); setSahodAmount(""); setSahodExtra(""); setSahodBankId("");
-  }
 
-  // ── Bank CRUD ─────────────────────────────────────────────────────────────
-  async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string; is_main_bank: boolean }) {
+    // Only update salary figures when money goes into the MAIN bank account
+    if (targetBank?.is_main_bank) {
+      const prevTotal = settings?.total_salary_received || 0;
+
+      // Get the specific cutoff being paid (1st or 2nd)
+      const salaryField = sahodCutoff === "1st" ? "first_cutoff_salary" : "second_cutoff_salary";
+      const extraField  = sahodCutoff === "1st" ? "extra_income_1st"    : "extra_income_2nd";
+
+      // Get existing salary history for this month, or null if not exists
+      const { data: existingHist } = await supabase
+        .from("salary_history")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("year", viewYear)
+        .eq("month", viewMonth + 1)
+        .maybeSingle();
+
+      // Build the payload - ONLY update the specific cutoff being paid
+      // Keep the other cutoff's value from existing history or settings
+      const histPayload = {
+        user_id:              userId,
+        year:                 viewYear,
+        month:                viewMonth + 1,
+        first_cutoff_salary:  salaryField === "first_cutoff_salary"  
+          ? amt 
+          : (existingHist?.first_cutoff_salary ?? settings?.first_cutoff_salary ?? 0),
+        second_cutoff_salary: salaryField === "second_cutoff_salary" 
+          ? amt 
+          : (existingHist?.second_cutoff_salary ?? settings?.second_cutoff_salary ?? 0),
+        extra_income_1st:     extraField === "extra_income_1st"     
+          ? extra 
+          : (existingHist?.extra_income_1st ?? settings?.extra_income_1st ?? 0),
+        extra_income_2nd:     extraField === "extra_income_2nd"     
+          ? extra 
+          : (existingHist?.extra_income_2nd ?? settings?.extra_income_2nd ?? 0),
+        savings_goal:         existingHist?.savings_goal ?? settings?.savings_goal ?? 500,
+      };
+
+      const { data: histData } = await supabase
+        .from("salary_history")
+        .upsert(histPayload, { onConflict: "user_id,year,month" })
+        .select()
+        .single();
+
+      // Only update the running total in user_settings — NOT the salary placeholder fields
+      await supabase.from("user_settings").update({
+        total_salary_received: prevTotal + total,
+      }).eq("user_id", userId);
+
+      setSalaryHistory(histData ?? null);
+      setSettings(prev => prev ? { ...prev, total_salary_received: prevTotal + total } : prev);
+    }
+    // If non-main bank: balance is updated above but salary totals stay unchanged
+
+    setSahodSaving(false); 
+    setShowSahod(false); 
+    setSahodAmount(""); 
+    setSahodExtra(""); 
+    setSahodBankId("");
+  }async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string; is_main_bank: boolean }) {
     if (!userId) return;
     if (bank.is_main_bank) {
       await supabase.from("bank_accounts").update({ is_main_bank: false }).eq("user_id", userId);
@@ -379,19 +434,21 @@ function DashboardPageInner() {
   }
 
   // ── Computed values ───────────────────────────────────────────────────────
-  const netWorth      = (settings?.first_cutoff_salary || 0) + (settings?.second_cutoff_salary || 0);
+  // Use month-specific salary_history if it exists, otherwise fall back to global user_settings default
+  const activeSalary  = salaryHistory ?? settings;
+  const netWorth      = (activeSalary?.first_cutoff_salary || 0) + (activeSalary?.second_cutoff_salary || 0);
   const mainBank      = banks.find(b => b.is_main_bank);
   const cutoffItems   = items.filter(i =>
     i.cutoff === activeTab &&
     i.status !== 'Suspended' &&
     isItemVisibleInMonth(i, viewMonth, viewYear)
   );
-  const salary        = activeTab === "1st" ? (settings?.first_cutoff_salary || 0) : (settings?.second_cutoff_salary || 0);
-  const extraIncome   = activeTab === "1st" ? (settings?.extra_income_1st || 0)    : (settings?.extra_income_2nd || 0);
+  const salary        = activeTab === "1st" ? (activeSalary?.first_cutoff_salary || 0) : (activeSalary?.second_cutoff_salary || 0);
+  const extraIncome   = activeTab === "1st" ? (activeSalary?.extra_income_1st || 0)    : (activeSalary?.extra_income_2nd || 0);
   const totalIncome   = salary + extraIncome;
   const totalExpenses = cutoffItems.reduce((s, i) => s + i.amount, 0);
   const savingsChecked = activeTab === "1st" ? savingsCheck1st : savingsCheck2nd;
-  const savingsGoal   = settings?.savings_goal || 0;
+  const savingsGoal   = activeSalary?.savings_goal || 0;
   const afterSavings  = totalIncome - totalExpenses - (savingsChecked ? savingsGoal : 0);
 
   if (loading) return (
@@ -702,7 +759,7 @@ function DashboardPageInner() {
 
         {/* Header */}
         <div style={{ background: "#1a237e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Cutoff Payments</span>
+          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Monthly Payments</span>
           <span style={{ background: "rgba(255,255,255,0.18)", color: "white", borderRadius: 20, padding: "3px 13px", fontSize: 12, fontWeight: 700 }}>
             {cutoffItems.length} Items
           </span>
@@ -710,7 +767,7 @@ function DashboardPageInner() {
             onClick={() => setPaymentsHidden(v => { const next = !v; try { localStorage.setItem("paymentsHidden", String(next)); } catch {} return next; })}
             style={{ background: "#2563EB", color: "white", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
             {paymentsHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-            {paymentsHidden ? "Show All" : "Hide All"}
+            {paymentsHidden ? "Show All Payments" : "Hide All Payments"}
           </button>
         </div>
 
@@ -1082,8 +1139,8 @@ function DashboardPageInner() {
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>Which Cutoff?</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {[{ label: "1st Cutoff (15th)", val: "1st" as const, salary: settings?.first_cutoff_salary || 0 },
-                    { label: "2nd Cutoff (30th)", val: "2nd" as const, salary: settings?.second_cutoff_salary || 0 }].map(opt => (
+                  {[{ label: "1st Cutoff (15th)", val: "1st" as const, salary: activeSalary?.first_cutoff_salary || 0 },
+                    { label: "2nd Cutoff (30th)", val: "2nd" as const, salary: activeSalary?.second_cutoff_salary || 0 }].map(opt => (
                     <button key={opt.val} onClick={() => { setSahodCutoff(opt.val); setSahodAmount(opt.salary.toString()); }}
                       style={{ padding: "10px 8px", borderRadius: 12, textAlign: "center", cursor: "pointer", background: sahodCutoff === opt.val ? "#dbeafe" : "var(--bg-subtle)", border: `1.5px solid ${sahodCutoff === opt.val ? "#93c5fd" : "var(--border)"}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                       <p style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>{opt.label}</p>
@@ -1111,6 +1168,21 @@ function DashboardPageInner() {
                     );
                   })}
                 </div>
+                {/* Non-main bank warning */}
+                {(() => {
+                  const selectedBank = banks.find(b => sahodBankId ? b.id === sahodBankId : b.is_main_bank);
+                  if (selectedBank && !selectedBank.is_main_bank) {
+                    return (
+                      <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: 10, background: "#fff7ed", border: "1.5px solid #fed7aa", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <span style={{ fontSize: 15, lineHeight: 1, marginTop: 1 }}>ℹ️</span>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: "#c2410c", margin: 0 }}>
+                          Balance will be added to <strong>{selectedBank.name}</strong>, but your <strong>salary figures won't update</strong> since this isn't your main account.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>Salary Amount (₱)</label>
