@@ -119,14 +119,16 @@ export default function NotificationsPage() {
   }
 
   // Call Supabase Edge Function to send the push
-  async function triggerPush(title: string, body: string, url?: string) {
+ async function triggerPush(title: string, body: string, url?: string) {
     if (!userId) return
     const { data: { session } } = await supabase.auth.getSession()
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     await fetch(SEND_PUSH_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
       },
       body: JSON.stringify({ user_id: userId, title, body, url }),
     })
