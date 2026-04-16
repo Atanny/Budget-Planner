@@ -638,8 +638,8 @@ function DashboardPageInner() {
                 </div>
                 <p style={{ color: "white", fontWeight: 700, fontSize: 15 }}>{bank.name}</p>
                 {bank.is_main_bank && (
-                  <span style={{ background: "white", color: "#1d4ed8", fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 12, whiteSpace: "nowrap", marginLeft: 2 }}>
-                    Main Account
+                  <span style={{ background: "rgba(255,255,255,0.18)", color: "white", borderRadius: 20, padding: "3px 13px", fontSize: 8, fontWeight: 700 }}>
+                    Main
                   </span>
                 )}
               </div>
@@ -679,30 +679,48 @@ function DashboardPageInner() {
       {/* ═══ FILTER ROW + MONTH NAV ════════════════════════════════════════ */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
         {/* Category legend dots — centered */}
-        <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-          {[
-            { label: "Loan",        color: "#7c3aed" },
-            { label: "Maintenance", color: "#f97316" },
-            { label: "Expense",     color: "#16a34a" },
-          ].map(f => (
-            <label key={f.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
-              <span style={{ width: 9, height: 9, borderRadius: "50%", background: f.color, display: "inline-block", flexShrink: 0 }} />
-              {f.label}
-            </label>
-          ))}
-        </div>
+        
         {/* Month navigator — month label left, chevrons grouped right */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative", overflow: "visible" }}>
-          <button ref={monthBtnRef} onClick={() => {
-              if (!showMonthPicker && monthBtnRef.current) {
-                const r = monthBtnRef.current.getBoundingClientRect();
-                setMonthPickerPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
-              }
-              setShowMonthPicker(v => !v);
-            }}
-            style={{ flex: 1, fontWeight: 700, fontSize: 16, color: "var(--text-primary)", textAlign: "left", background: showMonthPicker ? "#e0e7ff" : "transparent", border: showMonthPicker ? "1.5px solid #2563EB" : "1.5px solid transparent", borderRadius: 10, padding: "6px 8px", cursor: "pointer", transition: "all 0.15s" }}>
-            {MONTHS_LONG[viewMonth]} {viewYear !== CURRENT_YEAR ? viewYear : ""}
-          </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative", overflow: "visible", justifyContent:'end' }}>
+          <button
+  ref={monthBtnRef}
+  onClick={() => {
+    if (!showMonthPicker && monthBtnRef.current) {
+      const r = monthBtnRef.current.getBoundingClientRect()
+
+      setMonthPickerPos({
+        top: r.bottom + 8,
+        right: Math.max(8, window.innerWidth - r.right)
+      })
+    }
+    setShowMonthPicker(v => !v)
+  }}
+  style={{
+    display: "inline-flex",   // ✅ hug content
+    alignItems: "center",
+    fontWeight: 700,
+    fontSize: 16,
+    color: "var(--text-primary)",
+    textAlign: "left",
+
+    background: "#fff",       // ✅ always white bg
+    border: showMonthPicker
+      ? "1.5px solid #2563EB"
+      : "1.5px solid #E5E7EB",
+
+    borderRadius: 12,
+    padding: "8px 12px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+
+    width: "fit-content",     // ✅ hug content
+    whiteSpace: "nowrap",
+    gap: 6
+  }}
+>
+  {MONTHS_LONG[viewMonth]}{" "}
+  {viewYear !== CURRENT_YEAR ? viewYear : ""}
+</button>
           <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
             <button onClick={goToPrevMonth} style={{ width: 34, height: 34, borderRadius: "50%", background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <ChevronLeft size={17} />
@@ -713,26 +731,54 @@ function DashboardPageInner() {
           </div>
           {/* Month picker dropdown */}
           {showMonthPicker && (
-            <div style={{ position: "fixed", top: monthPickerPos.top, left: 16, right: 16, zIndex: 9999, background: "white", border: "1.5px solid #0f172a", borderRadius: 14, boxShadow: "0 8px 28px rgba(15,23,42,0.16)", overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
-                {MONTHS_LONG.map((m, i) => (
-                  <button key={m} onClick={() => { setLoading(true); setViewMonth(i); setShowMonthPicker(false); }}
-                    style={{
-                      padding: "12px 4px", fontSize: 13, fontWeight: i === viewMonth ? 800 : 500, cursor: "pointer", border: "none",
-                      background: i === viewMonth ? "#2563EB" : "white",
-                      color: i === viewMonth ? "white" : "var(--text-primary)",
-                      transition: "background 0.12s",
-                      borderBottom: "1px solid #f1f5f9",
-                      borderRight: "1px solid #f1f5f9",
-                      fontFamily: "'Poppins', sans-serif",
-                    }}
-                    onMouseEnter={e => { if (i !== viewMonth) (e.target as HTMLButtonElement).style.background = "#eff6ff"; }}
-                    onMouseLeave={e => { if (i !== viewMonth) (e.target as HTMLButtonElement).style.background = "white"; }}>
-                    {m.slice(0, 3)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div
+  style={{
+    position: "fixed",
+    top: monthPickerPos.top,
+    right: monthPickerPos.right,
+    zIndex: 9999
+  }}
+>
+  <div
+    className="
+      inline-block
+      bg-white
+      border border-slate-200
+      rounded-xl
+      shadow-xl
+      p-2
+    "
+  >
+    <div className="grid grid-cols-3 gap-2 w-fit">
+      {MONTHS_LONG.map((m, i) => (
+        <button
+          key={m}
+          onClick={() => {
+            setLoading(true)
+            setViewMonth(i)
+            setShowMonthPicker(false)
+          }}
+          className={`
+            px-4 py-2
+            text-[13px]
+            font-['Poppins']
+            rounded-lg
+            whitespace-nowrap
+            transition-all duration-150
+            border
+
+            ${i === viewMonth
+              ? 'bg-blue-600 text-white border-blue-600 font-bold'
+              : 'bg-white text-[var(--text-primary)] border-slate-100 hover:bg-blue-50'
+            }
+          `}
+        >
+          {m.slice(0, 3)}
+        </button>
+      ))}
+    </div>
+  </div>
+</div>
           )}
         </div>
       </div>
@@ -759,7 +805,7 @@ function DashboardPageInner() {
 
         {/* Header */}
         <div style={{ background: "#1a237e", padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Monthly Payments</span>
+          <span style={{ color: "white", fontWeight: 800, fontSize: 17, flex: 1 }}>Payments</span>
           <span style={{ background: "rgba(255,255,255,0.18)", color: "white", borderRadius: 20, padding: "3px 13px", fontSize: 12, fontWeight: 700 }}>
             {cutoffItems.length} Items
           </span>
@@ -767,15 +813,29 @@ function DashboardPageInner() {
             onClick={() => setPaymentsHidden(v => { const next = !v; try { localStorage.setItem("paymentsHidden", String(next)); } catch {} return next; })}
             style={{ background: "#2563EB", color: "white", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
             {paymentsHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-            {paymentsHidden ? "Show All Payments" : "Hide All Payments"}
+            {paymentsHidden ? "Show All" : "Hide All"}
           </button>
         </div>
 
        {/* Rows */}
+       <div style={{ display: "flex", gap: 10, justifyContent: "start" }}>
+          {[
+            { label: "Loan",        color: "#7c3aed" },
+            { label: "Maintenance", color: "#f97316" },
+            { label: "Expense",     color: "#16a34a" },
+          ].map(f => (
+            <label className="my-3 mx-4" key={f.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: f.color, display: "inline-block", flexShrink: 0 }} />
+              {f.label}
+            </label>
+          ))}
+        </div>
+
 {cutoffItems.length === 0 ? (
   <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--text-faint)", fontSize: 14, background: "white" }}>
     No items yet — add them from the Budget page.
   </div>
+  
 ) : cutoffItems.map(item => {
   const isPaid  = isMonthPaid(item.id, viewMonth + 1);
   const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category);
@@ -806,14 +866,14 @@ function DashboardPageInner() {
       </div>
 
       {/* Amount */}
-      <span style={{ color: paymentsHidden ? "var(--text-faint)" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0 }}>
+      <span style={{ color: paymentsHidden ? "#dc2626" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0 }}>
         {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
       </span>
 
       {/* Paid badge (if paid) */}
       {isPaid && (
-        <span style={{ background: "#dcfce7", color: "#16a34a", border: "1.5px solid #16a34a", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>
-          <Check size={11} /> Paid
+        <span style={{ color: "#16a34a", borderRadius: 999, padding: "12px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <Check size={11} /> 
         </span>
       )}
 

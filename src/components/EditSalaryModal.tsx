@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { SalaryHistory } from '@/lib/types'
+import { SalaryHistory, UserSettings } from '@/lib/types'
 import { X, Wallet, PiggyBank, ArrowRight } from 'lucide-react'
 
 interface Props {

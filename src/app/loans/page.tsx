@@ -173,90 +173,204 @@ function LoansPageInner() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', marginBottom: 20, gap: 12 }}>
         <h1 style={{ fontSize: 28, fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, color: 'var(--text-primary)' }}>Loans</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={handleDownload} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 999, background: 'white', border: '1.5px solid #CBD5E1', fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
-            <Download size={13} /><span className="hide-on-small"> Download {MONTHS_LONG[viewMonth]} Loans</span>
-          </button>
-          <button onClick={() => { setEditLoan(null); setShowAdd(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 999, background: '#2563EB', border: '1.5px solid #2563EB', fontSize: 12, fontWeight: 700, color: 'white', cursor: 'pointer', fontFamily: "'Poppins', sans-serif", whiteSpace: 'nowrap' }}>
-            <CreditCard size={13} /><span className="hide-on-small"> Add Loan</span>
-          </button>
+        <button
+  onClick={handleDownload}
+  className="
+    flex items-center justify-center
+    w-[34px] h-[34px] sm:w-auto sm:h-auto
+    p-2 sm:px-4 sm:py-2
+    gap-0 sm:gap-1.5
+    rounded-full
+    bg-white
+    border-[1.5px] border-slate-300
+    text-[12px] font-bold
+    text-[var(--text-primary)]
+    whitespace-nowrap
+    font-['Poppins']
+  "
+>
+  <Download size={13} />
+  <span className="hidden sm:inline">
+    Download {MONTHS_LONG[viewMonth]} Loans
+  </span>
+</button>
+
+<button
+  onClick={() => { setEditLoan(null); setShowAdd(true) }}
+  className="
+    flex items-center justify-center
+    w-[34px] h-[34px] sm:w-auto sm:h-auto
+    p-2 sm:px-4 sm:py-2
+    gap-0 sm:gap-1.5
+    rounded-full
+    bg-[#2563EB]
+    border-[1.5px] border-[#2563EB]
+    text-[12px] font-bold
+    text-white
+    whitespace-nowrap
+    font-['Poppins']
+  "
+>
+  <CreditCard size={13} />
+  <span className="hidden sm:inline">
+    Add Loan
+  </span>
+</button>
         </div>
       </div>
 
-      {/* Stat Cards — 2x2 responsive grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 18 }}>
-        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '18px 10px', display: 'grid', justifyItems: 'center', gap: 5, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}><CreditCard size={18} color="white" /></div>
-          <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', fontWeight: 500, textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>Monthly Due</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'white', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalMonthlyLoan.toLocaleString()}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 10px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><Clock size={18} color="#94A3B8" /></div>
-          <p style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Active</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>{loans.filter(l => l.status !== 'Suspended').length}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 10px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><CheckCircle2 size={18} color="#94A3B8" /></div>
-          <p style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Paid Off</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>{paidOffCount}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 10px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><TrendingDown size={18} color="#94A3B8" /></div>
-          <p style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 500, textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>Remaining</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalRemainingLoan.toLocaleString()}</p>
-        </div>
-      </div>
+     {/* Stat Cards */}
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-[10px] mb-[18px]">
 
+  {/* Monthly Due */}
+  <div className="rounded-[16px] bg-gradient-to-br from-[#FF8B00] to-[#FF5500] p-[18px_10px] grid justify-items-center gap-[5px] border-[1.5px] border-slate-900 shadow-[0_4px_18px_rgba(255,139,0,0.18)]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-white/25 grid place-items-center">
+      <CreditCard size={18} color="white" />
+    </div>
+    <p className="text-[9px] text-white/85 font-medium text-center font-['Poppins'] uppercase">
+      Monthly Due
+    </p>
+    <p className="text-[14px] font-bold text-white tracking-[-0.02em] text-center font-['Poppins']">
+      ₱ {totalMonthlyLoan.toLocaleString()}
+    </p>
+  </div>
+
+  {/* Active */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_10px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-slate-100 grid place-items-center">
+      <Clock size={18} color="#94A3B8" />
+    </div>
+    <p className="text-[9px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
+      Active
+    </p>
+    <p className="text-[14px] font-bold text-[var(--text-primary)] text-center font-['Poppins']">
+      {loans.filter(l => l.status !== 'Suspended').length}
+    </p>
+  </div>
+
+  {/* Paid Off */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_10px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-slate-100 grid place-items-center">
+      <CheckCircle2 size={18} color="#94A3B8" />
+    </div>
+    <p className="text-[9px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
+      Paid Off
+    </p>
+    <p className="text-[14px] font-bold text-[var(--text-primary)] text-center font-['Poppins']">
+      {paidOffCount}
+    </p>
+  </div>
+
+  {/* Remaining */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_10px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-slate-100 grid place-items-center">
+      <TrendingDown size={18} color="#94A3B8" />
+    </div>
+    <p className="text-[9px] text-[var(--text-muted)] font-medium text-center font-['Poppins'] uppercase">
+      Remaining
+    </p>
+    <p className="text-[14px] font-bold text-[var(--text-primary)] text-center font-['Poppins']">
+      ₱ {totalRemainingLoan.toLocaleString()}
+    </p>
+  </div>
+
+</div>
       {/* Legend + Month Nav — stacked full width */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center' }}>
-          {[
-            { label: 'Loan',        color: '#7c3aed' },
-            { label: 'Maintenance', color: '#f97316' },
-          ].map(f => (
-            <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.color }} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>{f.label}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', overflow: 'visible' }}>
-          <button ref={monthBtnRef}
-            onClick={() => {
-              if (!showMonthPicker && monthBtnRef.current) {
-                const r = monthBtnRef.current.getBoundingClientRect()
-                setMonthPickerPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) })
-              }
-              setShowMonthPicker(v => !v)
-            }}
-            style={{ flex: 1, fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', textAlign: 'left', background: 'transparent', border: showMonthPicker ? '1.5px solid #2563EB' : '1.5px solid transparent', borderRadius: 10, padding: '6px 8px', cursor: 'pointer', transition: 'all 0.15s', fontFamily: "'Poppins', sans-serif" }}>
-            {MONTHS_LONG[viewMonth]}
-          </button>
-          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-            <button onClick={() => { setLoading(true); if (viewMonth === 0) setViewMonth(11); else setViewMonth(m => m - 1); }}
-              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-              <ChevronLeft size={16} color="white" />
-            </button>
-            <button onClick={() => { setLoading(true); if (viewMonth === 11) setViewMonth(0); else setViewMonth(m => m + 1); }}
-              style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-              <ChevronRight size={16} color="white" />
-            </button>
+      <div className="flex flex-col gap-2 mb-3">
+
+  <div className="flex items-center justify-end gap-2 relative overflow-visible">
+
+    {/* Month Button (fixed) */}
+    <button
+      ref={monthBtnRef}
+      onClick={() => {
+        if (!showMonthPicker && monthBtnRef.current) {
+          const r = monthBtnRef.current.getBoundingClientRect()
+          setMonthPickerPos({
+            top: r.bottom + 8,
+            right: Math.max(8, window.innerWidth - r.right)
+          })
+        }
+        setShowMonthPicker(v => !v)
+      }}
+      className={`
+        inline-flex items-center
+        px-3 py-2
+        rounded-lg
+        font-bold text-[15px]
+        font-['Poppins']
+        bg-white
+        border
+        transition-all duration-150
+        hover:bg-slate-50
+        active:scale-[0.98]
+        ${showMonthPicker ? 'border-blue-600' : 'border-slate-200'}
+      `}
+    >
+      {MONTHS_LONG[viewMonth]}
+    </button>
+
+    {/* 🔥 KEEP YOUR CHEVRON BUTTONS EXACTLY AS-IS */}
+    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+      <button onClick={() => { setLoading(true); if (viewMonth === 0) setViewMonth(11); else setViewMonth(m => m - 1); }}
+        style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+        <ChevronLeft size={16} color="white" />
+      </button>
+      <button onClick={() => { setLoading(true); if (viewMonth === 11) setViewMonth(0); else setViewMonth(m => m + 1); }}
+        style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+        <ChevronRight size={16} color="white" />
+      </button>
+    </div>
+
+    {/* Dropdown (fixed only) */}
+    {showMonthPicker && (
+      <div
+        style={{
+          position: 'fixed',
+          top: monthPickerPos.top,
+          right: monthPickerPos.right,
+          zIndex: 9999
+        }}
+      >
+        <div className="inline-block bg-white border border-slate-200 rounded-xl shadow-xl p-2">
+
+          <div className="grid grid-cols-3 gap-2 w-fit">
+
+            {MONTHS_LONG.map((m, i) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setLoading(true)
+                  setViewMonth(i)
+                  setShowMonthPicker(false)
+                }}
+                className={`
+                  px-4 py-2
+                  text-[13px]
+                  font-['Poppins']
+                  rounded-lg
+                  whitespace-nowrap
+                  transition-all duration-150
+                  border
+
+                  ${i === viewMonth
+                    ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                    : 'bg-white text-[var(--text-primary)] border-slate-100 hover:bg-blue-50'
+                  }
+                `}
+              >
+                {m.slice(0, 3)}
+              </button>
+            ))}
+
           </div>
-          {showMonthPicker && (
-            <div style={{ position: 'fixed', top: monthPickerPos.top, left: 16, right: 16, zIndex: 9999, background: 'white', border: '1.5px solid #0f172a', borderRadius: 14, boxShadow: '0 8px 28px rgba(15,23,42,0.16)', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
-                {MONTHS_LONG.map((m, i) => (
-                  <button key={m} onClick={() => { setLoading(true); setViewMonth(i); setShowMonthPicker(false); }}
-                    style={{ padding: '12px 4px', fontSize: 13, fontWeight: i === viewMonth ? 700 : 400, cursor: 'pointer', border: 'none', background: i === viewMonth ? '#2563EB' : 'white', color: i === viewMonth ? 'white' : 'var(--text-primary)', transition: 'background 0.12s', borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #f1f5f9', fontFamily: "'Poppins', sans-serif" }}
-                    onMouseEnter={e => { if (i !== viewMonth) (e.target as HTMLButtonElement).style.background = '#eff6ff'; }}
-                    onMouseLeave={e => { if (i !== viewMonth) (e.target as HTMLButtonElement).style.background = 'white'; }}>
-                    {m.slice(0, 3)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
+    )}
+
+  </div>
+</div>
 
       {/* Loans Table */}
       <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A', marginBottom: 22 }}>
@@ -269,7 +383,17 @@ function LoansPageInner() {
             {hidePayments ? 'Show All' : 'Hide All'}
           </button>
         </div>
-
+           <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'start' }}>
+          {[
+            { label: 'Loan',        color: '#7c3aed' },
+            { label: 'Maintenance', color: '#f97316' },
+          ].map(f => (
+            <div className="my-3 mx-5" key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.color }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>{f.label}</span>
+            </div>
+          ))}
+        </div>
         {/* Rows */}
         {loans.length === 0 ? (
   <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, background: 'white' }}>

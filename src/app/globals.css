@@ -77,6 +77,8 @@ h1, h2, h3, .heading {
   letter-spacing: 0.03em;
 }
 
+
+
 /* ─── Scrollbar ───────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }

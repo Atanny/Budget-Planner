@@ -70,7 +70,7 @@ export default function SavingsPage() {
   const maxSaving = Math.max(...savings.map(s => s.kinsenas + s.atrenta), 1)
 
   const inputStyle: React.CSSProperties = {
-    background: '#F8FAFC', border: '1.5px solid #0f172a', borderRadius: 10,
+    background: '#F8FAFC', border: '1.5px solid #0f172a', borderRadius: '50%',
     color: 'var(--text-primary)', padding: '7px 10px', fontSize: 13,
     width: '100%', outline: 'none', fontFamily: "'Poppins', sans-serif",
   }
@@ -100,29 +100,62 @@ export default function SavingsPage() {
         </div>
       </div>
 
-      {/* Stat Cards 2x2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div style={{ borderRadius: 16, background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5, border: '1.5px solid #0f172a', boxShadow: '0 4px 18px rgba(255,139,0,0.18)' }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="white" /></div>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Annual Total</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {grandTotal.toLocaleString()}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F1F5F9', display: 'grid', placeItems: 'center' }}><TrendingUp size={18} color="#94A3B8" /></div>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Year-to-Date</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {ytd.toLocaleString()}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#EFF6FF', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="#2563EB" /></div>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Kinsenas (15th)</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#2563EB', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalKinsenas.toLocaleString()}</p>
-        </div>
-        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid #E2E8F0', padding: '18px 14px', display: 'grid', justifyItems: 'center', gap: 5 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F0FDF4', display: 'grid', placeItems: 'center' }}><PiggyBank size={18} color="#16A34A" /></div>
-          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, fontFamily: "'Poppins', sans-serif" }}>Atrenta (30th)</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#16A34A', letterSpacing: '-0.02em', textAlign: 'center', fontFamily: "'Poppins', sans-serif" }}>₱ {totalAtrenta.toLocaleString()}</p>
-        </div>
-      </div>
+      {/* Stat Cards */}
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+
+  {/* Annual Total */}
+  <div className="rounded-[16px] bg-gradient-to-br from-[#FF8B00] to-[#FF5500] p-[18px_14px] grid justify-items-center gap-[5px] border-[1.5px] border-slate-900 shadow-[0_4px_18px_rgba(255,139,0,0.18)]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-white/25 grid place-items-center">
+      <PiggyBank size={18} color="white" />
+    </div>
+    <p className="text-[10px] text-white/85 font-medium font-['Poppins'] uppercase">
+      Annual Total
+    </p>
+    <p className="text-[16px] font-bold text-white tracking-[-0.02em] text-center font-['Poppins']">
+      ₱ {grandTotal.toLocaleString()}
+    </p>
+  </div>
+
+  {/* Year to Date */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-slate-100 grid place-items-center">
+      <TrendingUp size={18} color="#94A3B8" />
+    </div>
+    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
+      Year-to-Date
+    </p>
+    <p className="text-[16px] font-bold text-[var(--text-primary)] tracking-[-0.02em] text-center font-['Poppins']">
+      ₱ {ytd.toLocaleString()}
+    </p>
+  </div>
+
+  {/* Kinsenas */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-blue-50 grid place-items-center">
+      <PiggyBank size={18} color="#2563EB" />
+    </div>
+    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
+      Kinsenas (15th)
+    </p>
+    <p className="text-[16px] font-bold text-[#2563EB] tracking-[-0.02em] text-center font-['Poppins']">
+      ₱ {totalKinsenas.toLocaleString()}
+    </p>
+  </div>
+
+  {/* Atrenta */}
+  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
+    <div className="w-[38px] h-[38px] rounded-[12px] bg-green-50 grid place-items-center">
+      <PiggyBank size={18} color="#16A34A" />
+    </div>
+    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
+      Atrenta (30th)
+    </p>
+    <p className="text-[16px] font-bold text-[#16A34A] tracking-[-0.02em] text-center font-['Poppins']">
+      ₱ {totalAtrenta.toLocaleString()}
+    </p>
+  </div>
+
+</div>
 
       {/* Monthly Table */}
       <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A', marginBottom: 22 }}>
@@ -168,11 +201,11 @@ export default function SavingsPage() {
                 <div style={{ display: 'flex', gap: 6 }}>
                   {isEditing ? (
                     <>
-                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
-                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
+                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
+                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
                     </>
                   ) : (
-                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: 10, background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
+                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
                   )}
                 </div>
               </div>
