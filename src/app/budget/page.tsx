@@ -136,7 +136,7 @@ function BudgetPageInner() {
   const [viewYear,       setViewYear]       = useState(CURRENT_YEAR)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
   const monthBtnRef = useRef<HTMLButtonElement>(null)
-  const [monthPickerPos, setMonthPickerPos] = useState({ top: 0, right: 0 })
+  const [monthPickerPos, setMonthPickerPos] = useState({ top: 0, left: 0 })
   const viewMonth1 = viewMonth + 1
 
   function isMonthPaid(itemId: string, month: number) {
