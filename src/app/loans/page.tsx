@@ -524,8 +524,8 @@ function LoansPageInner() {
 
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, fontFamily: "'Poppins', sans-serif" }}>
             {loan.cutoff === '1st'
-              ? '1st Cutoff · 15th'
-              : '2nd Cutoff · 30th'}
+              ? `1st Cutoff · 15th • ${MONTHS_LONG[viewMonth]} 15, ${CURRENT_YEAR}`
+              : `2nd Cutoff · 30th • ${MONTHS_LONG[viewMonth]} 30, ${CURRENT_YEAR}`}
 
             {isSuspended && (
               <span style={{ marginLeft: 8, color: '#94A3B8', fontSize: 11 }}>

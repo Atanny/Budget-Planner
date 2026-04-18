@@ -685,7 +685,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
             <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--brand)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif" }}>{item.name}</p>
             {/* UPDATED LINE BELOW - Shows category + cutoff */}
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.3, fontFamily: "'Poppins', sans-serif" }}>
-              {catInfo?.label.split(' ').slice(1).join(' ') || item.category || 'General'} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'}
+              {catInfo?.label.split(' ').slice(1).join(' ') || item.category || 'General'} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'} • {MONTHS[viewMonth]} {item.cutoff === '1st' ? '15' : '30'}, {viewYear}
             </p>
           </div>
           <span style={{ fontWeight: 700, fontSize: 14, color: '#dc2626', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif" }}>

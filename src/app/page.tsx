@@ -114,6 +114,14 @@ function DashboardPageInner() {
   const [sahodBankId,  setSahodBankId]  = useState<string>("");
   const [dashReceiptItem, setDashReceiptItem] = useState<BudgetItem | null>(null);
 
+  // Bank-to-bank transfer modal
+  const [showTransfer,   setShowTransfer]   = useState(false);
+  const [transferFromId, setTransferFromId] = useState<string>("");
+  const [transferToId,   setTransferToId]   = useState<string>("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [transferNote,   setTransferNote]   = useState("");
+  const [transferSaving, setTransferSaving] = useState(false);
+
   // Bank modal
   const [showBankForm,    setShowBankForm]    = useState(false);
   const [editBank,        setEditBank]        = useState<BankAccount | null>(null);
@@ -400,6 +408,49 @@ function DashboardPageInner() {
     setSahodAmount(""); 
     setSahodExtra(""); 
     setSahodBankId("");
+  }
+
+  async function handleTransfer() {
+    if (!userId || !transferFromId || !transferToId || !transferAmount) return;
+    if (transferFromId === transferToId) return;
+    const amt = parseFloat(transferAmount);
+    if (!amt || amt <= 0) return;
+    setTransferSaving(true);
+
+    const fromBank = banks.find(b => b.id === transferFromId);
+    const toBank   = banks.find(b => b.id === transferToId);
+    if (!fromBank || !toBank) { setTransferSaving(false); return; }
+
+    const newFrom = fromBank.balance - amt;
+    const newTo   = toBank.balance   + amt;
+
+    await Promise.all([
+      supabase.from("bank_accounts").update({ balance: newFrom }).eq("id", transferFromId),
+      supabase.from("bank_accounts").update({ balance: newTo   }).eq("id", transferToId),
+    ]);
+
+    setBanks(prev => prev.map(b =>
+      b.id === transferFromId ? { ...b, balance: newFrom } :
+      b.id === transferToId   ? { ...b, balance: newTo   } : b
+    ));
+
+    // Log to transaction_logs
+    await supabase.from("transaction_logs").insert({
+      user_id:    userId,
+      action:     "add",
+      item_name:  `Transfer: ${fromBank.name} → ${toBank.name}`,
+      amount:     amt,
+      category:   "Transfer",
+      notes:      transferNote || null,
+      created_at: new Date().toISOString(),
+    });
+
+    setTransferSaving(false);
+    setShowTransfer(false);
+    setTransferFromId("");
+    setTransferToId("");
+    setTransferAmount("");
+    setTransferNote("");
   }async function saveBank(bank: Partial<BankAccount> & { name: string; type: string; balance: number; color: string; is_main_bank: boolean }) {
     if (!userId) return;
     if (bank.is_main_bank) {
@@ -591,8 +642,12 @@ function DashboardPageInner() {
           return (
             <>
               <button onClick={(e) => { e.stopPropagation(); setEditBank(bank); setShowBankForm(true); setOpenCardMenu(null); }}
-                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: isCashRequired ? "none" : "1px solid #f1f5f9", fontFamily: "'Poppins', sans-serif" }}>
+                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#1e40af", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #f1f5f9", fontFamily: "'Poppins', sans-serif" }}>
                 <Edit2 size={13} color="#2563EB" /> Edit Account
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setTransferFromId(bank.id); setTransferToId(""); setTransferAmount(""); setTransferNote(""); setShowTransfer(true); setOpenCardMenu(null); }}
+                style={{ width: "100%", padding: "11px 16px", fontSize: 13, fontWeight: 600, color: "#16a34a", background: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, borderBottom: isCashRequired ? "none" : "1px solid #f1f5f9", fontFamily: "'Poppins', sans-serif" }}>
+                <span style={{ fontSize: 13 }}>⇄</span> Transfer Money
               </button>
               {!isCashRequired && (
                 <button onClick={(e) => { e.stopPropagation(); askDeleteBank(bank.id, bank.name); setOpenCardMenu(null); }}
@@ -866,7 +921,11 @@ function DashboardPageInner() {
     No items yet — add them from the Budget page.
   </div>
   
-) : cutoffItems.map(item => {
+) : [...cutoffItems].sort((a, b) => {
+  const aPaid = isMonthPaid(a.id, viewMonth + 1) ? 1 : 0;
+  const bPaid = isMonthPaid(b.id, viewMonth + 1) ? 1 : 0;
+  return aPaid - bPaid;
+}).map(item => {
   const isPaid  = isMonthPaid(item.id, viewMonth + 1);
   const catInfo = EXPENSE_CATEGORIES.find(c => c.value === item.category);
   const isUnlimitedLoan = item.is_loan && ((item.loan_details as any)?.total_months >= 9999);
@@ -891,21 +950,21 @@ function DashboardPageInner() {
           {isUnlimitedLoan ? '♾️ ' : ''}{item.name}
         </p>
         <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
-          {item.is_loan ? 'Loan' : catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"} • {item.cutoff === '1st' ? '15th' : '30th'}
+          {item.is_loan ? 'Loan' : catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'} • {MONTHS_LONG[viewMonth]} {item.cutoff === '1st' ? '15' : '30'}, {viewYear}
         </p>
       </div>
 
-      {/* Amount */}
-      <span style={{ color: paymentsHidden ? "#dc2626" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0 }}>
-        {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
-      </span>
-
-      {/* Paid badge (if paid) */}
-      {isPaid && (
-        <span style={{ color: "#16a34a", borderRadius: 999, padding: "12px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: 'nowrap' }}>
-          <Check size={11} /> 
+      {/* Amount + paid check — price on top, checkmark below */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0, gap: 3 }}>
+        <span style={{ color: isPaid ? "#94a3b8" : "#dc2626", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textDecoration: isPaid ? "line-through" : "none" }}>
+          {paymentsHidden ? "₱ ••••••" : formatCurrency(item.amount)}
         </span>
-      )}
+        {isPaid && (
+          <span style={{ color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+            <Check size={11} color="#16a34a" strokeWidth={3} />
+          </span>
+        )}
+      </div>
 
       {/* 3-Dot Menu */}
 <div style={{ position: 'relative' }}>
@@ -1303,6 +1362,107 @@ function DashboardPageInner() {
               </button>
               <button onClick={handleSahod} disabled={!sahodAmount || sahodSaving} style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #2563eb, #1d4ed8)", border: "none", cursor: "pointer", opacity: (!sahodAmount || sahodSaving) ? 0.5 : 1 }}>
                 {sahodSaving ? "Adding..." : "Add Sahod 💸"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ BANK TRANSFER MODAL ══════════════════════════════════════════ */}
+      {showTransfer && (
+        <div className="fixed inset-0 z-50 grid place-items-center modal-overlay p-4">
+          <div className="w-full max-w-md mx-auto slide-up rounded-2xl overflow-hidden" style={{ background: "var(--bg-surface)", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.16)", display: "flex", flexDirection: "column", maxHeight: "88vh" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #bbf7d0", background: "#f0fdf4", flexShrink: 0 }}>
+              <div>
+                <h2 style={{ fontWeight: 700, color: "#14532d", margin: 0 }}>⇄ Transfer Money</h2>
+                <p style={{ fontSize: 12, marginTop: 2, color: "#16a34a", margin: "2px 0 0" }}>Move funds between your accounts</p>
+              </div>
+              <button onClick={() => setShowTransfer(false)} style={{ padding: 6, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={17} />
+              </button>
+            </div>
+            {/* Body */}
+            <div style={{ padding: 20, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+              {/* From */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>From Account</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {banks.map(b => {
+                    const sel = transferFromId === b.id;
+                    return (
+                      <button key={b.id} onClick={() => setTransferFromId(b.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${sel ? "#dc2626" : "var(--border)"}`, background: sel ? "#fef2f2" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: sel ? "#dc2626" : "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.name}</p>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", fontFamily: "monospace" }}>{formatCurrency(b.balance)}</span>
+                        {sel && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* To */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>To Account</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {banks.filter(b => b.id !== transferFromId).map(b => {
+                    const sel = transferToId === b.id;
+                    return (
+                      <button key={b.id} onClick={() => setTransferToId(b.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${sel ? "#2563EB" : "var(--border)"}`, background: sel ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: sel ? "#1d4ed8" : "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.name}</p>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", fontFamily: "monospace" }}>{formatCurrency(b.balance)}</span>
+                        {sel && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Amount */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>Amount (₱)</label>
+                <input type="number" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} placeholder="0.00" className="w-full px-3 py-2.5 text-sm" style={{ textAlign: "center" }} />
+              </div>
+              {/* Note */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>Note <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>— optional</span></label>
+                <input type="text" value={transferNote} onChange={e => setTransferNote(e.target.value)} placeholder="e.g. for bills, savings..." className="w-full px-3 py-2.5 text-sm" />
+              </div>
+              {/* Summary */}
+              {transferFromId && transferToId && parseFloat(transferAmount) > 0 && (() => {
+                const from = banks.find(b => b.id === transferFromId);
+                const to   = banks.find(b => b.id === transferToId);
+                const amt  = parseFloat(transferAmount);
+                const insufficient = from && from.balance < amt;
+                return (
+                  <div style={{ padding: "10px 12px", borderRadius: 10, background: insufficient ? "#fef2f2" : "var(--bg-subtle)", border: `1.5px solid ${insufficient ? "#fca5a5" : "#0f172a"}`, fontSize: 12 }}>
+                    {insufficient ? (
+                      <p style={{ color: "#dc2626", fontWeight: 600, margin: 0 }}>⚠️ Insufficient balance in {from?.name} ({formatCurrency(from?.balance || 0)} available)</p>
+                    ) : (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "var(--text-muted)" }}>{from?.name} <span style={{ color: "#94a3b8" }}>→</span> {to?.name}</span>
+                        <span style={{ fontWeight: 700, fontFamily: "monospace", color: "#16a34a" }}>−{formatCurrency(amt)}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: "12px 20px 20px", display: "flex", gap: 12, flexShrink: 0, borderTop: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+              <button onClick={() => setShowTransfer(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 600, background: "var(--bg-subtle)", color: "var(--text-muted)", border: "1.5px solid #0f172a", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleTransfer}
+                disabled={transferSaving || !transferFromId || !transferToId || !transferAmount || transferFromId === transferToId || (() => { const f = banks.find(b => b.id === transferFromId); return !!(f && f.balance < parseFloat(transferAmount)); })()}
+                style={{ flex: 2, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", cursor: "pointer", opacity: (transferSaving || !transferFromId || !transferToId || !transferAmount || transferFromId === transferToId) ? 0.4 : 1 }}>
+                {transferSaving ? "Transferring..." : "⇄ Transfer"}
               </button>
             </div>
           </div>
