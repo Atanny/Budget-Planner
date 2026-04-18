@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Wallet, CreditCard, PiggyBank, Bell, User, Plus, Banknote, ShoppingCart, History, ChevronRight, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Wallet, CreditCard, PiggyBank, Bell, User, Plus, Banknote, ShoppingCart, History, ChevronRight, Settings, LogOut, ArrowLeftRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getDaysUntilCutoff, getNextCutoffDate } from '@/lib/utils'
@@ -22,10 +22,10 @@ const MORE_PAGES = [
 ]
 
 const FAB_ACTIONS = [
-
-  { key: 'salary',  label: 'Edit Salary',   icon: Settings,     color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
-  { key: 'expense', label: 'Add Expense',   icon: ShoppingCart, color: '#e07a00', bg: '#fff7ed', border: '#ffb733' },
-  { key: 'loan',    label: 'Add Loan',      icon: CreditCard,   color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+  { key: 'salary',   label: 'Edit Salary',   icon: Settings,         color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+  { key: 'expense',  label: 'Add Expense',   icon: ShoppingCart,     color: '#e07a00', bg: '#fff7ed', border: '#ffb733' },
+  { key: 'loan',     label: 'Add Loan',      icon: CreditCard,       color: '#2563eb', bg: '#eff6ff', border: '#93c5fd' },
+  { key: 'transfer', label: 'Transfer Money', icon: ArrowLeftRight,  color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
 ]
 
 const SEPERATE_ACTION = [
@@ -63,10 +63,11 @@ export default function Navbar() {
 
   function trigger(action: string) {
     setFabOpen(false)
-    if (action === 'sahod')   router.push('/?action=sahod')
-    if (action === 'salary')  router.push('/budget?action=salary')
-    if (action === 'expense') router.push('/budget?action=add')
-    if (action === 'loan')    router.push('/loans?action=add')
+    if (action === 'sahod')    router.push('/?action=sahod')
+    if (action === 'salary')   router.push('/budget?action=salary')
+    if (action === 'expense')  router.push('/budget?action=add')
+    if (action === 'loan')     router.push('/loans?action=add')
+    if (action === 'transfer') router.push('/?action=transfer')
   }
 
   async function handleLogout() {

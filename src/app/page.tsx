@@ -237,6 +237,11 @@ function DashboardPageInner() {
       setShowSahod(true);
       router.replace("/");
     }
+    if (searchParams.get("action") === "transfer") {
+      setTransferFromId(""); setTransferToId(""); setTransferAmount(""); setTransferNote("");
+      setShowTransfer(true);
+      router.replace("/");
+    }
   }, [searchParams, router]);
 
 
@@ -1037,47 +1042,107 @@ function DashboardPageInner() {
   background: "white", flexWrap: "wrap", gap: 8,
 }}>
   <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>
-    Do you have Saving for the cutoff Today?
+    💰 Include savings goal?
   </p>
-  <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>
-    Deduct {formatCurrency(savingsGoal)} from Remaining
-    <input type="checkbox" checked={savingsChecked} onChange={toggleSavings}
-      style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#2563EB" }} />
+  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+    <span style={{ fontSize: 13, color: savingsChecked ? "#16a34a" : "var(--text-muted)", fontWeight: 600 }}>
+      {savingsChecked ? `− ${formatCurrency(savingsGoal)}` : formatCurrency(savingsGoal)}
+    </span>
+    <div onClick={toggleSavings} style={{
+      width: 40, height: 22, borderRadius: 999, cursor: "pointer",
+      background: savingsChecked ? "#16a34a" : "#e2e8f0",
+      position: "relative", transition: "background 0.2s", flexShrink: 0,
+      border: "1.5px solid " + (savingsChecked ? "#15803d" : "#cbd5e1"),
+    }}>
+      <div style={{
+        position: "absolute", top: 2, left: savingsChecked ? 18 : 2,
+        width: 14, height: 14, borderRadius: "50%", background: "white",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s",
+      }} />
+    </div>
   </label>
 </div>
 
-{/* Income / Expenses / Savings / Remaining */}
+{/* Income / Expenses / Remaining — redesigned */}
 {(() => {
   const expensesPaid    = cutoffItems.filter(i => isMonthPaid(i.id, viewMonth + 1)).reduce((s, i) => s + i.amount, 0);
   const expensesNotPaid = totalExpenses - expensesPaid;
-  const rows = [
-    { label: "Income",            value: totalIncome,                  color: "#2563EB",  show: true },
-    { label: "Expenses",          value: totalExpenses,                color: "#dc2626",  show: true },
-    { label: "Expenses Not Paid", value: expensesNotPaid,              color: "#f97316",  show: true, indent: true },
-    { label: "Expenses Paid",     value: expensesPaid,                 color: "#16a34a",  show: true, indent: true },
-    { label: "Savings",           value: savingsChecked ? savingsGoal : 0, color: "#f59e0b", show: savingsChecked },
-    { label: "Remaining",         value: afterSavings,                 color: afterSavings < 0 ? "#dc2626" : "#2563EB", show: true },
-  ].filter(r => r.show);
+  const paidPct         = totalExpenses > 0 ? Math.round((expensesPaid / totalExpenses) * 100) : 0;
+  const remaining       = afterSavings;
+  const isNegative      = remaining < 0;
+
   return (
-    <div style={{ borderTop: "2px solid #FFE0B2", background: "#FFF8F0" }}>
-      {rows.map((row, i) => (
-        <div key={row.label} style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: (row as any).indent ? "9px 16px 9px 28px" : "12px 16px",
-          borderBottom: i < rows.length - 1 ? "1px solid #FFE0B2" : "none",
-          background: (row as any).indent ? "rgba(0,0,0,0.018)" : "transparent",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {(row as any).indent && <div style={{ width: 3, height: 14, borderRadius: 2, background: row.color, flexShrink: 0 }} />}
-            <span style={{ fontWeight: (row as any).indent ? 600 : 700, fontSize: (row as any).indent ? 13 : 17, color: (row as any).indent ? "var(--text-secondary)" : "var(--brand)" }}>
-              {row.label}
-            </span>
+    <div style={{ background: "#f8fafc", borderTop: "1.5px solid #e2e8f0", padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+
+      {/* Row 1 — Income */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563EB", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>Income</span>
+        </div>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#2563EB", fontFamily: "monospace" }}>
+          {paymentsHidden ? "₱ ••••••" : formatCurrency(totalIncome)}
+        </span>
+      </div>
+
+      {/* Row 2 — Expenses with progress bar */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>Expenses</span>
           </div>
-          <span style={{ fontWeight: 700, fontSize: (row as any).indent ? 13 : 16, color: paymentsHidden ? 'var(--text-faint)' : row.color }}>
-            {paymentsHidden ? '₱ ••••••' : row.label === "Savings" ? `- ${formatCurrency(row.value)}` : formatCurrency(row.value)}
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", fontFamily: "monospace" }}>
+            {paymentsHidden ? "₱ ••••••" : formatCurrency(totalExpenses)}
           </span>
         </div>
-      ))}
+        {/* Progress bar */}
+        <div style={{ height: 6, borderRadius: 999, background: "#fee2e2", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${paidPct}%`, background: "#16a34a", borderRadius: 999, transition: "width 0.4s" }} />
+        </div>
+        {/* Paid / Unpaid pills */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 999, padding: "2px 8px" }}>
+            ✓ {paymentsHidden ? "••••" : formatCurrency(expensesPaid)} paid
+          </span>
+          {expensesNotPaid > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#f97316", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 999, padding: "2px 8px" }}>
+              ⏳ {paymentsHidden ? "••••" : formatCurrency(expensesNotPaid)} pending
+            </span>
+          )}
+          <span style={{ fontSize: 11, fontWeight: 500, color: "var(--text-faint)", marginLeft: "auto" }}>{paidPct}% done</span>
+        </div>
+      </div>
+
+      {/* Row 3 — Savings (only if toggled) */}
+      {savingsChecked && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>Savings Goal</span>
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>
+            {paymentsHidden ? "₱ ••••••" : `− ${formatCurrency(savingsGoal)}`}
+          </span>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div style={{ height: 1, background: "#e2e8f0" }} />
+
+      {/* Row 4 — Remaining */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)" }}>Remaining</span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+          <span style={{ fontSize: 17, fontWeight: 800, fontFamily: "monospace", color: isNegative ? "#dc2626" : "#16a34a" }}>
+            {paymentsHidden ? "₱ ••••••" : (isNegative ? `−${formatCurrency(Math.abs(remaining))}` : formatCurrency(remaining))}
+          </span>
+          {isNegative && (
+            <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>Over budget</span>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 })()}

@@ -663,20 +663,58 @@ function LoansPageInner() {
 })}
 
         {/* Summary footer */}
-        <div style={{ background: '#FFF8F0', borderTop: '2px solid #FFE0B2' }}>
-          {[
-            { label: 'Income',    value: 0 },
-            { label: 'Expenses',  value: totalMonthlyLoan },
-            { label: 'Remaining', value: -totalMonthlyLoan },
-          ].map((row, i, arr) => (
-            <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid #FFE0B2' : 'none' }}>
-              <span style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 17, color: 'var(--brand)' }}>{row.label}</span>
-              <span style={{ fontWeight: 700, fontSize: 16, color: '#2563EB', fontFamily: "'Poppins', sans-serif" }}>
-                {hidePayments ? '₱ ••••' : `₱ ${row.value.toLocaleString()}`}
-              </span>
+        {(() => {
+          const loansPaid    = loans.filter(l => l.status !== 'Suspended' && (payments[l.id]?.[viewMonth + 1]?.paid ?? false))
+          const paidAmt      = loansPaid.reduce((s, l) => s + l.amount, 0)
+          const pendingAmt   = totalMonthlyLoan - paidAmt
+          const paidPct      = totalMonthlyLoan > 0 ? Math.round((paidAmt / totalMonthlyLoan) * 100) : 0
+          return (
+            <div style={{ background: '#f8fafc', borderTop: '1.5px solid #e2e8f0', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Monthly Loans */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed', flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Monthly Loans</span>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed', fontFamily: 'monospace' }}>
+                    {hidePayments ? '₱ ••••' : formatCurrency(totalMonthlyLoan)}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: '#ede9fe', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${paidPct}%`, background: '#16a34a', borderRadius: 999, transition: 'width 0.4s' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>
+                    ✓ {hidePayments ? '••••' : formatCurrency(paidAmt)} paid
+                  </span>
+                  {pendingAmt > 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#f97316', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 999, padding: '2px 8px' }}>
+                      ⏳ {hidePayments ? '••••' : formatCurrency(pendingAmt)} pending
+                    </span>
+                  )}
+                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-faint)', marginLeft: 'auto' }}>{paidPct}% done</span>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: '#e2e8f0' }} />
+
+              {/* Total Remaining Debt */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Helvetica, Arial, sans-serif' }}>Total Debt</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <span style={{ fontSize: 17, fontWeight: 800, fontFamily: 'monospace', color: '#dc2626' }}>
+                    {hidePayments ? '₱ ••••' : formatCurrency(totalRemainingLoan)}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>outstanding balance</span>
+                </div>
+              </div>
+
             </div>
-          ))}
-        </div>
+          )
+        })()}
       </div>
 
       {/* Year Overview Table */}

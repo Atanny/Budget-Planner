@@ -231,18 +231,61 @@ export default function SavingsPage() {
         })}
 
         {/* Footer totals */}
-        <div style={{ background: '#FFF8F0', borderTop: '2px solid #FFE0B2' }}>
-          {[
-            { label: 'Kinsenas Total', value: totalKinsenas, color: '#2563EB' },
-            { label: 'Atrenta Total',  value: totalAtrenta,  color: '#16A34A' },
-            { label: 'Grand Total',    value: grandTotal,    color: '#0F172A' },
-          ].map((row, i, arr) => (
-            <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid #FFE0B2' : 'none' }}>
-              <span style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15, color: 'var(--brand)' }}>{row.label}</span>
-              <span style={{ fontWeight: 700, fontSize: 15, color: row.color, fontFamily: "'Poppins', sans-serif" }}>₱ {row.value.toLocaleString()}</span>
+        {(() => {
+          const goalPerYear  = savingsGoal * 24 // 2 cutoffs × 12 months
+          const goalPct      = goalPerYear > 0 ? Math.min(100, Math.round((grandTotal / goalPerYear) * 100)) : 0
+          return (
+            <div style={{ background: '#f8fafc', borderTop: '1.5px solid #e2e8f0', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+              {/* Kinsenas */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563EB', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Kinsenas Total</span>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#2563EB', fontFamily: 'monospace' }}>
+                  {formatCurrency(totalKinsenas)}
+                </span>
+              </div>
+
+              {/* Atrenta */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Atrenta Total</span>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', fontFamily: 'monospace' }}>
+                  {formatCurrency(totalAtrenta)}
+                </span>
+              </div>
+
+              {/* Progress bar toward yearly goal */}
+              {savingsGoal > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <div style={{ height: 6, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${goalPct}%`, background: 'linear-gradient(90deg, #2563EB, #16a34a)', borderRadius: 999, transition: 'width 0.4s' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>{goalPct}% of yearly goal</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>{formatCurrency(goalPerYear)} target</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Divider */}
+              <div style={{ height: 1, background: '#e2e8f0' }} />
+
+              {/* Grand Total */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Helvetica, Arial, sans-serif' }}>Grand Total</span>
+                <span style={{ fontSize: 17, fontWeight: 800, fontFamily: 'monospace', color: '#0F172A' }}>
+                  {formatCurrency(grandTotal)}
+                </span>
+              </div>
+
             </div>
-          ))}
-        </div>
+          )
+        })()}
       </div>
     </div>
   )
