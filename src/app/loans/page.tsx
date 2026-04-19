@@ -415,7 +415,7 @@ function LoansPageInner() {
     "
   >
     {hidePayments ? <Eye size={12} /> : <EyeOff size={12} />}
-    {hidePayments ? 'Show All' : 'Hide All'}
+    {hidePayments ? 'Show All Payments' : 'Hide All Payments'}
   </button>
 
 </div>

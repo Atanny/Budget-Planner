@@ -503,9 +503,10 @@ function DashboardPageInner() {
   const extraIncome   = activeTab === "1st" ? (activeSalary?.extra_income_1st || 0)    : (activeSalary?.extra_income_2nd || 0);
   const totalIncome   = salary + extraIncome;
   const totalExpenses = cutoffItems.reduce((s, i) => s + i.amount, 0);
+  const unpaidExpenses = cutoffItems.filter(i => !isMonthPaid(i.id, viewMonth + 1)).reduce((s, i) => s + i.amount, 0);
   const savingsChecked = activeTab === "1st" ? savingsCheck1st : savingsCheck2nd;
   const savingsGoal   = activeSalary?.savings_goal || 0;
-  const afterSavings  = totalIncome - totalExpenses - (savingsChecked ? savingsGoal : 0);
+  const afterSavings  = totalIncome - unpaidExpenses - (savingsChecked ? savingsGoal : 0);
 
   if (loading) return (
     <div className="w-full flex items-center justify-center h-64">
@@ -525,7 +526,7 @@ function DashboardPageInner() {
 
       {/* ═══ DASHBOARD TITLE ═══════════════════════════════════════════════ */}
       <h1 style={{ fontSize: 28, fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, marginBottom: 14, color: "var(--text-primary)" }}>
-        Dashboard
+        Home
       </h1>
 
       {/* ═══ HERO BANNER ═══════════════════════════════════════════════════ */}
@@ -940,11 +941,10 @@ function DashboardPageInner() {
       background: isPaid ? "#f0fdf4" : "white",
       display: "flex", alignItems: "center", gap: 10,
     }}>
-      {/* Colored dot */}
+      {/* Colored dot — always shows item type, not paid status */}
       <div style={{
         width: 11, height: 11, borderRadius: "50%", flexShrink: 0,
-        background: isPaid ? "#16a34a"
-          : isUnlimitedLoan ? "#f97316"
+        background: isUnlimitedLoan ? "#f97316"
           : item.is_loan ? "#7c3aed"
           : "#16a34a",
       }} />
@@ -952,10 +952,10 @@ function DashboardPageInner() {
       {/* Name + category */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontWeight: 700, fontSize: 15, color: isPaid ? "var(--text-muted)" : "var(--brand)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {isUnlimitedLoan ? '♾️ ' : ''}{item.name}
+          {item.name}
         </p>
         <p style={{ fontSize: 12, color: "var(--text-faint)" }}>
-          {item.is_loan ? 'Loan' : catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'} • {MONTHS_LONG[viewMonth]} {item.cutoff === '1st' ? '15' : '30'}, {viewYear}
+          {item.is_loan ? (isUnlimitedLoan ? 'Maintenance' : 'Loan') : catInfo?.label.split(" ").slice(1).join(" ") || item.category || "General"} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'} • {MONTHS_LONG[viewMonth]} {item.cutoff === '1st' ? '15' : '30'}, {viewYear}
         </p>
       </div>
 
@@ -1004,12 +1004,14 @@ function DashboardPageInner() {
             <Check size={14} color="#2563EB" /> Mark as Paid
           </button>
         )}
-        <button
-          onClick={() => { setOpenItemMenu(null); setDashReceiptItem(activeItem); }}
-          disabled={!activeReceipt}
-          style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: activeReceipt ? '#d97706' : 'var(--text-faint)', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: activeReceipt ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, opacity: activeReceipt ? 1 : 0.5, fontFamily: "'Poppins', sans-serif" }}>
-          <ReceiptText size={14} color={activeReceipt ? '#d97706' : '#94a3b8'} /> View Receipt
-        </button>
+        {activeIsPaid && (
+          <button
+            onClick={() => { setOpenItemMenu(null); setDashReceiptItem(activeItem); }}
+            disabled={!activeReceipt}
+            style={{ width: '100%', padding: '11px 16px', fontSize: 13, fontWeight: 600, color: activeReceipt ? '#d97706' : 'var(--text-faint)', background: 'white', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: activeReceipt ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, opacity: activeReceipt ? 1 : 0.5, fontFamily: "'Poppins', sans-serif" }}>
+            <ReceiptText size={14} color={activeReceipt ? '#d97706' : '#94a3b8'} /> View Receipt
+          </button>
+        )}
         <button
           onClick={() => {
             setOpenItemMenu(null);
@@ -1066,7 +1068,7 @@ function DashboardPageInner() {
 {/* Income / Expenses / Remaining — redesigned */}
 {(() => {
   const expensesPaid    = cutoffItems.filter(i => isMonthPaid(i.id, viewMonth + 1)).reduce((s, i) => s + i.amount, 0);
-  const expensesNotPaid = totalExpenses - expensesPaid;
+  const expensesNotPaid = unpaidExpenses;
   const paidPct         = totalExpenses > 0 ? Math.round((expensesPaid / totalExpenses) * 100) : 0;
   const remaining       = afterSavings;
   const isNegative      = remaining < 0;
@@ -1090,11 +1092,21 @@ function DashboardPageInner() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>Expenses</span>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)" }}>Expenses</span>
+              <span style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 400 }}>only unpaid deducted</span>
+            </div>
           </div>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", fontFamily: "monospace" }}>
-            {paymentsHidden ? "₱ ••••••" : formatCurrency(totalExpenses)}
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", fontFamily: "monospace" }}>
+              {paymentsHidden ? "₱ ••••••" : formatCurrency(totalExpenses)}
+            </span>
+            {expensesNotPaid < totalExpenses && (
+              <span style={{ fontSize: 11, color: "#f97316", fontFamily: "monospace", fontWeight: 600 }}>
+                − {paymentsHidden ? "••••" : formatCurrency(expensesNotPaid)} unpaid
+              </span>
+            )}
+          </div>
         </div>
         {/* Progress bar */}
         <div style={{ height: 6, borderRadius: 999, background: "#fee2e2", overflow: "hidden" }}>
@@ -1132,7 +1144,7 @@ function DashboardPageInner() {
 
       {/* Row 4 — Remaining */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
-        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)" }}>Remaining</span>
+        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)" }}>Remaining Balance After Unpaid Amounts</span>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
           <span style={{ fontSize: 17, fontWeight: 800, fontFamily: "monospace", color: isNegative ? "#dc2626" : "#16a34a" }}>
             {paymentsHidden ? "₱ ••••••" : (isNegative ? `−${formatCurrency(Math.abs(remaining))}` : formatCurrency(remaining))}

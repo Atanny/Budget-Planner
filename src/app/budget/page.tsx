@@ -484,7 +484,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
   >
     Total Expenses
   </h2>
-  <span style={{ color: 'dark', fontFamily: 'poppins', fontWeight: 800, fontSize: 17 }}> </span>
+ 
     {/* Month Button */}
 
     <div className= "flex items-center justify-between gap-2 relative overflow-visible">
@@ -630,7 +630,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
     "
   >
     {hidePayments ? <Eye size={12} /> : <EyeOff size={12} />}
-    {hidePayments ? 'Show All' : 'Hide All'}
+    {hidePayments ? 'Show All Payments' : 'Hide All Payments'}
   </button>
 
 </div>
@@ -685,7 +685,7 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
             <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--brand)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif" }}>{item.name}</p>
             {/* UPDATED LINE BELOW - Shows category + cutoff */}
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.3, fontFamily: "'Poppins', sans-serif" }}>
-              {catInfo?.label.split(' ').slice(1).join(' ') || item.category || 'General'} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'} • {MONTHS[viewMonth]} {item.cutoff === '1st' ? '15' : '30'}, {viewYear}
+              {catInfo?.label.split(' ').slice(1).join(' ') || item.category || 'General'} • {item.cutoff === '1st' ? '1st Cutoff · 15th' : '2nd Cutoff · 30th'}
             </p>
           </div>
           <span style={{ fontWeight: 700, fontSize: 14, color: '#dc2626', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif" }}>
@@ -741,82 +741,20 @@ const accountsScrollRef = useRef<HTMLDivElement>(null);
         </FloatingMenu>
 
         {/* Summary footer */}
-        {(() => {
-          const expensesPaid    = allItems.filter(i => isMonthPaid(i.id, viewMonth1)).reduce((s, i) => s + i.amount, 0)
-          const expensesNotPaid = totalExpenses - expensesPaid
-          const paidPct         = totalExpenses > 0 ? Math.round((expensesPaid / totalExpenses) * 100) : 0
-          const isNegative      = remaining < 0
-          return (
-            <div style={{ background: '#f8fafc', borderTop: '1.5px solid #e2e8f0', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-              {/* Income */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563EB', flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Income</span>
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#2563EB', fontFamily: 'monospace' }}>
-                  {hidePayments ? '₱ ••••' : formatCurrency(totalIncome)}
-                </span>
-              </div>
-
-              {/* Expenses + progress */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Expenses</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', fontFamily: 'monospace' }}>
-                    {hidePayments ? '₱ ••••' : formatCurrency(totalExpenses)}
-                  </span>
-                </div>
-                <div style={{ height: 6, borderRadius: 999, background: '#fee2e2', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${paidPct}%`, background: '#16a34a', borderRadius: 999, transition: 'width 0.4s' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>
-                    ✓ {hidePayments ? '••••' : formatCurrency(expensesPaid)} paid
-                  </span>
-                  {expensesNotPaid > 0 && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#f97316', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 999, padding: '2px 8px' }}>
-                      ⏳ {hidePayments ? '••••' : formatCurrency(expensesNotPaid)} pending
-                    </span>
-                  )}
-                  <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-faint)', marginLeft: 'auto' }}>{paidPct}% done</span>
-                </div>
-              </div>
-
-              {/* Savings rows */}
-              {(savingsCheck1st || savingsCheck2nd) && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Savings Goal</span>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace' }}>
-                    {hidePayments ? '₱ ••••' : `− ${formatCurrency(totalSavings)}`}
-                  </span>
-                </div>
-              )}
-
-              {/* Divider */}
-              <div style={{ height: 1, background: '#e2e8f0' }} />
-
-              {/* Remaining */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Helvetica, Arial, sans-serif' }}>Remaining</span>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-                  <span style={{ fontSize: 17, fontWeight: 800, fontFamily: 'monospace', color: isNegative ? '#dc2626' : '#16a34a' }}>
-                    {hidePayments ? '₱ ••••' : (isNegative ? `−${formatCurrency(Math.abs(remaining))}` : formatCurrency(remaining))}
-                  </span>
-                  {isNegative && <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>Over budget</span>}
-                </div>
-              </div>
-
+        <div style={{ background: '#FFF8F0', borderTop: '2px solid #FFE0B2' }}>
+          {[
+            { label: 'Income',    value: totalIncome },
+            { label: 'Expenses',  value: totalExpenses },
+            { label: 'Remaining', value: remaining },
+          ].map((row, i, arr) => (
+            <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid #FFE0B2' : 'none' }}>
+              <span style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 17, color: 'var(--brand)' }}>{row.label}</span>
+              <span style={{ fontWeight: 700, fontSize: 16, color: '#2563EB', fontFamily: "'Poppins', sans-serif" }}>
+                {hidePayments ? '₱ ••••' : `₱ ${row.value.toLocaleString()}`}
+              </span>
             </div>
-          )
-        })()}
+          ))}
+        </div>
       </div>
 {/* ═══ ACCOUNTS HEADER ═══════════════════════════════════════════════ */}
 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
