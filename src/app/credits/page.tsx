@@ -32,12 +32,17 @@ interface CreditRecord {
   taken_month: number | null;
   taken_year: number | null;
   
+  status: "Unpaid" | "Paid" | null;
+
   // Independent statuses for USED and DUE rows
   used_status: "Unpaid" | "Paid";
   due_status: "Unpaid" | "Paid";
   
   // Receipt uploaded when taking credit (proof of purchase)
   receipt_before: string | null;
+  
+  // Receipt uploaded after payment
+  receipt_after: string | null;
   
   // Payment receipts (uploaded when marking as paid)
   used_receipt_url: string | null;
