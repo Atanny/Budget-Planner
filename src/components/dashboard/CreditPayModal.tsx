@@ -6,7 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 interface CreditPayModalProps {
   credit: { id: string; name: string; amount: number; source: string } | null;
   rowType: "used" | "due" | null;
-  banks: { id: string; name: string; balance: number; color?: string }[];
+  banks: { id: string; name: string; balance: number; color?: string; is_credit?: boolean }[];
   onClose: () => void;
   onConfirm: (params: {
     creditId: string;
