@@ -1,4 +1,4 @@
-export type Cutoff = '1st' | '2nd'
+export type Cutoff = '1st' | '2nd' | 'both'
 export type PaymentStatus = 'Required' | 'Optional' | 'First Payment' | 'Last Payment' | 'Once' | 'Suspended' | 'Paid'
 
 export interface SalaryHistory {

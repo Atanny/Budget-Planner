@@ -14,7 +14,7 @@ interface Props {
 }
 
 const primaryButtonStyle: CSSProperties = {
-  background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))',
+  background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
   color: 'white',
   border: 'none',
   borderRadius: 12,
@@ -25,7 +25,7 @@ const primaryButtonStyle: CSSProperties = {
 }
 
 const secondaryButtonStyle: CSSProperties = {
-  background: 'var(--bg-subtle)',
+  background: '#FFFFFF',
   color: 'var(--text-secondary)',
   border: '1.5px solid var(--border)',
   borderRadius: 12,
@@ -59,25 +59,33 @@ function getAutoCutoff(): Cutoff {
 export default function AddItemModal({ editItem, banks, onClose, onSave }: Props) {
   const autoCutoff = editItem ? editItem.cutoff : getAutoCutoff()
 
-  const [name, setName] = useState(editItem?.name || '')
-  const [amount, setAmount] = useState(editItem?.amount?.toString() || '')
-  const [category, setCategory] = useState(editItem?.category || 'Food')
-  const [saving, setSaving] = useState(false)
-  const [step, setStep] = useState<'form' | 'confirm' | 'pay_now'>('form')
-  const [payNowBank, setPayNowBank] = useState<string>('')
-  const [transferFee, setTransferFee] = useState('')
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null)
+  const [name,          setName]          = useState(editItem?.name || '')
+  const [amount,        setAmount]        = useState(editItem?.amount?.toString() || '')
+  const [category,      setCategory]      = useState(editItem?.category || 'Food')
+  const [saving,        setSaving]        = useState(false)
+  const [step,          setStep]          = useState<'form' | 'confirm' | 'pay_now'>('form')
+  const [payNowBank,    setPayNowBank]    = useState<string>('')
+  const [transferFee,   setTransferFee]   = useState('')
+  const [receiptFile,   setReceiptFile]   = useState<File | null>(null)
+  const [receiptPreview,setReceiptPreview]= useState<string | null>(null)
+  // Cutoff — 1st | 2nd | both
+  const [cutoff,        setCutoff]        = useState<'1st' | '2nd' | 'both'>(
+    editItem ? (editItem.cutoff as '1st' | '2nd') : autoCutoff
+  )
+  // Recurring (no expiry) — like medicine, subscriptions
+  const [isRecurring,   setIsRecurring]   = useState(false)
 
   const selectedCategory = useMemo(
     () => EXPENSE_CATEGORIES.find(item => item.value === category),
     [category]
   )
 
-  const feeAmount = parseFloat(transferFee) || 0
-  const numericAmount = parseFloat(amount) || 0
-  const totalDeduct = numericAmount + feeAmount
-  const cutoffLabel = autoCutoff === '1st' ? '1st Cutoff (15th)' : '2nd Cutoff (30th)'
+  const feeAmount    = parseFloat(transferFee) || 0
+  const numericAmount= parseFloat(amount) || 0
+  const totalDeduct  = numericAmount + feeAmount
+  const cutoffLabel  =
+    cutoff === 'both' ? 'Both Cutoffs (15th & 30th)' :
+    cutoff === '1st'  ? '1st Cutoff (15th)'          : '2nd Cutoff (30th)'
 
   useEffect(() => {
     return () => {
@@ -113,16 +121,14 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
   async function doSave(isPaid: boolean, deductBankId?: string, fee?: number) {
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setSaving(false)
-      return
-    }
+    if (!user) { setSaving(false); return }
 
-    const payload: Partial<BudgetItem> & Record<string, unknown> = {
+    const cutoffs: Array<'1st' | '2nd'> = cutoff === 'both' ? ['1st', '2nd'] : [cutoff as '1st' | '2nd']
+
+    const basePayload: Partial<BudgetItem> & Record<string, unknown> = {
       name,
       amount: numericAmount,
-      cutoff: autoCutoff,
-      status: 'Once',
+      status: isRecurring ? 'Required' : 'Once',
       is_loan: false,
       category,
       bank_account_id: deductBankId || editItem?.bank_account_id || null,
@@ -130,41 +136,30 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
 
     let savedItem: BudgetItem | undefined
 
-    if (editItem) {
-      const { data: updated } = await supabase
-        .from('budget_items')
-        .update(payload)
-        .eq('id', editItem.id)
-        .select()
-        .single()
+    for (const co of cutoffs) {
+      const payload = { ...basePayload, cutoff: co }
 
-      savedItem = updated ?? undefined
-    } else {
-      const { data: newItem } = await supabase
-        .from('budget_items')
-        .insert({ user_id: user.id, ...payload })
-        .select()
-        .single()
+      if (editItem && cutoffs.length === 1) {
+        const { data: updated } = await supabase
+          .from('budget_items').update(payload).eq('id', editItem.id).select().single()
+        savedItem = updated ?? undefined
+      } else {
+        const { data: newItem } = await supabase
+          .from('budget_items').insert({ user_id: user.id, ...payload }).select().single()
+        savedItem = newItem ?? undefined
 
-      savedItem = newItem ?? undefined
-
-      if (newItem && isPaid) {
-        const receiptUrl = await uploadReceipt(user.id, newItem.id)
-        const now = new Date()
-
-        await supabase.from('monthly_payments').upsert({
-          budget_item_id: newItem.id,
-          user_id: user.id,
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          paid: true,
-          paid_at: now.toISOString(),
-          receipt_url: receiptUrl,
-        }, { onConflict: 'budget_item_id,year,month' })
-
-        if (deductBankId) {
-          const total = numericAmount + (fee || 0)
-          await supabase.rpc('adjust_bank_balance', { p_id: deductBankId, p_delta: -total })
+        if (newItem && isPaid) {
+          const receiptUrl = await uploadReceipt(user.id, newItem.id)
+          const now = new Date()
+          await supabase.from('monthly_payments').upsert({
+            budget_item_id: newItem.id, user_id: user.id,
+            year: now.getFullYear(), month: now.getMonth() + 1,
+            paid: true, paid_at: now.toISOString(), receipt_url: receiptUrl,
+          }, { onConflict: 'budget_item_id,year,month' })
+          if (deductBankId) {
+            const total = numericAmount + (fee || 0)
+            await supabase.rpc('adjust_bank_balance', { p_id: deductBankId, p_delta: -total })
+          }
         }
       }
     }
@@ -257,14 +252,14 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
         >
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: selectedCategory ? `${selectedCategory.color}18` : 'var(--accent-pale)' }}>
-              <ShoppingBag size={18} style={{ color: selectedCategory?.color || 'var(--accent)' }} />
+              <ShoppingBag size={18} style={{ color: selectedCategory?.color || 'var(--primary)' }} />
             </div>
             <div>
               <h2 className="font-bold" style={{ color: 'var(--text-primary)', margin: 0 }}>
                 {editItem ? 'Edit Expense' : step === 'confirm' ? 'Payment Status' : step === 'pay_now' ? 'Pay Now' : 'Add Expense'}
               </h2>
-              <p style={{ fontSize: 12, color: 'var(--accent)', margin: '4px 0 0' }}>
-                Auto-assigned to <strong>{cutoffLabel}</strong>
+              <p style={{ fontSize: 12, color: 'var(--primary)', margin: '4px 0 0' }}>
+                {editItem ? `Editing · ${cutoffLabel}` : step === 'form' ? 'Set cutoff & details below' : `→ ${cutoffLabel}`}
               </p>
             </div>
           </div>
@@ -298,7 +293,7 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
               <button
                 onClick={() => setStep('pay_now')}
                 disabled={saving}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <CreditCard size={16} /> Pay Now — Deduct from Account
               </button>
@@ -403,6 +398,61 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
                   placeholder="0.00"
                   style={inputStyle}
                 />
+              </div>
+
+              {/* Cutoff selector */}
+              {!editItem && (
+                <div style={{ marginBottom: 20 }}>
+                  <label style={labelStyle}>Which Cutoff?</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    {([
+                      { val: '1st' as const, label: '1st Cutoff', sub: '15th' },
+                      { val: '2nd' as const, label: '2nd Cutoff', sub: '30th' },
+                      { val: 'both' as const, label: 'Both',      sub: '15th & 30th' },
+                    ]).map(opt => (
+                      <button key={opt.val} type="button"
+                        onClick={() => setCutoff(opt.val)}
+                        style={{
+                          padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer',
+                          background: cutoff === opt.val ? '#eff6ff' : 'var(--bg-subtle)',
+                          border: `1.5px solid ${cutoff === opt.val ? '#2563EB' : 'var(--border)'}`,
+                        }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: cutoff === opt.val ? '#1d4ed8' : 'var(--text-primary)', margin: 0 }}>{opt.label}</p>
+                        <p style={{ fontSize: 10, color: cutoff === opt.val ? '#3b82f6' : 'var(--text-faint)', margin: '2px 0 0' }}>{opt.sub}</p>
+                      </button>
+                    ))}
+                  </div>
+                  {cutoff === 'both' && (
+                    <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 10, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                      <p style={{ fontSize: 11, color: '#2563EB', fontWeight: 600, margin: 0 }}>
+                        💡 This will create 2 separate expense items — one for each cutoff.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recurring toggle */}
+              <div style={{ marginBottom: 20 }}>
+                <button type="button" onClick={() => setIsRecurring(v => !v)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 14px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                    background: isRecurring ? '#fff7ed' : 'var(--bg-subtle)',
+                    border: `1.5px solid ${isRecurring ? '#f97316' : 'var(--border)'}`,
+                  }}>
+                  <div style={{ width: 36, height: 20, borderRadius: 999, background: isRecurring ? '#f97316' : '#e2e8f0', position: 'relative', flexShrink: 0, border: `1.5px solid ${isRecurring ? '#ea580c' : '#cbd5e1'}`, transition: 'background 0.2s' }}>
+                    <div style={{ position: 'absolute', top: 2, left: isRecurring ? 16 : 2, width: 12, height: 12, borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: isRecurring ? '#c2410c' : 'var(--text-primary)', margin: 0 }}>
+                      🔁 Recurring / No Expiry
+                    </p>
+                    <p style={{ fontSize: 11, color: isRecurring ? '#f97316' : 'var(--text-faint)', margin: '2px 0 0' }}>
+                      {isRecurring ? 'Appears every month — great for medicine, subscriptions, utilities' : 'Enable for expenses that repeat every month with no end date'}
+                    </p>
+                  </div>
+                </button>
               </div>
 
               <div style={{ marginBottom: 8 }}>

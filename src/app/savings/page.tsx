@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MonthlySavings } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
-import { PiggyBank, TrendingUp, Edit2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { PiggyBank, TrendingUp, Edit2, Check, X, ChevronLeft, ChevronRight, Leaf } from 'lucide-react'
 
-const MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CURRENT_YEAR = new Date().getFullYear()
 
 export default function SavingsPage() {
@@ -68,162 +68,178 @@ export default function SavingsPage() {
   const currentMonth  = new Date().getMonth()
   const ytd = savings.slice(0, currentMonth + 1).reduce((s, m) => s + m.kinsenas + m.atrenta, 0)
   const maxSaving = Math.max(...savings.map(s => s.kinsenas + s.atrenta), 1)
+  const goalPerYear = savingsGoal * 24
+  const goalPct = goalPerYear > 0 ? Math.min(100, Math.round((grandTotal / goalPerYear) * 100)) : 0
 
-  const inputStyle: React.CSSProperties = {
-    background: '#F8FAFC', border: '1.5px solid #0f172a', borderRadius: '50%',
-    color: 'var(--text-primary)', padding: '7px 10px', fontSize: 13,
-    width: '100%', outline: 'none', fontFamily: "'Poppins', sans-serif",
-  }
-
-  if (loading) return (
-    <div style={{ display: 'grid', placeItems: 'center', height: 256 }}>
-      <div className="spinner" />
-    </div>
-  )
+  if (loading) return <div style={{ display: 'grid', placeItems: 'center', height: 256 }}><div className="spinner" /></div>
 
   return (
     <div style={{ width: '100%', paddingBottom: 24 }}>
 
-      {/* Header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', marginBottom: 20, gap: 12 }}>
-        <h1 style={{ fontSize: 28, fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, color: 'var(--text-primary)' }}>Savings</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>{year}</span>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={() => setYear(y => y - 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-              <ChevronLeft size={16} color="white" />
-            </button>
-            <button onClick={() => setYear(y => y + 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: '#2563EB', border: 'none', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
-              <ChevronRight size={16} color="white" />
-            </button>
-          </div>
+      {/* ── Page Header (Figma) ── */}
+      <div className="page-header">
+        <div className="page-header-icon">
+          <Leaf size={22} color="white" strokeWidth={2.5} />
+        </div>
+        <div>
+          <h1 className="page-header-title">SAVINGS</h1>
+          <p className="page-header-subtitle">Track your monthly savings goals.</p>
         </div>
       </div>
 
-      {/* Stat Cards */}
-<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-
-  {/* Annual Total */}
-  <div className="rounded-[16px] bg-gradient-to-br from-[#FF8B00] to-[#FF5500] p-[18px_14px] grid justify-items-center gap-[5px] border-[1.5px] border-slate-900 shadow-[0_4px_18px_rgba(255,139,0,0.18)]">
-    <div className="w-[38px] h-[38px] rounded-[12px] bg-white/25 grid place-items-center">
-      <PiggyBank size={18} color="white" />
-    </div>
-    <p className="text-[10px] text-white/85 font-medium font-['Poppins'] uppercase">
-      Annual Total
-    </p>
-    <p className="text-[16px] font-bold text-white tracking-[-0.02em] text-center font-['Poppins']">
-      ₱ {grandTotal.toLocaleString()}
-    </p>
-  </div>
-
-  {/* Year to Date */}
-  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
-    <div className="w-[38px] h-[38px] rounded-[12px] bg-slate-100 grid place-items-center">
-      <TrendingUp size={18} color="#94A3B8" />
-    </div>
-    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
-      Year-to-Date
-    </p>
-    <p className="text-[16px] font-bold text-[var(--text-primary)] tracking-[-0.02em] text-center font-['Poppins']">
-      ₱ {ytd.toLocaleString()}
-    </p>
-  </div>
-
-  {/* Kinsenas */}
-  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
-    <div className="w-[38px] h-[38px] rounded-[12px] bg-blue-50 grid place-items-center">
-      <PiggyBank size={18} color="#2563EB" />
-    </div>
-    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
-      Kinsenas (15th)
-    </p>
-    <p className="text-[16px] font-bold text-[#2563EB] tracking-[-0.02em] text-center font-['Poppins']">
-      ₱ {totalKinsenas.toLocaleString()}
-    </p>
-  </div>
-
-  {/* Atrenta */}
-  <div className="rounded-[16px] bg-white border-[1.5px] border-slate-200 p-[18px_14px] grid justify-items-center gap-[5px]">
-    <div className="w-[38px] h-[38px] rounded-[12px] bg-green-50 grid place-items-center">
-      <PiggyBank size={18} color="#16A34A" />
-    </div>
-    <p className="text-[10px] text-[var(--text-muted)] font-medium font-['Poppins'] uppercase">
-      Atrenta (30th)
-    </p>
-    <p className="text-[16px] font-bold text-[#16A34A] tracking-[-0.02em] text-center font-['Poppins']">
-      ₱ {totalAtrenta.toLocaleString()}
-    </p>
-  </div>
-
-</div>
-
-      {/* Monthly Table */}
-      <div style={{ borderRadius: 16, overflow: 'hidden', border: '1.5px solid #0F172A', marginBottom: 22 }}>
-        <div style={{ background: '#1a237e', padding: '14px 20px' }}>
-          <p style={{ color: 'white', fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 700, fontSize: 15 }}>Monthly Breakdown — {year}</p>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 3, fontFamily: "'Poppins', sans-serif" }}>Savings checkbox in Budget auto-fills · or edit manually below</p>
+      {/* ── Stat Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {/* Annual Total */}
+        <div style={{ borderRadius: 16, background: 'linear-gradient(135deg, #FF8B00 0%, #FF5500 100%)', padding: '16px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, boxShadow: '0 4px 18px rgba(255,139,0,0.20)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PiggyBank size={18} color="white" />
+          </div>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, fontFamily: 'Nunito, sans-serif' }}>Annual Total</p>
+          <p style={{ fontSize: 16, fontWeight: 900, color: 'white', margin: 0, fontFamily: 'Nunito, sans-serif' }}>₱ {grandTotal.toLocaleString()}</p>
         </div>
 
+        {/* Year-to-Date */}
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid var(--border)', padding: '16px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F4F6FB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingUp size={18} color="#94A3B8" />
+          </div>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, fontFamily: 'Nunito, sans-serif' }}>Year-to-Date</p>
+          <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', margin: 0, fontFamily: 'Nunito, sans-serif' }}>₱ {ytd.toLocaleString()}</p>
+        </div>
+
+        {/* Kinsenas */}
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid var(--border)', padding: '16px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--primary-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PiggyBank size={18} color="var(--primary)" />
+          </div>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, fontFamily: 'Nunito, sans-serif' }}>Kinsenas (15th)</p>
+          <p style={{ fontSize: 16, fontWeight: 900, color: 'var(--primary)', margin: 0, fontFamily: 'Nunito, sans-serif' }}>₱ {totalKinsenas.toLocaleString()}</p>
+        </div>
+
+        {/* Atrenta */}
+        <div style={{ borderRadius: 16, background: 'white', border: '1.5px solid var(--border)', padding: '16px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, boxShadow: 'var(--shadow-card)' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PiggyBank size={18} color="#16A34A" />
+          </div>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0, fontFamily: 'Nunito, sans-serif' }}>Atrenta (30th)</p>
+          <p style={{ fontSize: 16, fontWeight: 900, color: '#16A34A', margin: 0, fontFamily: 'Nunito, sans-serif' }}>₱ {totalAtrenta.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* ── Year Nav ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: 0, fontFamily: 'Nunito, sans-serif' }}>
+          Monthly Breakdown — <span style={{ color: 'var(--primary)' }}>{year}</span>
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setYear(y => y - 1)}
+            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronLeft size={16} color="white" />
+          </button>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif', minWidth: 36, textAlign: 'center' }}>{year}</span>
+          <button onClick={() => setYear(y => y + 1)}
+            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronRight size={16} color="white" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Monthly Table ── */}
+      <div className="section-card">
         {savings.map((row, idx) => {
           const isEditing  = editingId === row.id || editingId === `temp-${row.month}`
           const isCurrent  = idx === currentMonth && year === CURRENT_YEAR
           const total      = row.kinsenas + row.atrenta
-          const fromBudget = savingsGoal > 0 && (row.kinsenas === savingsGoal || row.atrenta === savingsGoal)
+          const isGoalMet  = savingsGoal > 0 && total >= savingsGoal * 2
           const barPct     = Math.round((total / maxSaving) * 100)
+          const fromBudget = savingsGoal > 0 && (row.kinsenas >= savingsGoal || row.atrenta >= savingsGoal)
+
           return (
-            <div key={row.id} style={{ borderBottom: idx < 11 ? '1px solid #F1F5F9' : 'none', background: isCurrent ? '#EFF6FF' : isEditing ? '#FAFFFE' : 'white' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 1fr auto', alignItems: 'center', gap: 12, padding: '14px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {isCurrent && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#2563EB', display: 'block', flexShrink: 0 }} />}
-                  <div>
-                    <p style={{ fontWeight: isCurrent ? 700 : 600, fontSize: 13, color: isCurrent ? '#1d4ed8' : 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>{MONTHS_LONG[idx]}</p>
-                    {fromBudget && !isEditing && (
-                      <span style={{ fontSize: 9, fontWeight: 700, background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: 8, padding: '1px 6px', display: 'inline-block', marginTop: 2, fontFamily: "'Poppins', sans-serif" }}>AUTO</span>
-                    )}
+            <div key={row.id} style={{
+              borderBottom: idx < 11 ? '1px solid #F1F5F9' : 'none',
+              background: isEditing ? '#FAFBFF' : isCurrent ? 'var(--primary-pale)' : 'white',
+              borderLeft: isCurrent ? '3px solid var(--primary)' : isGoalMet ? '3px solid #16A34A' : 'none',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr auto', alignItems: 'center', gap: 10, padding: '14px 14px' }}>
+                {/* Month label */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {isCurrent && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)', display: 'block', flexShrink: 0 }} />}
+                    <p style={{ fontWeight: isCurrent ? 800 : 700, fontSize: 13, color: isCurrent ? 'var(--primary)' : 'var(--text-primary)', margin: 0, fontFamily: 'Nunito, sans-serif' }}>
+                      {MONTHS_LONG[idx]}
+                    </p>
                   </div>
-                </div>
-                <div>
-                  <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2, fontFamily: "'Poppins', sans-serif" }}>Kinsenas</p>
-                  {isEditing ? (
-                    <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))} style={inputStyle} />
-                  ) : (
-                    <p style={{ fontWeight: 700, fontSize: 13, color: row.kinsenas > 0 ? '#2563EB' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>{row.kinsenas > 0 ? `₱ ${row.kinsenas.toLocaleString()}` : '—'}</p>
+                  {fromBudget && !isEditing && (
+                    <span style={{ fontSize: 8, fontWeight: 700, background: 'var(--primary-pale)', color: 'var(--primary)', border: '1px solid var(--primary-muted)', borderRadius: 6, padding: '1px 5px', display: 'inline-block', marginTop: 2, fontFamily: 'Nunito, sans-serif' }}>AUTO</span>
                   )}
                 </div>
+
+                {/* Kinsenas */}
                 <div>
-                  <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2, fontFamily: "'Poppins', sans-serif" }}>Atrenta</p>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 3px', fontFamily: 'Nunito, sans-serif' }}>Kinsenas</p>
                   {isEditing ? (
-                    <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))} style={inputStyle} />
+                    <input type="number" value={editValues.kinsenas} onChange={e => setEditValues(v => ({ ...v, kinsenas: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'Nunito, sans-serif' }} />
                   ) : (
-                    <p style={{ fontWeight: 700, fontSize: 13, color: row.atrenta > 0 ? '#16A34A' : '#CBD5E1', fontFamily: "'Poppins', sans-serif" }}>{row.atrenta > 0 ? `₱ ${row.atrenta.toLocaleString()}` : '—'}</p>
+                    <p style={{ fontWeight: 700, fontSize: 13, color: row.kinsenas > 0 ? 'var(--primary)' : '#CBD5E1', margin: 0, fontFamily: 'Nunito, sans-serif' }}>
+                      {row.kinsenas > 0 ? `₱ ${row.kinsenas.toLocaleString()}` : '—'}
+                    </p>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
+
+                {/* Atrenta */}
+                <div>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, margin: '0 0 3px', fontFamily: 'Nunito, sans-serif' }}>Atrenta</p>
+                  {isEditing ? (
+                    <input type="number" value={editValues.atrenta} onChange={e => setEditValues(v => ({ ...v, atrenta: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'Nunito, sans-serif' }} />
+                  ) : (
+                    <p style={{ fontWeight: 700, fontSize: 13, color: row.atrenta > 0 ? '#16A34A' : '#CBD5E1', margin: 0, fontFamily: 'Nunito, sans-serif' }}>
+                      {row.atrenta > 0 ? `₱ ${row.atrenta.toLocaleString()}` : '—'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Edit controls */}
+                <div style={{ display: 'flex', gap: 5 }}>
                   {isEditing ? (
                     <>
-                      <button onClick={() => saveEdit(row)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#22C55E', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Check size={14} color="white" /></button>
-                      <button onClick={() => setEditingId(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'white', border: '1.5px solid #E2E8F0', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={14} color="#64748B" /></button>
+                      <button onClick={() => saveEdit(row)}
+                        style={{ width: 30, height: 30, borderRadius: 8, background: '#16A34A', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={13} color="white" />
+                      </button>
+                      <button onClick={() => setEditingId(null)}
+                        style={{ width: 30, height: 30, borderRadius: 8, background: 'white', border: '1.5px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <X size={13} color="var(--text-muted)" />
+                      </button>
                     </>
                   ) : (
-                    <button onClick={() => startEdit(row)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#2563EB', border: 'none', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Edit2 size={14} color="white" /></button>
+                    <button onClick={() => startEdit(row)}
+                      style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Edit2 size={13} color="white" />
+                    </button>
                   )}
                 </div>
               </div>
-              {(total > 0 || isEditing) && (
-                <div style={{ padding: '0 20px 14px' }}>
-                  {total > 0 && !isEditing && (
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Poppins', sans-serif" }}>Total saved</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', fontFamily: "'Poppins', sans-serif" }}>₱ {total.toLocaleString()}</span>
-                      </div>
-                      <div style={{ height: 5, borderRadius: 999, background: '#E2E8F0', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${barPct}%`, background: 'linear-gradient(90deg, #2563EB, #16A34A)', borderRadius: 999, transition: 'width 0.4s ease' }} />
-                      </div>
-                    </div>
-                  )}
-                  {isEditing && <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))} placeholder="Notes (optional)..." style={{ ...inputStyle, marginTop: 4 }} />}
-                  {!isEditing && row.notes && <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 6, fontFamily: "'Poppins', sans-serif" }}>{row.notes}</p>}
+
+              {/* Progress bar */}
+              {(total > 0 || isEditing) && !isEditing && (
+                <div style={{ padding: '0 14px 12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'Nunito, sans-serif' }}>Total saved</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif' }}>₱ {total.toLocaleString()}</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 999, background: '#E8ECF4', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${barPct}%`, background: isGoalMet ? '#16A34A' : 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 999, transition: 'width 0.4s' }} />
+                  </div>
+                  {row.notes && <p style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 5, fontFamily: 'Nunito, sans-serif' }}>{row.notes}</p>}
+                </div>
+              )}
+              {isEditing && (
+                <div style={{ padding: '0 14px 12px' }}>
+                  <input value={editValues.notes} onChange={e => setEditValues(v => ({ ...v, notes: e.target.value }))}
+                    placeholder="Notes (optional)..."
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'Nunito, sans-serif' }} />
                 </div>
               )}
             </div>
@@ -231,61 +247,37 @@ export default function SavingsPage() {
         })}
 
         {/* Footer totals */}
-        {(() => {
-          const goalPerYear  = savingsGoal * 24 // 2 cutoffs × 12 months
-          const goalPct      = goalPerYear > 0 ? Math.min(100, Math.round((grandTotal / goalPerYear) * 100)) : 0
-          return (
-            <div style={{ background: '#f8fafc', borderTop: '1.5px solid #e2e8f0', padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-              {/* Kinsenas */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563EB', flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Kinsenas Total</span>
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#2563EB', fontFamily: 'monospace' }}>
-                  {formatCurrency(totalKinsenas)}
-                </span>
-              </div>
-
-              {/* Atrenta */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', fontFamily: "'Poppins', sans-serif" }}>Atrenta Total</span>
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', fontFamily: 'monospace' }}>
-                  {formatCurrency(totalAtrenta)}
-                </span>
-              </div>
-
-              {/* Progress bar toward yearly goal */}
-              {savingsGoal > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <div style={{ height: 6, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${goalPct}%`, background: 'linear-gradient(90deg, #2563EB, #16a34a)', borderRadius: 999, transition: 'width 0.4s' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>{goalPct}% of yearly goal</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 500 }}>{formatCurrency(goalPerYear)} target</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Divider */}
-              <div style={{ height: 1, background: '#e2e8f0' }} />
-
-              {/* Grand Total */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'Helvetica, Arial, sans-serif' }}>Grand Total</span>
-                <span style={{ fontSize: 17, fontWeight: 800, fontFamily: 'monospace', color: '#0F172A' }}>
-                  {formatCurrency(grandTotal)}
-                </span>
-              </div>
-
+        <div style={{ background: '#FAFBFF', borderTop: '1px solid var(--border)', padding: '16px 14px', borderRadius: '0 0 18px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="summary-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', display: 'block' }} />
+              <span className="summary-label">Kinsenas Total</span>
             </div>
-          )
-        })()}
+            <span className="summary-value" style={{ color: 'var(--primary)' }}>{formatCurrency(totalKinsenas)}</span>
+          </div>
+          <div className="summary-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16A34A', display: 'block' }} />
+              <span className="summary-label">Atrenta Total</span>
+            </div>
+            <span className="summary-value" style={{ color: '#16A34A' }}>{formatCurrency(totalAtrenta)}</span>
+          </div>
+          {savingsGoal > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ height: 6, borderRadius: 999, background: '#E8ECF4', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${goalPct}%`, background: 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 999, transition: 'width 0.4s' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, fontFamily: 'Nunito, sans-serif' }}>{goalPct}% of yearly goal</span>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, fontFamily: 'Nunito, sans-serif' }}>{formatCurrency(goalPerYear)} target</span>
+              </div>
+            </div>
+          )}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 15, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif' }}>Grand Total</span>
+            <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif' }}>{formatCurrency(grandTotal)}</span>
+          </div>
+        </div>
       </div>
     </div>
   )

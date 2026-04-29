@@ -56,7 +56,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
   const [baseStatus,    setBaseStatus]    = useState<'Required' | 'Optional'>('Required')
   const UNLIMITED_MONTHS = 9999
   const isExistingUnlimited = existingLD?.total_months >= UNLIMITED_MONTHS
-  const [isUnlimited,   setIsUnlimited]   = useState(isExistingUnlimited)
+  const [isUnlimited] = useState(false)  // unlimited moved to Expenses → Recurring toggle
   const [totalMonths,   setTotalMonths]   = useState(isExistingUnlimited ? '12' : (existingLD?.total_months?.toString() || '12'))
   const [startDate,     setStartDate]     = useState(existingLD?.start_date || new Date().toISOString().split('T')[0])
   const [notes,         setNotes]         = useState(existingLD?.notes || '')
@@ -247,40 +247,6 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
               </div>
             </div>
 
-            {/* Unlimited / No Expiry toggle */}
-            <div
-              onClick={() => setIsUnlimited(v => !v)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
-                borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-                background: isUnlimited ? '#FFF7ED' : 'white',
-                border: `1.5px solid ${isUnlimited ? 'var(--brand)' : '#bfdbfe'}`,
-                transition: 'all 0.2s',
-              }}
-            >
-              <div style={{
-                width: 38, height: 22, borderRadius: 'var(--radius-md)', flexShrink: 0, position: 'relative',
-                background: isUnlimited ? 'var(--brand)' : '#CBD5E1',
-                transition: 'background 0.2s',
-              }}>
-                <div style={{
-                  position: 'absolute', top: 3,
-                  left: isUnlimited ? 18 : 3,
-                  width: 16, height: 16, borderRadius: '50%',
-                  background: 'white', transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: isUnlimited ? 'var(--brand-dark)' : 'var(--text-primary)' }}>
-                  ♾️ No Expiry (Maintenance)
-                </p>
-                <p style={{ fontSize: 11, color: isUnlimited ? 'var(--brand)' : 'var(--text-faint)', marginTop: 1 }}>
-                  {isUnlimited ? 'Loan never expires — always appears in budget' : 'Enable for recurring payments that never end'}
-                </p>
-              </div>
-            </div>
-
             {/* Compute mode */}
             <div>
               <p className="text-xs font-semibold mb-2" style={{ color: '#2563eb' }}>Payment Computation</p>
@@ -398,6 +364,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
             <select value={cutoff} onChange={e => setCutoff(e.target.value as Cutoff)} style={inputStyle}>
               <option value="1st">1st Cutoff (15th)</option>
               <option value="2nd">2nd Cutoff (30th)</option>
+              <option value="both">Both Cutoffs (1st & 2nd)</option>
             </select>
           </div>
 
