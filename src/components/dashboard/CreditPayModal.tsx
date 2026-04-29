@@ -41,7 +41,7 @@ export default function CreditPayModal({ credit, rowType, banks, onClose, onConf
   }
 
   async function handleSubmit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !credit || !rowType) return;
     setSaving(true);
     try {
       await onConfirm({
