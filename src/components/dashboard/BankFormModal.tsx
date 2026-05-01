@@ -43,11 +43,11 @@ export default function BankFormModal({ bank, onClose, onSave }: BankFormModalPr
           {/* Credit / Regular toggle */}
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => { setIsCredit(false); if (type === "credit") setType("bank"); }}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1.5px solid", background: !isCredit ? "#eff6ff" : "var(--bg-subtle)", color: !isCredit ? "#2563EB" : "var(--text-muted)", borderColor: !isCredit ? "#2563EB" : "var(--border)" }}>
+              style={{ flex: 1, padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1.5px solid", background: !isCredit ? "#eff6ff" : "var(--bg-subtle)", color: !isCredit ? "#2563EB" : "var(--text-muted)", borderColor: !isCredit ? "#2563EB" : "var(--border)" }}>
               🏦 Savings / Bank
             </button>
             <button onClick={() => { setIsCredit(true); setType("credit"); }}
-              style={{ flex: 1, padding: "11px 0", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1.5px solid", background: isCredit ? "#f5f3ff" : "var(--bg-subtle)", color: isCredit ? "#7c3aed" : "var(--text-muted)", borderColor: isCredit ? "#7c3aed" : "var(--border)" }}>
+              style={{ flex: 1, padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1.5px solid", background: isCredit ? "#f5f3ff" : "var(--bg-subtle)", color: isCredit ? "#7c3aed" : "var(--text-muted)", borderColor: isCredit ? "#7c3aed" : "var(--border)" }}>
               💳 Credits
             </button>
           </div>
@@ -69,7 +69,7 @@ export default function BankFormModal({ bank, onClose, onSave }: BankFormModalPr
           )}
 
           {isCredit && (
-            <div style={{ padding: "10px 12px", borderRadius: 12, background: "#f5f3ff", border: "1.5px solid #ddd6fe" }}>
+            <div style={{ padding: "10px 12px", borderRadius: 10, background: "#f5f3ff", border: "1.5px solid #ddd6fe" }}>
               <p style={{ fontSize: 12, fontWeight: 600, color: "#6d28d9", margin: "0 0 2px" }}>💳 Credit Account</p>
               <p style={{ fontSize: 11, color: "#7c3aed", margin: 0 }}>This account will appear as a credit source in the Credits page.</p>
             </div>

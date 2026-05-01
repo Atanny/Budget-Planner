@@ -14,7 +14,7 @@ interface Props {
 }
 
 const primaryButtonStyle: CSSProperties = {
-  background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+  background: 'linear-gradient(135deg, #6D28D9, #2563EB)',
   color: 'white',
   border: 'none',
   borderRadius: 12,
@@ -244,7 +244,7 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div
         className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}
+        style={{ background: 'var(--bg-surface)', border: '1px solid #E2E8F0', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}
       >
         <div
           className="flex items-center justify-between px-5 py-4 border-b shrink-0"
@@ -285,7 +285,7 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
               <button
                 onClick={() => void doSave(false)}
                 disabled={saving}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: '#f8fafc', color: '#475569', border: '1.5px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <Clock size={16} color="#64748b" /> Not Yet Paid
                 <span style={{ fontWeight: 500, fontSize: 12, color: '#94a3b8' }}>— save without paying</span>
@@ -293,11 +293,11 @@ export default function AddItemModal({ editItem, banks, onClose, onSave }: Props
               <button
                 onClick={() => setStep('pay_now')}
                 disabled={saving}
-                style={{ width: '100%', padding: '14px 16px', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                style={{ width: '100%', padding: '14px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <CreditCard size={16} /> Pay Now — Deduct from Account
               </button>
-              <button onClick={() => setStep('form')} style={{ ...secondaryButtonStyle, width: '100%', borderRadius: 999 }}>
+              <button onClick={() => setStep('form')} style={{ ...secondaryButtonStyle, width: '100%', borderRadius: 10 }}>
                 ← Back to Edit
               </button>
             </div>

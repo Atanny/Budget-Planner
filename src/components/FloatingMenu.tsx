@@ -68,9 +68,9 @@ export default function FloatingMenu({
         zIndex: 9999,
         minWidth,
         background: 'white',
-        border: '1.5px solid #0f172a',
-        borderRadius: 12,
-        boxShadow: '0 8px 28px rgba(15,23,42,0.22)',
+        border: '1px solid #E2E8F0',
+        borderRadius: 14,
+        boxShadow: '0 8px 32px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06)',
         overflow: 'hidden',
         transform: showAbove ? 'translateY(-100%)' : 'none',
       }}

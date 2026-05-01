@@ -109,11 +109,11 @@ function TransactionsPageInner() {
               onChange={e => setSearch(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { setSearchActive(search); setPage(1) } }}
               placeholder="Search Transaction from here"
-              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 999, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }}
+              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 10, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }}
             />
           </div>
           <button onClick={() => { setSearchActive(search); setPage(1) }}
-            style={{ background: '#4F46E5', color: 'white', border: 'none', borderRadius: 999, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(79,70,229,0.25)', flexShrink: 0 }}>
+            style={{ background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(109,40,217,0.25)', flexShrink: 0 }}>
             <Search size={14} /> Search
           </button>
         </div>
@@ -139,7 +139,7 @@ function TransactionsPageInner() {
             </button>
           </div>
           <button onClick={() => { setFromDateActive(fromDate); setToDateActive(toDate); setPage(1) }}
-            style={{ width: 38, height: 38, borderRadius: 10, background: '#4F46E5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(79,70,229,0.25)' }}>
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(109,40,217,0.25)' }}>
             <Search size={15} />
           </button>
           {(fromDateActive || toDateActive) && (
@@ -181,13 +181,19 @@ function TransactionsPageInner() {
           const timeFormatted = new Date(log.created_at).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })
 
           return (
-            <div key={log.id} style={{ borderBottom: idx < pageLogs.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+            <div key={log.id}>
               {/* Main log row */}
               <div
                 onClick={() => setExpandedLog(isExpanded ? null : log.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', cursor: 'pointer', background: 'white', transition: 'background 0.1s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#FAFBFF')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px',
+                  cursor: 'pointer', background: 'white',
+                  borderBottom: '1px solid #F1F5F9',
+                  borderLeft: `3.5px solid ${meta.color}`,
+                  transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#FAFBFF'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'white'; }}
               >
                 {/* Action icon circle */}
                 <div style={{
@@ -276,7 +282,7 @@ function TransactionsPageInner() {
                 }
 
                 return (
-                  <div style={{ background: '#F8FAFF', padding: '10px 14px 14px', borderLeft: `3px solid ${meta.color}`, borderBottom: '1px solid #F1F5F9' }}>
+                  <div style={{ background: '#F8FAFF', padding: '10px 16px 14px', borderLeft: `3.5px solid ${meta.color}`, borderBottom: '1px solid #F1F5F9' }}>
                     {/* Status badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: meta.bg, color: meta.color, border: `1px solid ${meta.color}30` }}>

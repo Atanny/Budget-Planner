@@ -165,10 +165,10 @@ function LoansPageInner() {
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (setSearchActive(search), setPage(1))}
               placeholder="Search Item"
-              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 999, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }} />
+              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 10, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }} />
           </div>
           <button onClick={() => { setSearchActive(search); setPage(1) }}
-            style={{ background: '#4F46E5', color: 'white', border: 'none', borderRadius: 999, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(79,70,229,0.25)', flexShrink: 0 }}>
+            style={{ background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(109,40,217,0.25)', flexShrink: 0 }}>
             <Search size={14} /> Search
           </button>
         </div>
@@ -192,7 +192,7 @@ function LoansPageInner() {
             </button>
           </div>
           <button onClick={() => { setFromDateActive(fromDate); setToDateActive(toDate); setPage(1) }}
-            style={{ width: 38, height: 38, borderRadius: 10, background: '#4F46E5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(79,70,229,0.25)' }}>
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(109,40,217,0.25)' }}>
             <Search size={15} />
           </button>
           {(fromDateActive || toDateActive) && (
@@ -292,7 +292,7 @@ function LoansPageInner() {
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)' }}>{Math.min(elapsed, totalM)}/{totalM} months ({pct}%)</span>
                       </div>
                       <div style={{ height: 6, borderRadius: 999, background: '#E8ECF4', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: isFullyPaid ? '#16A34A' : 'var(--primary)', borderRadius: 999, transition: 'width 0.4s' }} />
+                        <div style={{ height: '100%', width: `${pct}%`, background: isFullyPaid ? '#16A34A' : 'var(--primary)', borderRadius: 10, transition: 'width 0.4s' }} />
                       </div>
                     </div>
                   )}
@@ -376,7 +376,7 @@ function LoansPageInner() {
           ['Name','Monthly Amount','Category','Cutoff','Status'],
           ...loans.map(l => [l.name, l.amount.toFixed(2), l.category||'', l.cutoff, l.status||''])
         ])}
-          style={{ background: 'var(--primary-pale)', border: '1.5px solid var(--primary-muted)', color: 'var(--primary)', borderRadius: 999, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Nunito, sans-serif' }}>
+          style={{ background: 'var(--primary-pale)', border: '1.5px solid var(--primary-muted)', color: 'var(--primary)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Nunito, sans-serif' }}>
           <Download size={13} /> Export
         </button>
       </div>

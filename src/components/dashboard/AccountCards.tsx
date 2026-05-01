@@ -82,10 +82,10 @@ export default function AccountCards({
           onClick={onAddAccount}
           style={{
             background: "var(--primary)", color: "white", border: "none",
-            borderRadius: 999, padding: "7px 14px", fontSize: 12, fontWeight: 700,
+            borderRadius: 10, padding: "7px 14px", fontSize: 12, fontWeight: 700,
             cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
             fontFamily: "Nunito, sans-serif",
-            boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
+            boxShadow: "0 2px 8px rgba(109,40,217,0.25)",
           }}
         >
           <Plus size={12} /> Add Account
@@ -137,7 +137,7 @@ export default function AccountCards({
           }}>
             <Plus size={20} style={{ color: "#CBD5E1" }} />
             <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-faint)", margin: 0 }}>No accounts yet</p>
-            <button onClick={onAddAccount} style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            <button onClick={onAddAccount} style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               Add Account
             </button>
           </div>

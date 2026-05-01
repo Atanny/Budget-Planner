@@ -21,7 +21,7 @@ export default function CutoffTabs({ activeTab, onChange }: CutoffTabsProps) {
             onClick={() => onChange(tab)}
             style={{
               padding: "10px 22px",
-              borderRadius: 999,
+              borderRadius: 10,
               fontFamily: "Nunito, sans-serif",
               fontWeight: 700,
               fontSize: 13,
@@ -30,7 +30,7 @@ export default function CutoffTabs({ activeTab, onChange }: CutoffTabsProps) {
               background: active ? "#4F46E5" : "#FFFFFF",
               color: active ? "#FFFFFF" : "#4F46E5",
               transition: "all 0.15s ease",
-              boxShadow: active ? "0 3px 10px rgba(79,70,229,0.25)" : "none",
+              boxShadow: active ? "0 3px 10px rgba(109,40,217,0.25)" : "none",
             }}
           >
             {tab === "1st" ? "1st Cutoff" : "2nd Cutoff"}

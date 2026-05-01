@@ -8,15 +8,17 @@ interface PayConfirmModalProps {
   item: BudgetItem;
   banks: { id: string; name: string; balance: number }[];
   onClose: () => void;
-  onConfirm: (params: { bankId: string; totalAmount: number; receiptFile: File | null }) => void;
+  onConfirm: (params: { bankId: string; totalAmount: number; receiptFile: File | null }) => Promise<void>;
 }
 
 export default function PayConfirmModal({ item, banks, onClose, onConfirm }: PayConfirmModalProps) {
-  const [step,         setStep]         = useState<null | "already" | "payNow">(null);
-  const [selectedBank, setSelectedBank] = useState("");
-  const [transferFee,  setTransferFee]  = useState("");
-  const [receiptFile,  setReceiptFile]  = useState<File | null>(null);
+  const [step,           setStep]           = useState<null | "already" | "payNow">(null);
+  const [selectedBank,   setSelectedBank]   = useState("");
+  const [transferFee,    setTransferFee]    = useState("");
+  const [receiptFile,    setReceiptFile]    = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
 
   const selectedBankObj = banks.find(b => b.id === selectedBank);
   const fee             = parseFloat(transferFee) || 0;
@@ -28,13 +30,26 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
     if (f) { setReceiptFile(f); setReceiptPreview(URL.createObjectURL(f)); }
   }
 
+  async function handleConfirm(params: { bankId: string; totalAmount: number; receiptFile: File | null }) {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onConfirm(params);
+    } catch (err) {
+      console.error(err);
+      setError("Payment failed. Please try again.");
+      setSaving(false);
+    }
+  }
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15,23,42,0.45)", backdropFilter: "blur(8px)", padding: 16 }}>
-      <div className="slide-up" style={{ width: "100%", maxWidth: 360, borderRadius: 20, overflow: "hidden", background: "white", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.18)" }}>
+      <div className="slide-up" style={{ width: "100%", maxWidth: 360, borderRadius: 20, overflow: "hidden", background: "white", border: "1px solid #E2E8F0", boxShadow: "0 8px 32px rgba(15,23,42,0.18)" }}>
 
         {/* Header */}
         <div style={{ padding: "22px 20px 14px", textAlign: "center" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", border: "2px solid #0f172a", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, background: "#dcfce7", border: "2px solid #86EFAC", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
             <Check size={22} color="var(--brand-dark)" strokeWidth={3} />
           </div>
           <h2 style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)" }}>
@@ -53,11 +68,11 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <button onClick={() => setStep("already")}
-                style={{ width: "100%", padding: "13px 16px", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #16a34a", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                style={{ width: "100%", padding: "13px 16px", borderRadius: 10, fontSize: 14, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #16a34a", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Check size={15} /> Already Paid — just mark it
               </button>
               <button onClick={() => setStep("payNow")}
-                style={{ width: "100%", padding: "13px 16px", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                style={{ width: "100%", padding: "13px 16px", borderRadius: 10, fontSize: 14, fontWeight: 700, background: "#2563EB", color: "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <CreditCard size={15} /> Pay Now — deduct from account
               </button>
               <button onClick={onClose}
@@ -84,10 +99,11 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
               {receiptPreview && <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }} style={{ marginTop: 6, fontSize: 11, color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>✕ Remove photo</button>}
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setStep(null)} className="btn-cancel" style={{ flex: 1 }}>← Back</button>
-              <button onClick={() => onConfirm({ bankId: "", totalAmount: item.amount, receiptFile })}
-                style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #16a34a, #15803d)", color: "white", border: "none", cursor: "pointer" }}>
-                ✓ Mark as Paid
+              <button onClick={() => setStep(null)} disabled={saving} className="btn-cancel" style={{ flex: 1 }}>← Back</button>
+              <button onClick={() => handleConfirm({ bankId: "", totalAmount: item.amount, receiptFile })}
+                disabled={saving}
+                style={{ flex: 2, padding: "11px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, background: saving ? "#86efac" : "linear-gradient(135deg, #16a34a, #15803d)", color: "white", border: "none", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+                {saving ? "Saving..." : "✓ Mark as Paid"}
               </button>
             </div>
           </div>
@@ -100,7 +116,7 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
             <div style={{ margin: "0 20px 12px" }}>
               <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, display: "block", color: "var(--text-secondary)" }}>Deduct from which account?</label>
               <select value={selectedBank} onChange={e => setSelectedBank(e.target.value)}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontSize: 14, border: `1.5px solid ${lowBalance ? "#dc2626" : "#0f172a"}`, background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }}>
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 12, fontSize: 14, border: `1.5px solid ${lowBalance ? "#dc2626" : "#E2E8F0"}`, background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }}>
                 <option value="">Select bank account...</option>
                 {banks.map(b => <option key={b.id} value={b.id} disabled={b.balance < item.amount}>{b.name} — {formatCurrency(b.balance)}{b.balance < item.amount ? " ⚠️ Low balance" : ""}</option>)}
               </select>
@@ -116,7 +132,7 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
             <div style={{ margin: "0 20px 12px" }}>
               <label style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, display: "block", color: "var(--text-secondary)" }}>Transfer Fee <span style={{ fontWeight: 400, color: "var(--text-faint)" }}>(optional)</span></label>
               <input type="number" value={transferFee} onChange={e => setTransferFee(e.target.value)} placeholder="0.00"
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1.5px solid #0f172a", background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }} />
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1.5px solid #E2E8F0", background: "var(--bg-subtle)", color: "var(--text-primary)", outline: "none" }} />
               {fee > 0 && <p style={{ fontSize: 11, marginTop: 5, color: "#854d0e", fontWeight: 600 }}>💡 Total: {formatCurrency(totalAmount)}</p>}
             </div>
 
@@ -135,18 +151,24 @@ export default function PayConfirmModal({ item, banks, onClose, onConfirm }: Pay
               <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>⚠️ This will deduct {formatCurrency(totalAmount)} from the selected account</p>
             </div>
 
+            {error && (
+              <div style={{ margin: "0 20px 10px", padding: "10px 12px", borderRadius: 10, background: "#fef2f2", border: "1.5px solid #fca5a5" }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "#dc2626", margin: 0 }}>⚠️ {error}</p>
+              </div>
+            )}
+
             {/* Buttons */}
             <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-              <button onClick={() => setStep(null)} className="btn-cancel" style={{ flex: 1 }}>← Back</button>
+              <button onClick={() => setStep(null)} disabled={saving} className="btn-cancel" style={{ flex: 1 }}>← Back</button>
               <button
                 onClick={() => {
                   const bankId = selectedBank || item.bank_account_id;
-                  if (!bankId) { alert("Please select a bank account"); return; }
-                  onConfirm({ bankId, totalAmount, receiptFile });
+                  if (!bankId) { setError("Please select a bank account."); return; }
+                  handleConfirm({ bankId, totalAmount, receiptFile });
                 }}
-                disabled={!selectedBank || lowBalance}
-                style={{ flex: 2, padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: "pointer", opacity: (!selectedBank || lowBalance) ? 0.4 : 1 }}>
-                Confirm &amp; Deduct
+                disabled={!selectedBank || lowBalance || saving}
+                style={{ flex: 2, padding: "11px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, background: saving ? "#93c5fd" : "linear-gradient(135deg, #2563EB, #1d4ed8)", color: "white", border: "none", cursor: (saving || !selectedBank || lowBalance) ? "not-allowed" : "pointer", opacity: (!selectedBank || lowBalance || saving) ? 0.6 : 1 }}>
+                {saving ? "Processing..." : "Confirm & Deduct"}
               </button>
             </div>
           </>

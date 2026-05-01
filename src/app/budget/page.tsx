@@ -242,11 +242,11 @@ function BudgetPageInner() {
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (setSearchActive(search), setPage(1))}
               placeholder="Search Item"
-              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 999, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }}
+              style={{ width: '100%', padding: '11px 14px 11px 38px', borderRadius: 10, fontFamily: 'Nunito, sans-serif', fontSize: 14, border: '1.5px solid #E2E8F0', outline: 'none' }}
             />
           </div>
           <button onClick={() => { setSearchActive(search); setPage(1) }}
-            style={{ background: '#4F46E5', color: 'white', border: 'none', borderRadius: 999, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(79,70,229,0.25)', flexShrink: 0 }}>
+            style={{ background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 20px', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 3px 10px rgba(109,40,217,0.25)', flexShrink: 0 }}>
             <Search size={14} /> Search
           </button>
         </div>
@@ -272,7 +272,7 @@ function BudgetPageInner() {
             </button>
           </div>
           <button onClick={() => { setFromDateActive(fromDate); setToDateActive(toDate); setPage(1) }}
-            style={{ width: 38, height: 38, borderRadius: 10, background: '#4F46E5', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(79,70,229,0.25)' }}>
+            style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', flexShrink: 0, boxShadow: '0 2px 8px rgba(109,40,217,0.25)' }}>
             <Search size={15} />
           </button>
           {(fromDateActive || toDateActive) && (
@@ -438,7 +438,7 @@ function BudgetPageInner() {
           ['Name','Category','Amount','Cutoff','Paid'],
           ...allItems.map(i => [i.name, EXPENSE_CATEGORIES.find(c=>c.value===i.category)?.label?.split(' ').slice(1).join(' ')||i.category, i.amount.toFixed(2), i.cutoff, isMonthPaid(i.id,viewMonth1)?'Yes':'No'])
         ])}
-          style={{ background: 'var(--primary-pale)', border: '1.5px solid var(--primary-muted)', color: 'var(--primary)', borderRadius: 999, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Nunito, sans-serif' }}>
+          style={{ background: 'var(--primary-pale)', border: '1.5px solid var(--primary-muted)', color: 'var(--primary)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Nunito, sans-serif' }}>
           <Download size={13} /> Export
         </button>
       </div>
@@ -471,7 +471,7 @@ function BudgetPageInner() {
             <div style={{ width: '100%', maxWidth: 420, borderRadius: 20, overflow: 'hidden', background: 'white', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #FCD34D', background: '#FFFBEB' }}>
                 <p style={{ fontWeight: 700, fontSize: 15, color: '#92400E', margin: 0 }}>Receipt — {receiptModalItem.name}</p>
-                <button onClick={() => setReceiptModalItem(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: '#FEF3C7', border: '1px solid #FCD34D', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <button onClick={() => setReceiptModalItem(null)} style={{ width: 32, height: 32, borderRadius: 8, background: '#FEF3C7', border: '1px solid #FCD34D', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <X size={15} color="#D97706" />
                 </button>
               </div>
@@ -483,7 +483,7 @@ function BudgetPageInner() {
                 )}
               </div>
               <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-                <button onClick={() => setReceiptModalItem(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: '#D97706', color: 'white', border: 'none', cursor: 'pointer' }}>Close</button>
+                <button onClick={() => setReceiptModalItem(null)} style={{ width: '100%', padding: '11px 0', borderRadius: 10, fontSize: 14, fontWeight: 700, background: '#D97706', color: 'white', border: 'none', cursor: 'pointer' }}>Close</button>
               </div>
             </div>
           </div>
@@ -495,7 +495,7 @@ function BudgetPageInner() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', padding: 16, background: 'rgba(15,23,42,0.50)', backdropFilter: 'blur(8px)' }}>
           <div className="slide-up" style={{ width: '100%', maxWidth: 360, borderRadius: 22, overflow: 'hidden', background: 'white', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid var(--border)' }}>
             <div style={{ padding: '24px 20px 16px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#DCFCE7', border: '2px solid #86EFAC', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: '#DCFCE7', border: '2px solid #86EFAC', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
                 <Check size={24} color="#16A34A" strokeWidth={3} />
               </div>
               <h2 style={{ fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 17, color: 'var(--text-primary)', margin: '0 0 6px' }}>Mark as Paid?</h2>
@@ -531,7 +531,7 @@ function BudgetPageInner() {
             </div>
             <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button onClick={() => { setPayConfirmItem(null); setPaySelectedBank(''); setPayTransferFee(''); setPayReceiptFile(null); setPayReceiptPreview(null) }}
-                style={{ padding: '12px 0', borderRadius: 999, fontSize: 14, fontWeight: 600, background: '#F4F6FB', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                style={{ padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 600, background: '#F4F6FB', color: 'var(--text-secondary)', border: '1px solid var(--border)', cursor: 'pointer' }}>
                 Cancel
               </button>
               <button onClick={async () => {
@@ -541,7 +541,7 @@ function BudgetPageInner() {
                 setPayConfirmItem(null); setPaySelectedBank(''); setPayTransferFee(''); setPayReceiptFile(null); setPayReceiptPreview(null)
                 await toggleCurrentMonthWithFee(item, bankId, item.amount + fee, rf)
               }}
-                style={{ padding: '12px 0', borderRadius: 999, fontSize: 14, fontWeight: 700, background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                style={{ padding: '12px 0', borderRadius: 10, fontSize: 14, fontWeight: 700, background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer' }}>
                 Mark Paid
               </button>
             </div>

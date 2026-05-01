@@ -37,7 +37,7 @@ const STATUS_BADGE_STYLE: Record<string, { bg: string; color: string; border: st
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', fontSize: 14,
-  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
+  border: '1px solid #E2E8F0', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
 const labelStyle: React.CSSProperties = {
@@ -201,7 +201,7 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
       <div className="w-full max-w-md slide-up rounded-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
+        style={{ background: 'var(--bg-surface)', border: '1px solid #E2E8F0', boxShadow: '0 8px 32px rgba(15,23,42,0.16)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0"
@@ -424,12 +424,12 @@ export default function AddLoanModal({ editItem, onClose, onSave }: Props) {
           style={{ borderColor: '#0f172a', background: 'var(--bg-subtle)' }}>
           <button onClick={onClose}
             className="flex-1 py-2.5 text-sm font-semibold transition"
-            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 999 }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 10 }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving || !name || !amount}
             className="flex-1 py-2.5 text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-dark))', borderRadius: 999 }}>
+            style={{ background: 'linear-gradient(135deg, #6D28D9, #2563EB)', borderRadius: 10 }}>
             {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Add Loan'}
           </button>
         </div>
@@ -522,7 +522,7 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
           </p>
           <div className="flex flex-wrap gap-1.5 mb-4">
             {monthLabels.map(m => (
-              <span key={m} className="text-xs px-2.5 py-1 rounded-full font-semibold"
+              <span key={m} className="text-xs px-2.5 py-1 rounded-xl font-semibold"
                 style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd' }}>
                 {m}
               </span>
@@ -537,13 +537,13 @@ function PrevMonthConfirmModal({ startDate, onNo, onYes }: { startDate: string; 
           <button
             onClick={onNo}
             className="flex-1 py-2.5 text-sm font-semibold transition"
-            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 999 }}>
+            style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand)', borderRadius: 10 }}>
             No, skip
           </button>
           <button
             onClick={onYes}
             className="flex-1 py-2.5 text-sm font-bold text-white transition"
-            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderRadius: 999 }}>
+            style={{ background: 'linear-gradient(135deg, #6D28D9, #2563EB)', borderRadius: 10 }}>
             Yes, mark paid ✓
           </button>
         </div>

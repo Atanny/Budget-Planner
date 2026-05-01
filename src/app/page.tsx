@@ -208,10 +208,43 @@ function DashboardPageInner() {
         receiptUrl = urlData.publicUrl;
       }
     }
-    await supabase.from("monthly_payments").upsert(
-      { budget_item_id: item.id, user_id: userId, year: viewYear, month, paid: true, paid_at: new Date().toISOString(), ...(receiptUrl ? { receipt_url: receiptUrl } : {}) },
-      { onConflict: "budget_item_id,user_id,year,month" }
-    );
+
+    // Check if a record already exists for this item/year/month
+    const { data: existing } = await supabase
+      .from("monthly_payments")
+      .select("id")
+      .eq("budget_item_id", item.id)
+      .eq("user_id", userId)
+      .eq("year", viewYear)
+      .eq("month", month)
+      .maybeSingle();
+
+    const payload = {
+      budget_item_id: item.id,
+      user_id: userId,
+      year: viewYear,
+      month,
+      paid: true,
+      paid_at: new Date().toISOString(),
+      ...(receiptUrl ? { receipt_url: receiptUrl } : {}),
+    };
+
+    let dbError;
+    if (existing?.id) {
+      // Update existing row
+      const { error } = await supabase
+        .from("monthly_payments")
+        .update({ paid: true, paid_at: payload.paid_at, ...(receiptUrl ? { receipt_url: receiptUrl } : {}) })
+        .eq("id", existing.id);
+      dbError = error;
+    } else {
+      // Insert new row
+      const { error } = await supabase.from("monthly_payments").insert(payload);
+      dbError = error;
+    }
+
+    if (dbError) throw new Error(dbError.message);
+
     if (bankId) {
       await supabase.rpc("adjust_bank_balance", { p_id: bankId, p_delta: -totalAmount });
       const { data: updatedBanks } = await supabase.from("bank_accounts").select("*").eq("user_id", userId).eq("is_active", true);
@@ -387,13 +420,13 @@ function DashboardPageInner() {
               const active = activeTab === tab;
               return (
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                  padding: "9px 20px", borderRadius: 999, fontFamily: "Nunito, sans-serif",
+                  padding: "9px 20px", borderRadius: 10, fontFamily: "Nunito, sans-serif",
                   fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  border: `1.5px solid ${active ? "#4F46E5" : "#C7D2FE"}`,
-                  background: active ? "#4F46E5" : "#FFFFFF",
+                  border: `1.5px solid ${active ? 'transparent' : '#C7D2FE'}`,
+                  background: active ? "linear-gradient(135deg, #6D28D9, #2563EB)" : "#FFFFFF",
                   color: active ? "#FFFFFF" : "#4F46E5",
                   transition: "all 0.15s ease",
-                  boxShadow: active ? "0 3px 10px rgba(79,70,229,0.25)" : "none",
+                  boxShadow: active ? "0 3px 10px rgba(109,40,217,0.28)" : "none",
                 }}>
                   {tab === "1st" ? "Kinsenas" : "Atrenta"}
                 </button>
@@ -446,6 +479,7 @@ function DashboardPageInner() {
       )}
       {payConfirmItem && (
         <PayConfirmModal
+          key={payConfirmItem.id}
           item={payConfirmItem}
           banks={banks}
           onClose={() => setPayConfirmItem(null)}
@@ -467,7 +501,7 @@ function DashboardPageInner() {
             <div style={{ width: "100%", maxWidth: 420, borderRadius: 20, overflow: "hidden", background: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.2)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #FCD34D", background: "#FFFBEB" }}>
                 <p style={{ fontWeight: 700, fontSize: 15, color: "#92400E", margin: 0 }}>Receipt — {dashReceiptItem.name}</p>
-                <button onClick={() => setDashReceiptItem(null)} style={{ width: 32, height: 32, borderRadius: "50%", background: "#FEF3C7", border: "1px solid #FCD34D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <button onClick={() => setDashReceiptItem(null)} style={{ width: 32, height: 32, borderRadius: 8, background: "#FEF3C7", border: "1px solid #FCD34D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                   <X size={15} color="#D97706" />
                 </button>
               </div>
@@ -479,7 +513,7 @@ function DashboardPageInner() {
                 )}
               </div>
               <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)" }}>
-                <button onClick={() => setDashReceiptItem(null)} style={{ width: "100%", padding: "11px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, background: "#D97706", color: "white", border: "none", cursor: "pointer" }}>Close</button>
+                <button onClick={() => setDashReceiptItem(null)} style={{ width: "100%", padding: "11px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, background: "#D97706", color: "white", border: "none", cursor: "pointer" }}>Close</button>
               </div>
             </div>
           </div>
@@ -539,12 +573,12 @@ function DashboardPageInner() {
               <div style={{ padding: "12px 20px 20px", display: "flex", gap: 10, borderTop: "1px solid var(--border)" }}>
                 {!isPaid && (
                   <button onClick={() => { setDashCreditViewId(null); setDashCreditPayId(cred.id); setDashCreditPayRowType(dashCreditViewRowType); }}
-                    style={{ flex: 1, padding: "11px 0", borderRadius: 999, fontSize: 13, fontWeight: 700, color: "white", background: "#16A34A", border: "none", cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, color: "white", background: "#16A34A", border: "none", cursor: "pointer" }}>
                     Mark as Paid
                   </button>
                 )}
                 <button onClick={() => setDashCreditViewId(null)}
-                  style={{ flex: 1, padding: "11px 0", borderRadius: 999, fontSize: 13, fontWeight: 600, background: "var(--bg-subtle)", color: "var(--text-muted)", border: "1px solid var(--border)", cursor: "pointer" }}>
+                  style={{ flex: 1, padding: "11px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, background: "var(--bg-subtle)", color: "var(--text-muted)", border: "1px solid var(--border)", cursor: "pointer" }}>
                   Close
                 </button>
               </div>
@@ -567,31 +601,38 @@ function OwedSection({ userId }: { userId: string | null }) {
       .then(({ data }) => { setRecords(data || []); setLoading(false); });
   }, [userId]);
 
-  if (loading || records.length === 0) return null;
+  if (loading) return null;
 
   return (
     <div style={{ marginBottom: 14 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 12px", fontFamily: "Nunito, sans-serif" }}>
-        Owed
+      <h2 style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 4px", fontFamily: "Nunito, sans-serif" }}>
+        Owed to You
       </h2>
-      <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", margin: "-8px 0 12px" }}>
-        Know who owed you.
+      <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", margin: "0 0 12px" }}>
+        Track who still owes you money.
       </p>
       <div className="section-card">
-        {records.map(r => {
+        {records.length === 0 ? (
+          <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13, fontFamily: 'Nunito, sans-serif' }}>
+            🎉 No one owes you right now.
+          </div>
+        ) : records.map(r => {
           const pct = r.amount_owed > 0 ? Math.round((r.amount_paid / r.amount_owed) * 100) : 0;
           return (
-            <div key={r.id} style={{ padding: "14px 16px", borderBottom: "1px solid #F1F5F9" }}>
+            <div key={r.id} style={{ padding: "14px 16px", borderBottom: "1px solid #F1F5F9", borderLeft: `3px solid ${pct >= 100 ? '#16a34a' : '#FF8B00'}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <p style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", margin: 0, fontFamily: "Nunito, sans-serif" }}>
                   {r.person_name}
                 </p>
-                <p style={{ fontWeight: 700, fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
-                  {formatCurrency(r.amount_paid)}/{formatCurrency(r.amount_owed)}
+                <p style={{ fontWeight: 700, fontSize: 13, color: "var(--text-secondary)", margin: 0, fontFamily: 'monospace' }}>
+                  {formatCurrency(r.amount_paid)}<span style={{ color: 'var(--text-faint)' }}> / {formatCurrency(r.amount_owed)}</span>
                 </p>
               </div>
-              <div className="owed-bar">
-                <div className="owed-fill" style={{ width: `${Math.min(pct, 100)}%` }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="owed-bar" style={{ flex: 1 }}>
+                  <div className="owed-fill" style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: pct >= 100 ? '#16a34a' : '#FF8B00', minWidth: 32, textAlign: 'right' }}>{pct}%</span>
               </div>
             </div>
           );

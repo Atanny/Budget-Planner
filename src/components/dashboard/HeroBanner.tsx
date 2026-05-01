@@ -73,7 +73,7 @@ export default function HeroBanner({
         <button onClick={onSahodClick} style={{
           background: "rgba(255,255,255,0.20)", backdropFilter: "blur(8px)",
           color: "white", border: "1.5px solid rgba(255,255,255,0.38)",
-          borderRadius: 999, padding: "8px 16px", fontSize: 12, fontWeight: 700,
+          borderRadius: 10, padding: "8px 16px", fontSize: 12, fontWeight: 700,
           cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5,
           fontFamily: "Nunito, sans-serif",
         }}>

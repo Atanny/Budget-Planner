@@ -242,10 +242,10 @@ export default function AuthPage() {
           width: '100%', padding: '14px 0',
           background: loading || disabled ? '#9CA3AF' : '#4F46E5',
           color: 'white', border: 'none',
-          borderRadius: 999, cursor: loading || disabled ? 'not-allowed' : 'pointer',
+          borderRadius: 10, cursor: loading || disabled ? 'not-allowed' : 'pointer',
           fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 15,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          boxShadow: '0 4px 14px rgba(79,70,229,0.30)',
+          boxShadow: '0 4px 14px rgba(109,40,217,0.30)',
           transition: 'all 0.2s',
         }}
       >
@@ -435,7 +435,7 @@ export default function AuthPage() {
                 <SubmitBtn label={<><ArrowRight size={15} /> Verify OTP</>} onClick={handleVerifyOtp} disabled={!otpCode} />
                 <button
                   onClick={() => { setOtpSent(false); setMsg('') }}
-                  style={{ width: '100%', marginTop: 10, background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 999, padding: '12px', fontSize: 14, fontWeight: 700, color: '#64748B', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
+                  style={{ width: '100%', marginTop: 10, background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, color: '#64748B', cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}
                 >
                   Resend OTP
                 </button>

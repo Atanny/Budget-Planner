@@ -20,7 +20,7 @@ interface NotifTemplate {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14,
-  border: '1.5px solid #0f172a', background: '#F8FAFC',
+  border: '1px solid #E2E8F0', background: '#F8FAFC',
   color: 'var(--text-primary)', outline: 'none', fontFamily: "'Poppins', sans-serif",
 }
 
@@ -193,7 +193,7 @@ export default function NotificationsPage() {
 
       {/* Permission Banner */}
       {!isReady && (
-        <div style={{ borderRadius: 16, border: '1.5px solid #0f172a', background: '#FFF7ED', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+        <div style={{ borderRadius: 16, border: '1px solid #E2E8F0', background: '#FFF7ED', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: '#FFE0B2', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <BellOff size={17} color="var(--brand-dark)" />
@@ -204,14 +204,14 @@ export default function NotificationsPage() {
             </div>
           </div>
           <button onClick={enableNotifications} disabled={enableLoading}
-            style={{ padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif", opacity: enableLoading ? 0.6 : 1 }}>
+            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: "'Poppins', sans-serif", opacity: enableLoading ? 0.6 : 1 }}>
             {enableLoading ? 'Setting up...' : 'Enable'}
           </button>
         </div>
       )}
 
       {isReady && (
-        <div style={{ borderRadius: 16, border: '1.5px solid #0f172a', background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{ borderRadius: 16, border: '1px solid #E2E8F0', background: 'linear-gradient(130deg, #FF8B00 0%, #FF5500 100%)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.25)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <CheckCircle size={16} color="white" />
           </div>
@@ -242,11 +242,11 @@ export default function NotificationsPage() {
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button onClick={() => generateCutoffNotif('1st')}
-              style={{ flex: 1, padding: '9px 0', borderRadius: 12, fontSize: 12, fontWeight: 700, background: '#dbeafe', color: '#1d4ed8', border: '1.5px solid #93c5fd', cursor: 'pointer', minWidth: 130, fontFamily: "'Poppins', sans-serif" }}>
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, background: '#dbeafe', color: '#1d4ed8', border: '1.5px solid #93c5fd', cursor: 'pointer', minWidth: 130, fontFamily: "'Poppins', sans-serif" }}>
               + 1st Cutoff Alert
             </button>
             <button onClick={() => generateCutoffNotif('2nd')}
-              style={{ flex: 1, padding: '9px 0', borderRadius: 12, fontSize: 12, fontWeight: 700, background: '#eff6ff', color: '#6d28d9', border: '1.5px solid #c4b5fd', cursor: 'pointer', minWidth: 130, fontFamily: "'Poppins', sans-serif" }}>
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, background: '#eff6ff', color: '#6d28d9', border: '1.5px solid #c4b5fd', cursor: 'pointer', minWidth: 130, fontFamily: "'Poppins', sans-serif" }}>
               + 2nd Cutoff Alert
             </button>
           </div>
@@ -269,7 +269,7 @@ export default function NotificationsPage() {
               <option value="2nd">2nd Cutoff</option>
             </select>
             <button onClick={sendCustom} disabled={!isReady || !customTitle || !customBody || sending === 'custom'}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700, background: '#2563EB', color: 'white', border: 'none', cursor: 'pointer', opacity: (!isReady || !customTitle || !customBody) ? 0.5 : 1, fontFamily: "'Poppins', sans-serif" }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color: 'white', border: 'none', cursor: 'pointer', opacity: (!isReady || !customTitle || !customBody) ? 0.5 : 1, fontFamily: "'Poppins', sans-serif" }}>
               <Send size={13} />
               {sending === 'custom' ? 'Sending...' : 'Send Now'}
             </button>

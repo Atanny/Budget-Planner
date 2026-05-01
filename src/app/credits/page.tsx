@@ -56,6 +56,7 @@ interface CreditRecord {
   used_transfer_fee: number;
   due_transfer_fee: number;
   
+  interest_rate: number;
   notes: string | null;
   created_at: string;
 }
@@ -74,7 +75,7 @@ const STATUS_STYLE: Record<CreditStatus, { color: string; bg: string; border: st
 }
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', fontSize: 13, borderRadius: 10,
-  border: '1.5px solid #0f172a', background: '#F8FAFC',
+  border: '1px solid #E2E8F0', background: '#F8FAFC',
   color: 'var(--text-primary)', outline: 'none', fontFamily: "'Poppins', sans-serif",
 }
 const labelStyle: React.CSSProperties = {
@@ -87,7 +88,7 @@ const overlay: React.CSSProperties = {
 }
 const mbox: React.CSSProperties = {
   width: '100%', maxWidth: 440, borderRadius: 20, overflow: 'hidden',
-  background: 'var(--bg-surface)', border: '1.5px solid #0f172a',
+  background: 'var(--bg-surface)', border: '1px solid #E2E8F0',
   boxShadow: '0 8px 32px rgba(15,23,42,0.18)',
   display: 'flex', flexDirection: 'column', maxHeight: '90vh',
 }
@@ -117,12 +118,14 @@ function CreditsInner() {
   const [addDueDate,    setAddDueDate]   = useState('')
   const [addNotes,      setAddNotes]     = useState('')
   const [addBefore,     setAddBefore]    = useState<File|null>(null)
+  const [addInterestRate, setAddInterestRate] = useState('')
   // This controls whether the USED item on dashboard is marked as paid
   const [usedAlreadyPaid, setUsedAlreadyPaid] = useState<boolean|null>(null)
   const [addSaving,     setAddSaving]    = useState(false)
 
   // Mark paid modal
   const [payCredit,   setPayCredit]   = useState<CreditRecord|null>(null)
+  const [payRowType,  setPayRowType]  = useState<'used'|'due'>('due')
   const [payReceipt,  setPayReceipt]  = useState<File|null>(null)
   const [paySaving,   setPaySaving]   = useState(false)
 
@@ -197,8 +200,11 @@ function CreditsInner() {
       // Overall status: if used is already paid, the whole credit is considered paid
       // Otherwise it's unpaid (will need to be paid by due date)
       status: usedAlreadyPaid ? 'Paid' : 'Unpaid',
+      used_status: usedAlreadyPaid ? 'Paid' : 'Unpaid',
+      due_status: 'Unpaid',
       receipt_before: receiptBeforeUrl,
       receipt_after: null,
+      interest_rate: parseFloat(addInterestRate) || 0,
       notes: addNotes || null,
     }).select().single()
 
@@ -218,15 +224,35 @@ function CreditsInner() {
     setAddSaving(false); setShowAdd(false)
     setAddName(''); setAddAmount(''); setAddSource(''); setAddAccId('')
     setAddDate(new Date().toISOString().split('T')[0]); setAddDueDate('')
-    setAddNotes(''); setAddBefore(null); setUsedAlreadyPaid(null)
+    setAddNotes(''); setAddBefore(null); setUsedAlreadyPaid(null); setAddInterestRate('')
   }
 
   async function handleMarkPaid() {
     if (!payCredit || !userId) return
     setPaySaving(true)
-    const receiptAfterUrl = payReceipt ? await uploadFile(payReceipt, userId) : payCredit.receipt_after
-    await supabase.from('credit_records').update({ status: 'Paid', receipt_after: receiptAfterUrl }).eq('id', payCredit.id)
-    setCredits(prev => prev.map(c => c.id === payCredit.id ? { ...c, status: 'Paid', receipt_after: receiptAfterUrl } : c))
+    const receiptUrl = payReceipt ? await uploadFile(payReceipt, userId) : null
+    const now = new Date().toISOString()
+
+    if (payRowType === 'used') {
+      await supabase.from('credit_records').update({
+        used_status: 'Paid',
+        used_receipt_url: receiptUrl || payCredit.used_receipt_url,
+        used_paid_at: now,
+      }).eq('id', payCredit.id)
+      setCredits(prev => prev.map(c => c.id === payCredit.id
+        ? { ...c, used_status: 'Paid' as const, used_receipt_url: receiptUrl || c.used_receipt_url, used_paid_at: now }
+        : c))
+    } else {
+      await supabase.from('credit_records').update({
+        due_status: 'Paid',
+        due_receipt_url: receiptUrl || payCredit.due_receipt_url,
+        due_paid_at: now,
+        status: 'Paid',
+      }).eq('id', payCredit.id)
+      setCredits(prev => prev.map(c => c.id === payCredit.id
+        ? { ...c, due_status: 'Paid' as const, due_receipt_url: receiptUrl || c.due_receipt_url, due_paid_at: now, status: 'Paid' as const }
+        : c))
+    }
     setPaySaving(false); setPayCredit(null); setPayReceipt(null)
   }
 
@@ -267,7 +293,7 @@ function CreditsInner() {
           <p style={{ fontSize:12, color:'var(--text-faint)', margin:'2px 0 0', fontFamily:"'Poppins',sans-serif" }}>Your credit transactions this cutoff</p>
         </div>
         <button onClick={() => setShowAdd(true)}
-          style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 14px', borderRadius:999, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(124,58,237,0.25)', fontFamily:"'Poppins',sans-serif" }}>
+          style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 14px', borderRadius: 10, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(124,58,237,0.25)', fontFamily:"'Poppins',sans-serif" }}>
           <Plus size={14}/> Take Credit
         </button>
       </div>
@@ -299,7 +325,7 @@ function CreditsInner() {
       )}
 
       {/* Main card */}
-      <div style={{ margin:'14px 16px 0', borderRadius:16, overflow:'hidden', border:'1.5px solid #0F172A' }}>
+      <div style={{ margin:'14px 16px 0', borderRadius:16, overflow:'hidden', border:'1px solid #E2E8F0' }}>
 
         {/* Card header */}
         <div className="bg-[#1a237e]" style={{ padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -327,7 +353,7 @@ function CreditsInner() {
               onSelectMonth={goToMonth}
             />
             <button onClick={() => setHideAmt(h=>!h)}
-              style={{ display:'inline-flex', alignItems:'center', gap:5, background:'#2563EB', color:'white', borderRadius:999, padding:'5px 12px', fontSize:11, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'Helvetica,Arial,sans-serif' }}>
+              style={{ display:'inline-flex', alignItems:'center', gap:5, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color:'white', borderRadius: 10, padding:'5px 12px', fontSize:11, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'Helvetica,Arial,sans-serif' }}>
               {hideAmt ? <Eye size={11}/> : <EyeOff size={11}/>}
               {hideAmt ? 'Show All Payments' : 'Hide All Payments'}
             </button>
@@ -351,7 +377,7 @@ function CreditsInner() {
           const st = STATUS_STYLE[overallStatus]
           const acc = accounts.find(a => a.id === c.source_account_id)
           return (
-            <div key={c.id} style={{ padding:'12px 16px', borderBottom: i < filtered.length-1 ? '1px solid var(--border)' : 'none', background: overallStatus==='Paid' ? '#f0fdf4' : 'white', display:'flex', alignItems:'center', gap:10 }}>
+            <div key={c.id} style={{ padding:'13px 16px', display:'flex', alignItems:'center', gap:12, background: overallStatus==='Paid' ? '#f0fdf4' : 'white', borderBottom: i < filtered.length-1 ? '1px solid #F1F5F9' : 'none', borderLeft:`3.5px solid ${overallStatus==='Paid' ? '#16a34a' : '#7c3aed'}` }}>
 
               <div style={{ width:11, height:11, borderRadius:'50%', background:'#7c3aed', opacity: overallStatus==='Paid' ? 0.35 : 1, flexShrink:0 }}/>
 
@@ -398,37 +424,50 @@ function CreditsInner() {
 
               <div style={{ position:'relative', flexShrink:0 }} onClick={e => e.stopPropagation()}>
                 <button id={`cmenu-${c.id}`} onClick={() => setOpenMenu(openMenu===c.id ? null : c.id)}
-                  style={{ background:'#F1F5F9', border:'1.5px solid #E2E8F0', borderRadius:'50%', width:32, height:32, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:2, flexShrink:0 }}>
+                  style={{ background:'#F1F5F9', border:'1.5px solid #E2E8F0', borderRadius:8, width:32, height:32, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:2, flexShrink:0 }}>
                   {[0,1,2].map(i=><span key={i} style={{ width:3.5, height:3.5, borderRadius:'50%', background:'#64748B', display:'block' }}/>)}
                 </button>
                 {openMenu===c.id && (
-                  <div style={{ position:'fixed', zIndex:999, background:'white', border:'1.5px solid #0f172a', borderRadius:12, boxShadow:'0 4px 20px rgba(0,0,0,0.13)', overflow:'hidden', minWidth:178 }}
+                  <div style={{ position:'fixed', zIndex:999, background:'white', border:'1px solid #E2E8F0', borderRadius:14, boxShadow:'0 8px 32px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06)', overflow:'hidden', minWidth:178 }}
                     ref={el => { if(el){ const btn=document.getElementById(`cmenu-${c.id}`); if(btn){ const r=btn.getBoundingClientRect(); el.style.top=(r.bottom+4)+'px'; el.style.right=(window.innerWidth-r.right)+'px'; } } }}>
                     {overallStatus === 'Paid' ? (
                       <>
-                        <button onClick={()=>{setViewCredit(c);setViewRowType('used');setOpenMenu(null)}} style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:'#2563EB', background:'white', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif" }}>
+                        <button onClick={()=>{setViewCredit(c);setViewRowType('used');setOpenMenu(null)}} className="fm-item blue">
                           <Eye size={13} color="#2563EB"/> View Details
                         </button>
-                        <button onClick={()=>{ const url = c.receipt_after || c.receipt_before; if(url) window.open(url,'_blank'); setOpenMenu(null) }}
-                          disabled={!c.receipt_after && !c.receipt_before}
-                          style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:(c.receipt_after||c.receipt_before)?'#d97706':'#94a3b8', background:'white', border:'none', cursor:(c.receipt_after||c.receipt_before)?'pointer':'not-allowed', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif", opacity:(c.receipt_after||c.receipt_before)?1:0.5 }}>
-                          <Eye size={13} color={(c.receipt_after||c.receipt_before)?'#d97706':'#94a3b8'}/> View Receipt
+                        <button onClick={()=>{ const url = c.used_receipt_url || c.receipt_before || c.receipt_after; if(url) window.open(url,'_blank'); setOpenMenu(null) }}
+                          disabled={!c.used_receipt_url && !c.receipt_before && !c.receipt_after}
+                          style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:(c.used_receipt_url||c.receipt_before||c.receipt_after)?'#d97706':'#94a3b8', background:'white', border:'none', cursor:(c.used_receipt_url||c.receipt_before||c.receipt_after)?'pointer':'not-allowed', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif", opacity:(c.used_receipt_url||c.receipt_before||c.receipt_after)?1:0.5 }}>
+                          <Eye size={13} color={(c.used_receipt_url||c.receipt_before||c.receipt_after)?'#d97706':'#94a3b8'}/> View Used Receipt
                         </button>
-                        <button onClick={()=>{setPayCredit(c);setOpenMenu(null)}} style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:'#6d28d9', background:'white', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif" }}>
+                        <button onClick={()=>{setPayCredit(c);setPayRowType('due');setOpenMenu(null)}} className="fm-item dark">
                           ✏️ Edit Payment
                         </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={()=>{setPayCredit(c);setOpenMenu(null)}} style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:700, color:'#16a34a', background:'white', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif" }}>
-                          <Check size={13} color="#16a34a"/> Mark as Paid
-                        </button>
-                        <button onClick={()=>{setViewCredit(c);setViewRowType('due');setOpenMenu(null)}} style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:'#2563EB', background:'white', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid #f1f5f9', fontFamily:"'Poppins',sans-serif" }}>
+                        {c.used_status === 'Unpaid' && (
+                          <button onClick={()=>{setPayCredit(c);setPayRowType('used');setOpenMenu(null)}} className="fm-item dark">
+                            <Check size={13} color="#7c3aed"/> Mark Used as Paid
+                          </button>
+                        )}
+                        {c.due_status === 'Unpaid' && (
+                          <button onClick={()=>{setPayCredit(c);setPayRowType('due');setOpenMenu(null)}} className="fm-item green">
+                            <Check size={13} color="#16a34a"/> Mark Due as Paid
+                          </button>
+                        )}
+                        {(c.used_receipt_url || c.receipt_before) && (
+                          <button onClick={()=>{ const url = c.used_receipt_url || c.receipt_before; if(url) window.open(url,'_blank'); setOpenMenu(null) }}
+                            className="fm-item orange">
+                            <Eye size={13} color="#d97706"/> View Used Receipt
+                          </button>
+                        )}
+                        <button onClick={()=>{setViewCredit(c);setViewRowType('due');setOpenMenu(null)}} className="fm-item blue">
                           ✏️ Edit Credit
                         </button>
                       </>
                     )}
-                    <button onClick={()=>handleDelete(c.id)} style={{ width:'100%', padding:'11px 16px', fontSize:13, fontWeight:600, color:'#dc2626', background:'white', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:8, fontFamily:"'Poppins',sans-serif" }}>
+                    <button onClick={()=>handleDelete(c.id)} className="fm-item red">
                       <Trash2 size={13} color="#dc2626"/> Delete
                     </button>
                   </div>
@@ -545,7 +584,7 @@ function CreditsInner() {
                         </span>
                       </div>
                       <div style={{ height: 5, borderRadius: 999, background: '#ede9fe', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: pct > 80 ? '#dc2626' : '#7c3aed', borderRadius: 999, transition: 'width 0.3s' }} />
+                        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: pct > 80 ? '#dc2626' : '#7c3aed', borderRadius: 10, transition: 'width 0.3s' }} />
                       </div>
                       <p style={{ fontSize: 10, color: 'var(--text-faint)', margin: '4px 0 0', fontFamily: "'Poppins',sans-serif" }}>
                         {pct}% used of ₱{limit.toLocaleString('en-PH', { minimumFractionDigits: 2 })} limit
@@ -556,7 +595,7 @@ function CreditsInner() {
               </div>
 
                             {/* ══ USED DATE SECTION ═══════════════════════════════ */}
-              <div style={{ padding:'14px', borderRadius:12, background:'#eff6ff', border:'1.5px solid #bfdbfe' }}>
+              <div style={{ padding:'14px', borderRadius:10, background:'#eff6ff', border:'1.5px solid #bfdbfe' }}>
                 <p style={{ fontSize:13, fontWeight:800, color:'#1d4ed8', margin:'0 0 10px', fontFamily:'Helvetica,Arial,sans-serif' }}>
                   📌 When You Used It
                 </p>
@@ -577,11 +616,11 @@ function CreditsInner() {
                   </label>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     <button type="button" onClick={()=>setUsedAlreadyPaid(false)}
-                      style={{ padding:'11px 0', borderRadius:12, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', background: usedAlreadyPaid===false ? '#fef2f2' : 'white', border:`1.5px solid ${usedAlreadyPaid===false ? '#dc2626' : '#bfdbfe'}`, color: usedAlreadyPaid===false ? '#dc2626' : '#64748b' }}>
+                      style={{ padding:'11px 0', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', background: usedAlreadyPaid===false ? '#fef2f2' : 'white', border:`1.5px solid ${usedAlreadyPaid===false ? '#dc2626' : '#bfdbfe'}`, color: usedAlreadyPaid===false ? '#dc2626' : '#64748b' }}>
                       ⏳ Not Yet Paid
                     </button>
                     <button type="button" onClick={()=>setUsedAlreadyPaid(true)}
-                      style={{ padding:'11px 0', borderRadius:12, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', background: usedAlreadyPaid===true ? '#f0fdf4' : 'white', border:`1.5px solid ${usedAlreadyPaid===true ? '#16a34a' : '#bfdbfe'}`, color: usedAlreadyPaid===true ? '#16a34a' : '#64748b' }}>
+                      style={{ padding:'11px 0', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', textAlign:'center', background: usedAlreadyPaid===true ? '#f0fdf4' : 'white', border:`1.5px solid ${usedAlreadyPaid===true ? '#16a34a' : '#bfdbfe'}`, color: usedAlreadyPaid===true ? '#16a34a' : '#64748b' }}>
                       ✓ Already Paid
                     </button>
                   </div>
@@ -608,7 +647,7 @@ function CreditsInner() {
               </div>
 
               {/* ══ DUE DATE SECTION ══════════════════════════════════ */}
-              <div style={{ padding:'14px', borderRadius:12, background:'#f5f3ff', border:'1.5px solid #ddd6fe' }}>
+              <div style={{ padding:'14px', borderRadius:10, background:'#f5f3ff', border:'1.5px solid #ddd6fe' }}>
                 <p style={{ fontSize:13, fontWeight:800, color:'#5b21b6', margin:'0 0 10px', fontFamily:'Helvetica,Arial,sans-serif' }}>
                   📅 When It's Due (Pay Back)
                 </p>
@@ -619,6 +658,35 @@ function CreditsInner() {
                 <div>
                   <label style={{...labelStyle, color:'#5b21b6'}}>Due Date *</label>
                   <input type="date" value={addDueDate} onChange={e=>setAddDueDate(e.target.value)} style={{...inputStyle, border:'1.5px solid #7c3aed', background:'#faf5ff'}}/>
+                </div>
+
+                {/* Interest Rate */}
+                <div style={{ marginTop: 12 }}>
+                  <label style={{...labelStyle, color:'#5b21b6'}}>Interest Rate (%) <span style={{ color:'#a78bfa', fontWeight:400 }}>optional</span></label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={addInterestRate}
+                    onChange={e => setAddInterestRate(e.target.value)}
+                    placeholder="e.g. 2.5 (leave blank for 0%)"
+                    style={{...inputStyle, border:'1.5px solid #7c3aed', background:'#faf5ff'}}
+                  />
+                  {addAmount && parseFloat(addInterestRate) > 0 && (
+                    <div style={{ marginTop:8, padding:'10px 12px', borderRadius:10, background:'#fdf4ff', border:'1.5px solid #e9d5ff' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:11, color:'#7c3aed', fontFamily:"'Poppins',sans-serif" }}>Principal</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:'#7c3aed', fontFamily:'monospace' }}>₱{(parseFloat(addAmount)||0).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+                      </div>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:11, color:'#9333ea', fontFamily:"'Poppins',sans-serif" }}>Interest ({addInterestRate}%)</span>
+                        <span style={{ fontSize:11, fontWeight:700, color:'#9333ea', fontFamily:'monospace' }}>+ ₱{((parseFloat(addAmount)||0) * (parseFloat(addInterestRate)||0) / 100).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+                      </div>
+                      <div style={{ height:1, background:'#e9d5ff', margin:'6px 0' }}/>
+                      <div style={{ display:'flex', justifyContent:'space-between' }}>
+                        <span style={{ fontSize:12, fontWeight:800, color:'#6d28d9', fontFamily:"'Poppins',sans-serif" }}>Due Amount</span>
+                        <span style={{ fontSize:13, fontWeight:900, color:'#6d28d9', fontFamily:'monospace' }}>₱{((parseFloat(addAmount)||0) * (1 + (parseFloat(addInterestRate)||0)/100)).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {addDueDate && addDueDate === addDate && (
@@ -669,7 +737,7 @@ function CreditsInner() {
               <button onClick={()=>setShowAdd(false)} className="btn-cancel" style={{ flex: 1 }}>Cancel</button>
               <button onClick={handleAdd}
                 disabled={addSaving || !addAmount || !addName || usedAlreadyPaid===null || !addDueDate || addDueDate===addDate}
-                style={{ flex:2, padding:'10px 0', borderRadius:999, fontSize:13, fontWeight:700, color:'white', background: usedAlreadyPaid===true ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', cursor:'pointer', opacity:(addSaving||!addAmount||!addName||usedAlreadyPaid===null||!addDueDate||addDueDate===addDate)?0.4:1, fontFamily:"'Poppins',sans-serif" }}>
+                style={{ flex:2, padding:'10px 0', borderRadius: 10, fontSize:13, fontWeight:700, color:'white', background: usedAlreadyPaid===true ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,#7c3aed,#6d28d9)', border:'none', cursor:'pointer', opacity:(addSaving||!addAmount||!addName||usedAlreadyPaid===null||!addDueDate||addDueDate===addDate)?0.4:1, fontFamily:"'Poppins',sans-serif" }}>
                 {addSaving ? 'Saving...' : usedAlreadyPaid===true ? '✓ Save as Paid' : usedAlreadyPaid===false ? 'Take Credit (Unpaid)' : 'Take Credit'}
               </button>
             </div>
@@ -681,10 +749,12 @@ function CreditsInner() {
       {payCredit && (
         <div style={overlay} onClick={e=>{if(e.target===e.currentTarget){setPayCredit(null);setPayReceipt(null)}}}>
           <div style={mbox} className="slide-up">
-            <div style={{ padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#f0fdf4', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+            <div style={{ padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background: payRowType==='used' ? '#eff6ff' : '#f0fdf4', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
               <div>
-                <h2 style={{ fontWeight:800, color:'#14532d', margin:0, fontSize:16, fontFamily:'Helvetica,Arial,sans-serif' }}>Mark as Paid</h2>
-                <p style={{ fontSize:12, color:'#16a34a', margin:'2px 0 0', fontFamily:"'Poppins',sans-serif" }}>{payCredit.name} — {formatCurrency(payCredit.amount)}</p>
+                <h2 style={{ fontWeight:800, color: payRowType==='used' ? '#1e3a5f' : '#14532d', margin:0, fontSize:16, fontFamily:'Helvetica,Arial,sans-serif' }}>
+                  {payRowType === 'used' ? '📌 Mark Used as Paid' : '📅 Mark Due as Paid'}
+                </h2>
+                <p style={{ fontSize:12, color: payRowType==='used' ? '#3b82f6' : '#16a34a', margin:'2px 0 0', fontFamily:"'Poppins',sans-serif" }}>{payCredit.name}</p>
               </div>
               <button onClick={()=>{setPayCredit(null);setPayReceipt(null)}} style={{ padding:6, background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)' }}><X size={17}/></button>
             </div>
@@ -694,6 +764,36 @@ function CreditsInner() {
                 <p style={{ fontSize:14, fontWeight:700, color:'var(--text-primary)', margin:0, fontFamily:"'Poppins',sans-serif" }}>{payCredit.source}</p>
                 <p style={{ fontSize:12, color:'var(--text-faint)', margin:'4px 0 0', fontFamily:"'Poppins',sans-serif" }}>Due: {dueDateLabel(payCredit)}</p>
               </div>
+              {/* Due amount with interest */}
+              {(() => {
+                const rate = payCredit.interest_rate || 0
+                const displayAmt = payRowType === 'due'
+                  ? payCredit.amount * (1 + rate / 100)
+                  : payCredit.amount
+                const hasInterest = payRowType === 'due' && rate > 0
+                return (
+                  <div style={{ padding:'12px 14px', borderRadius:12, background: hasInterest ? '#fdf4ff' : payRowType==='used' ? '#eff6ff' : '#f0fdf4', border:`1.5px solid ${hasInterest ? '#e9d5ff' : payRowType==='used' ? '#bfdbfe' : '#86efac'}` }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ fontSize:12, color: hasInterest ? '#7c3aed' : payRowType==='used' ? '#2563eb' : '#16a34a', fontFamily:"'Poppins',sans-serif" }}>
+                        {payRowType === 'used' ? 'Amount Used' : 'Amount to Pay Back'}
+                      </span>
+                      <span style={{ fontSize:18, fontWeight:900, color: hasInterest ? '#6d28d9' : payRowType==='used' ? '#1d4ed8' : '#15803d', fontFamily:'monospace' }}>
+                        {formatCurrency(displayAmt)}
+                      </span>
+                    </div>
+                    {hasInterest && (
+                      <div style={{ marginTop:6, fontSize:11, color:'#9333ea', fontFamily:"'Poppins',sans-serif" }}>
+                        ₱{payCredit.amount.toLocaleString('en-PH',{minimumFractionDigits:2})} principal + {rate}% interest
+                      </div>
+                    )}
+                    {payRowType === 'used' && (
+                      <div style={{ marginTop:4, fontSize:11, color:'#60a5fa', fontFamily:"'Poppins',sans-serif" }}>
+                        Due payment is separate — will appear on due date
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
               <div>
                 <label style={labelStyle}>Payment Receipt <span style={{ color:'var(--text-faint)', fontWeight:400 }}>optional</span></label>
                 <label style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px', borderRadius:10, border:'1.5px dashed #0f172a', cursor:'pointer', background:'#f8fafc', fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--text-secondary)' }}>
@@ -749,8 +849,19 @@ function CreditsInner() {
               </div>
               <div style={{ padding:20, overflowY:'auto', flex:1, display:'flex', flexDirection:'column', gap:14 }}>
                 <div style={{ textAlign:'center', padding:'16px 0', borderRadius:14, background:rowStatus==='Paid'?'#f0fdf4':'#fef2f2', border:`1.5px solid ${rowStatus==='Paid'?'#86efac':'#fca5a5'}` }}>
-                  <p style={{ fontSize:11, fontWeight:600, color:rowStatus==='Paid'?'#16a34a':'#dc2626', margin:'0 0 4px', textTransform:'uppercase', fontFamily:"'Poppins',sans-serif" }}>Amount</p>
-                  <p style={{ fontSize:26, fontWeight:900, color:rowStatus==='Paid'?'#16a34a':'#dc2626', margin:0, fontFamily:'monospace' }}>{formatCurrency(viewCredit.amount)}</p>
+                  <p style={{ fontSize:11, fontWeight:600, color:rowStatus==='Paid'?'#16a34a':'#dc2626', margin:'0 0 4px', textTransform:'uppercase', fontFamily:"'Poppins',sans-serif" }}>
+                    {!isViewingUsed && viewCredit.interest_rate > 0 ? 'Due Amount (with interest)' : 'Amount'}
+                  </p>
+                  <p style={{ fontSize:26, fontWeight:900, color:rowStatus==='Paid'?'#16a34a':'#dc2626', margin:0, fontFamily:'monospace' }}>
+                    {!isViewingUsed && viewCredit.interest_rate > 0
+                      ? formatCurrency(viewCredit.amount * (1 + viewCredit.interest_rate / 100))
+                      : formatCurrency(viewCredit.amount)}
+                  </p>
+                  {!isViewingUsed && viewCredit.interest_rate > 0 && (
+                    <p style={{ fontSize:11, color:'#9333ea', margin:'4px 0 0', fontFamily:"'Poppins',sans-serif" }}>
+                      {formatCurrency(viewCredit.amount)} + {viewCredit.interest_rate}% interest
+                    </p>
+                  )}
                   {rowFee > 0 && <p style={{ fontSize:12, color:'#854d0e', margin:'4px 0 0', fontFamily:'monospace' }}>+ {formatCurrency(rowFee)} transfer fee</p>}
                 </div>
                 
@@ -830,7 +941,7 @@ function CreditsInner() {
                 )}
               </div>
               <div style={{ padding:'12px 20px 20px', display:'flex', gap:10, borderTop:'1px solid #e2e8f0', flexShrink:0 }}>
-                {rowStatus==='Unpaid' && <button onClick={()=>{setPayCredit(viewCredit);setViewCredit(null)}} style={{ flex:1, padding:'10px 0', borderRadius:999, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', cursor:'pointer', fontFamily:"'Poppins',sans-serif" }}>Mark as Paid</button>}
+                {rowStatus==='Unpaid' && <button onClick={()=>{setPayCredit(viewCredit);setViewCredit(null)}} style={{ flex:1, padding:'10px 0', borderRadius: 10, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', cursor:'pointer', fontFamily:"'Poppins',sans-serif" }}>Mark as Paid</button>}
                 <button onClick={()=>setViewCredit(null)} className="btn-cancel" style={{ flex: 1 }}>Close</button>
               </div>
             </div>

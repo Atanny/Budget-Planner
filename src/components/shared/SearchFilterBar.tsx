@@ -68,7 +68,7 @@ export default function SearchFilterBar({
             style={{
               width: "100%",
               padding: "11px 14px 11px 38px",
-              borderRadius: 999,
+              borderRadius: 10,
               fontFamily: "Nunito, sans-serif",
               fontSize: 14,
               border: "1.5px solid #E2E8F0",
@@ -83,7 +83,7 @@ export default function SearchFilterBar({
             background: BTN_COLOR,
             color: "white",
             border: "none",
-            borderRadius: 999,
+            borderRadius: 10,
             padding: "11px 20px",
             fontFamily: "Nunito, sans-serif",
             fontWeight: 700,
@@ -93,7 +93,7 @@ export default function SearchFilterBar({
             alignItems: "center",
             gap: 6,
             whiteSpace: "nowrap",
-            boxShadow: "0 3px 10px rgba(79,70,229,0.25)",
+            boxShadow: "0 3px 10px rgba(109,40,217,0.25)",
             flexShrink: 0,
           }}
         >
@@ -162,7 +162,7 @@ export default function SearchFilterBar({
               border: "none",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer", color: "white", flexShrink: 0,
-              boxShadow: "0 2px 8px rgba(79,70,229,0.25)",
+              boxShadow: "0 2px 8px rgba(109,40,217,0.25)",
             }}
           >
             <Search size={15} />

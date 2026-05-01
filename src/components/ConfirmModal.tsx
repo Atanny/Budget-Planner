@@ -31,7 +31,7 @@ export default function ConfirmModal({
         className="w-full max-w-sm rounded-2xl overflow-hidden"
         style={{
           background: 'var(--bg-surface)',
-          border: '1.5px solid #0f172a',
+          border: '1px solid #E2E8F0',
           boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
           animation: 'slide-up 0.2s ease',
         }}

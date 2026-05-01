@@ -128,14 +128,14 @@ export default function ProfilePage() {
                     onClick={saveName}
                     disabled={savingName || !name.trim()}
                     className="p-2 rounded-lg transition"
-                    style={{ background: 'rgba(255,255,255,0.2)', borderRadius:'50%' }}
+                    style={{ background: 'rgba(255,255,255,0.2)', borderRadius:10 }}
                   >
                     <Save size={16} color="white" />
                   </button>
                   <button 
                     onClick={() => { setIsEditingName(false); setName(displayName) }}
                     className="p-2 rounded-lg transition"
-                    style={{ background: 'rgba(255,255,255,0.2)', borderRadius:'50%' }}
+                    style={{ background: 'rgba(255,255,255,0.2)', borderRadius:10 }}
                   >
                     <X size={16} color="white" />
                   </button>
@@ -209,7 +209,7 @@ export default function ProfilePage() {
 
       <button onClick={handleLogout}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition"
-        style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' , borderRadius:'50%'}}>
+        style={{ background: 'var(--brand-pale)', color: 'var(--brand-dark)', border: '1.5px solid var(--brand-muted)' , borderRadius:10}}>
         <LogOut size={16} /> Sign Out
       </button>
     </div>

@@ -133,13 +133,13 @@ export default function SavingsPage() {
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button onClick={() => setYear(y => y - 1)}
-            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <ChevronLeft size={16} color="white" />
+            style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #6D28D9', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronLeft size={16} />
           </button>
           <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif', minWidth: 36, textAlign: 'center' }}>{year}</span>
           <button onClick={() => setYear(y => y + 1)}
-            style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--primary)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <ChevronRight size={16} color="white" />
+            style={{ width: 32, height: 32, borderRadius: 10, background: 'white', border: '1.5px solid #6D28D9', color: '#6D28D9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -230,7 +230,7 @@ export default function SavingsPage() {
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Nunito, sans-serif' }}>₱ {total.toLocaleString()}</span>
                   </div>
                   <div style={{ height: 5, borderRadius: 999, background: '#E8ECF4', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${barPct}%`, background: isGoalMet ? '#16A34A' : 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 999, transition: 'width 0.4s' }} />
+                    <div style={{ height: '100%', width: `${barPct}%`, background: isGoalMet ? '#16A34A' : 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 10, transition: 'width 0.4s' }} />
                   </div>
                   {row.notes && <p style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 5, fontFamily: 'Nunito, sans-serif' }}>{row.notes}</p>}
                 </div>
@@ -265,7 +265,7 @@ export default function SavingsPage() {
           {savingsGoal > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ height: 6, borderRadius: 999, background: '#E8ECF4', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${goalPct}%`, background: 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 999, transition: 'width 0.4s' }} />
+                <div style={{ height: '100%', width: `${goalPct}%`, background: 'linear-gradient(90deg, var(--primary), #16A34A)', borderRadius: 10, transition: 'width 0.4s' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, fontFamily: 'Nunito, sans-serif' }}>{goalPct}% of yearly goal</span>

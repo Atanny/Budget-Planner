@@ -10,10 +10,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!isAuthPage && <Navbar />}
-      <main className={`${!isAuthPage ? 'w-full overflow-x-hidden' : ''}`}>
+      <main className={`${!isAuthPage ? 'w-full overflow-x-hidden' : ''}`}
+        style={!isAuthPage ? { height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : {}}>
         <div
           className={`${!isAuthPage ? 'w-full max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5' : ''}`}
-          style={!isAuthPage ? { paddingBottom: 104 } : {}}
+          style={!isAuthPage ? { paddingBottom: 120 } : {}}
         >
           {children}
         </div>

@@ -111,7 +111,7 @@ export default function EditSalaryModal({ settings, salaryHistory, viewMonth, vi
       <div className="w-full max-w-sm slide-up rounded-2xl overflow-hidden flex flex-col"
         style={{ 
           background: 'var(--bg-surface)', 
-          border: '1.5px solid #0f172a', 
+          border: '1px solid #E2E8F0', 
           boxShadow: '0 8px 32px rgba(15,23,42,0.16)',
           maxHeight: 'calc(100vh - 32px)',
         }}>
@@ -162,7 +162,7 @@ export default function EditSalaryModal({ settings, salaryHistory, viewMonth, vi
           <div className="p-5 space-y-4">
             {/* 1st Cutoff */}
             <div className="p-4 rounded-xl space-y-3"
-              style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
+              style={{ background: 'var(--bg-subtle)', border: '1px solid #E2E8F0' }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand-dark)' }}>1st Cutoff (15th)</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -185,7 +185,7 @@ export default function EditSalaryModal({ settings, salaryHistory, viewMonth, vi
 
             {/* 2nd Cutoff */}
             <div className="p-4 rounded-xl space-y-3"
-              style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
+              style={{ background: 'var(--bg-subtle)', border: '1px solid #E2E8F0' }}>
               <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>2nd Cutoff (30th)</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>

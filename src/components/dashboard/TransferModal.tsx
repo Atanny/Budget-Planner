@@ -36,7 +36,7 @@ export default function TransferModal({ banks, initialFromId = "", onClose, onCo
 
   const bankBtn = (b: BankAccount, selected: boolean, color: string) => (
     <button key={b.id} onClick={() => b.id === fromId ? setFromId(b.id) : setToId(b.id)}
-      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${selected ? color : "var(--border)"}`, background: selected ? (color === "#dc2626" ? "#fef2f2" : "#eff6ff") : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+      style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${selected ? color : "var(--border)"}`, background: selected ? (color === "#dc2626" ? "#fef2f2" : "#eff6ff") : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
       <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: selected ? color : "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.name}</p>
@@ -71,7 +71,7 @@ export default function TransferModal({ banks, initialFromId = "", onClose, onCo
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {banks.map(b => (
                 <button key={b.id} onClick={() => setFromId(b.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${fromId === b.id ? "#dc2626" : "var(--border)"}`, background: fromId === b.id ? "#fef2f2" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${fromId === b.id ? "#dc2626" : "var(--border)"}`, background: fromId === b.id ? "#fef2f2" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: fromId === b.id ? "#dc2626" : "var(--text-primary)", margin: 0 }}>{b.name}</p>
@@ -89,7 +89,7 @@ export default function TransferModal({ banks, initialFromId = "", onClose, onCo
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {banks.filter(b => b.id !== fromId).map(b => (
                 <button key={b.id} onClick={() => setToId(b.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${toId === b.id ? "#2563EB" : "var(--border)"}`, background: toId === b.id ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${toId === b.id ? "#2563EB" : "var(--border)"}`, background: toId === b.id ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: toId === b.id ? "#1d4ed8" : "var(--text-primary)", margin: 0 }}>{b.name}</p>
@@ -130,7 +130,7 @@ export default function TransferModal({ banks, initialFromId = "", onClose, onCo
 
           {/* Summary */}
           {fromId && toId && amt > 0 && (
-            <div style={{ padding: "10px 12px", borderRadius: 10, background: insufficient ? "#fef2f2" : "var(--bg-subtle)", border: `1.5px solid ${insufficient ? "#fca5a5" : "#0f172a"}`, fontSize: 12 }}>
+            <div style={{ padding: "10px 12px", borderRadius: 10, background: insufficient ? "#fef2f2" : "var(--bg-subtle)", border: `1.5px solid ${insufficient ? "#fca5a5" : "#E2E8F0"}`, fontSize: 12 }}>
               {insufficient ? (
                 <p style={{ color: "#dc2626", fontWeight: 600, margin: 0 }}>⚠️ Insufficient balance in {fromBank?.name} ({formatCurrency(fromBank?.balance || 0)} available)</p>
               ) : (
@@ -161,7 +161,7 @@ export default function TransferModal({ banks, initialFromId = "", onClose, onCo
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={!canSubmit || saving}
-            style={{ flex: 2, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", cursor: "pointer", opacity: (!canSubmit || saving) ? 0.4 : 1 }}>
+            style={{ flex: 2, padding: "10px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", cursor: "pointer", opacity: (!canSubmit || saving) ? 0.4 : 1 }}>
             {saving ? "Transferring..." : "⇄ Transfer"}
           </button>
         </div>

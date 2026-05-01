@@ -12,7 +12,7 @@ interface Props {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-sm)', fontSize: 14,
-  border: '1.5px solid #0f172a', background: 'var(--bg-subtle)',
+  border: '1px solid #E2E8F0', background: 'var(--bg-subtle)',
   color: 'var(--text-primary)', outline: 'none',
 }
 const labelStyle: React.CSSProperties = {
@@ -181,7 +181,7 @@ export default function ExtendLoanModal({ loan, onClose, onSave }: Props) {
           {/* Mode toggle */}
           <div>
             <label style={labelStyle}>Payment Amount Mode</label>
-            <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1.5px solid #0f172a' }}>
+            <div className="flex gap-2 p-1 rounded-xl" style={{ background: 'var(--bg-subtle)', border: '1px solid #E2E8F0' }}>
               {(['equal', 'manual'] as const).map(m => (
                 <button
                   key={m}

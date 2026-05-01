@@ -66,7 +66,7 @@ export default function SahodModal({ banks, activeSalary, onClose, onConfirm }: 
                 { label: "2nd Cutoff (30th)", val: "2nd" as const, salary: (activeSalary as any)?.second_cutoff_salary || 0 },
               ]).map(opt => (
                 <button key={opt.val} onClick={() => { setSahodCutoff(opt.val); setSahodAmount(opt.salary.toString()); }}
-                  style={{ padding: "10px 8px", borderRadius: 12, textAlign: "center", cursor: "pointer", background: sahodCutoff === opt.val ? "#dbeafe" : "var(--bg-subtle)", border: `1.5px solid ${sahodCutoff === opt.val ? "#93c5fd" : "var(--border)"}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  style={{ padding: "10px 8px", borderRadius: 10, textAlign: "center", cursor: "pointer", background: sahodCutoff === opt.val ? "#dbeafe" : "var(--bg-subtle)", border: `1.5px solid ${sahodCutoff === opt.val ? "#93c5fd" : "var(--border)"}`, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", margin: 0 }}>{opt.label}</p>
                   <p style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "#2563eb", margin: 0 }}>{formatCurrency(opt.salary)}</p>
                 </button>
@@ -82,7 +82,7 @@ export default function SahodModal({ banks, activeSalary, onClose, onConfirm }: 
                 const selected = sahodBankId ? sahodBankId === b.id : b.is_main_bank;
                 return (
                   <button key={b.id} onClick={() => setSahodBankId(b.id)}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12, border: `1.5px solid ${selected ? "#2563EB" : "var(--border)"}`, background: selected ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${selected ? "#2563EB" : "var(--border)"}`, background: selected ? "#eff6ff" : "var(--bg-subtle)", cursor: "pointer", textAlign: "left" }}>
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: b.color, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 13, fontWeight: 700, color: selected ? "#1d4ed8" : "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>{b.name}</p>
@@ -119,7 +119,7 @@ export default function SahodModal({ banks, activeSalary, onClose, onConfirm }: 
           </div>
 
           {total > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, background: "var(--bg-subtle)", border: "1.5px solid #0f172a", fontSize: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, background: "var(--bg-subtle)", border: "1.5px solid #E2E8F0", fontSize: 12 }}>
               <span style={{ color: "var(--text-muted)" }}>Total adding to <strong>{targetBank?.name || "account"}</strong></span>
               <span style={{ fontWeight: 700, fontFamily: "monospace", color: "#2563eb" }}>{formatCurrency(total)}</span>
             </div>
@@ -132,7 +132,7 @@ export default function SahodModal({ banks, activeSalary, onClose, onConfirm }: 
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={!sahodAmount || saving}
-            style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #2563eb, #1d4ed8)", border: "none", cursor: "pointer", opacity: (!sahodAmount || saving) ? 0.5 : 1 }}>
+            style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 14, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #6D28D9, #2563EB)", border: "none", cursor: "pointer", opacity: (!sahodAmount || saving) ? 0.5 : 1 }}>
             {saving ? "Adding..." : "Add Sahod 💸"}
           </button>
         </div>

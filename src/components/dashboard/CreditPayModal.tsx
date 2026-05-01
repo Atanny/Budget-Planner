@@ -62,7 +62,7 @@ export default function CreditPayModal({ credit, rowType, banks, onClose, onConf
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "grid", placeItems: "center", background: "rgba(0,0,0,0.45)", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 400, borderRadius: 20, overflow: "hidden", background: "white", border: "1.5px solid #0f172a", boxShadow: "0 8px 32px rgba(15,23,42,0.18)" }}>
+      <div style={{ width: "100%", maxWidth: 400, borderRadius: 20, overflow: "hidden", background: "white", border: "1px solid #E2E8F0", boxShadow: "0 8px 32px rgba(15,23,42,0.18)" }}>
         
         <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", background: rowType === "used" ? "#eff6ff" : "#f0fdf4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -108,7 +108,7 @@ export default function CreditPayModal({ credit, rowType, banks, onClose, onConf
               Transfer Fee <span style={{ fontWeight: 400, color: "#94a3b8" }}>(optional)</span>
             </label>
             <input type="number" value={transferFee} onChange={e => setTransferFee(e.target.value)} placeholder="0.00"
-              style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1.5px solid #0f172a", background: "#f8fafc", color: "#1e293b", outline: "none" }} />
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 10, fontSize: 13, border: "1px solid #E2E8F0", background: "#f8fafc", color: "#1e293b", outline: "none" }} />
             {fee > 0 && <p style={{ fontSize: 11, marginTop: 5, color: "#854d0e", fontWeight: 600 }}>Total: {formatCurrency(totalAmount)}</p>}
           </div>
 
@@ -124,7 +124,7 @@ export default function CreditPayModal({ credit, rowType, banks, onClose, onConf
             {receiptPreview && <button onClick={() => { setReceiptFile(null); setReceiptPreview(null); }} style={{ marginTop: 4, fontSize: 11, color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>✕ Remove</button>}
           </div>
 
-          <div style={{ padding: 11, borderRadius: 12, background: "#fef9c3", border: "1px solid #0f172a" }}>
+          <div style={{ padding: 11, borderRadius: 12, background: "#fef9c3", border: "1px solid #E2E8F0" }}>
             <p style={{ fontSize: 12, fontWeight: 700, textAlign: "center", color: "#854d0e" }}>
               ⚠️ Deduct {formatCurrency(totalAmount)} from selected account
             </p>
@@ -132,11 +132,11 @@ export default function CreditPayModal({ credit, rowType, banks, onClose, onConf
         </div>
 
         <div style={{ padding: "12px 20px 20px", display: "flex", gap: 10, borderTop: "1px solid #e2e8f0" }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 999, fontSize: 13, fontWeight: 600, background: "#f1f5f9", color: "#64748b", border: "1.5px solid #0f172a", cursor: "pointer" }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, background: "#f1f5f9", color: "#64748b", border: "1px solid #E2E8F0", cursor: "pointer" }}>
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={!canSubmit}
-            style={{ flex: 2, padding: "10px 0", borderRadius: 999, fontSize: 13, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", cursor: canSubmit ? "pointer" : "not-allowed", opacity: canSubmit ? 1 : 0.4 }}>
+            style={{ flex: 2, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, color: "white", background: "linear-gradient(135deg, #16A34A, #15803D)", border: "none", cursor: canSubmit ? "pointer" : "not-allowed", opacity: canSubmit ? 1 : 0.4 }}>
             {saving ? "Processing..." : "✓ Confirm Paid"}
           </button>
         </div>

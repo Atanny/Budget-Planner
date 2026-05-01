@@ -33,10 +33,10 @@ const SS: Record<DebtStatus, { color: string; bg: string; border: string }> = {
   Partial: { color: '#d97706', bg: '#fff7ed', border: '#fcd34d' },
   Paid:    { color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
 }
-const IS: React.CSSProperties = { width: '100%', padding: '10px 12px', fontSize: 13, borderRadius: 10, border: '1.5px solid #0f172a', background: '#F8FAFC', color: 'var(--text-primary)', outline: 'none', fontFamily: "'Poppins', sans-serif" }
+const IS: React.CSSProperties = { width: '100%', padding: '10px 12px', fontSize: 13, borderRadius: 10, border: '1px solid #E2E8F0', background: '#F8FAFC', color: 'var(--text-primary)', outline: 'none', fontFamily: "'Poppins', sans-serif" }
 const LS: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5, display: 'block', fontFamily: "'Poppins', sans-serif" }
 const OV: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 50, display: 'grid', placeItems: 'center', background: 'rgba(0,0,0,0.45)', padding: 16 }
-const MB: React.CSSProperties = { width: '100%', maxWidth: 440, borderRadius: 20, overflow: 'hidden', background: 'var(--bg-surface)', border: '1.5px solid #0f172a', boxShadow: '0 8px 32px rgba(15,23,42,0.18)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }
+const MB: React.CSSProperties = { width: '100%', maxWidth: 440, borderRadius: 20, overflow: 'hidden', background: 'var(--bg-surface)', border: '1px solid #E2E8F0', boxShadow: '0 8px 32px rgba(15,23,42,0.18)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }
 
 function HutangPageInner() {
   const searchParams = useSearchParams()
@@ -207,7 +207,7 @@ function HutangPageInner() {
           <p style={{ fontSize:12, color:'var(--text-faint)', margin:'2px 0 0', fontFamily:"'Poppins',sans-serif" }}>People who owe you money</p>
         </div>
         <button onClick={() => setShowAdd(true)}
-          style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 14px', borderRadius:999, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#2563EB,#1d4ed8)', border:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(37,99,235,0.3)', fontFamily:"'Poppins',sans-serif" }}>
+          style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 14px', borderRadius: 10, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg, #6D28D9, #2563EB)', border:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(109,40,217,0.3)', fontFamily:"'Poppins',sans-serif" }}>
           <Plus size={14}/> Add Record
         </button>
       </div>
@@ -229,7 +229,7 @@ function HutangPageInner() {
       {/* Quick Add Payment */}
       <div style={{ padding:'12px 16px 0' }}>
         <button onClick={() => { setPayDebtId(''); setShowPay(true) }}
-          style={{ width:'100%', padding:'11px 0', borderRadius:12, fontSize:13, fontWeight:700, color:'#16a34a', background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:"'Poppins',sans-serif" }}>
+          style={{ width:'100%', padding:'11px 0', borderRadius:10, fontSize:13, fontWeight:700, color:'#16a34a', background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:"'Poppins',sans-serif" }}>
           <Plus size={14}/> Add Payment Received
         </button>
       </div>
@@ -242,7 +242,7 @@ function HutangPageInner() {
             <input value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && setSearch(search)}
               placeholder="Search person..."
-              style={{ width:'100%', padding:'11px 14px 11px 38px', borderRadius:999, fontFamily:'Nunito, sans-serif', fontSize:14, border:'1.5px solid #E2E8F0', outline:'none' }}/>
+              style={{ width:'100%', padding:'11px 14px 11px 38px', borderRadius: 10, fontFamily:'Nunito, sans-serif', fontSize:14, border:'1.5px solid #E2E8F0', outline:'none' }}/>
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -265,7 +265,7 @@ function HutangPageInner() {
             </button>
           </div>
           <button onClick={() => { setFromDateActive(fromDate); setToDateActive(toDate) }}
-            style={{ width:38, height:38, borderRadius:10, background:'#4F46E5', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', flexShrink:0, boxShadow:'0 2px 8px rgba(79,70,229,0.25)' }}>
+            style={{ width:38, height:38, borderRadius:10, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', border:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'white', flexShrink:0, boxShadow:'0 2px 8px rgba(109,40,217,0.25)' }}>
             <Search size={15}/>
           </button>
           {(fromDateActive || toDateActive) && (
@@ -298,7 +298,7 @@ function HutangPageInner() {
             ))}
           </div>
           <button onClick={() => setHideAmts(h => !h)}
-            style={{ display:'inline-flex', alignItems:'center', gap:5, background:'#2563EB', color:'white', borderRadius:999, padding:'5px 12px', fontSize:11, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'Helvetica,Arial,sans-serif', flexShrink:0 }}>
+            style={{ display:'inline-flex', alignItems:'center', gap:5, background: 'linear-gradient(135deg, #6D28D9, #2563EB)', color:'white', borderRadius: 10, padding:'5px 12px', fontSize:11, fontWeight:700, border:'none', cursor:'pointer', fontFamily:'Helvetica,Arial,sans-serif', flexShrink:0 }}>
             {hideAmts ? <Eye size={11}/> : <EyeOff size={11}/>}
             {hideAmts ? 'Show' : 'Hide'}
           </button>
@@ -322,10 +322,10 @@ function HutangPageInner() {
           const rPays = payments[r.id] || []
           const pct = r.amount_owed>0 ? Math.min(100, Math.round((r.amount_paid/r.amount_owed)*100)) : 0
           return (
-            <div key={r.id} style={{ borderBottom: i<filtered.length-1 ? '1px solid var(--border)' : 'none', background: r.status==='Paid' ? '#f0fdf4' : 'white' }}>
-              <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
+            <div key={r.id} style={{ marginBottom: i < filtered.length - 1 ? 8 : 0 }}>
+              <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', gap:10, background: r.status==='Paid' ? '#f0fdf4' : 'white', borderRadius: 12, border:'1px solid #E8ECF4', borderLeft:`3.5px solid ${r.status==='Paid' ? '#16a34a' : '#FF8B00'}`, boxShadow:'0 1px 4px rgba(15,23,42,0.05)' }}>
                 {/* Avatar */}
-                <div style={{ width:36, height:36, borderRadius:'50%', background:'#eff6ff', border:'1.5px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <div style={{ width:36, height:36, borderRadius:12, background:'#eff6ff', border:'1.5px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <span style={{ fontSize:14, fontWeight:800, color:'#2563EB', fontFamily:'Helvetica,Arial,sans-serif' }}>{r.person_name[0].toUpperCase()}</span>
                 </div>
                 {/* Info + progress bar */}
@@ -356,16 +356,16 @@ function HutangPageInner() {
                 <div style={{ position:'relative', flexShrink:0 }}>
                   <button id={`hutang-menu-${r.id}`}
                     onClick={e => { e.stopPropagation(); setOpenMenu(openMenu===r.id ? null : r.id) }}
-                    style={{ background:'#F1F5F9', border:'1.5px solid #E2E8F0', borderRadius:'50%', width:34, height:34, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:2, flexShrink:0 }}>
+                    style={{ background:'#F1F5F9', border:'1.5px solid #E2E8F0', borderRadius:8, width:34, height:34, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:2, flexShrink:0 }}>
                     {[0,1,2].map(i => <span key={i} style={{ width:3.5, height:3.5, borderRadius:'50%', background:'#64748B', display:'block' }}/>)}
                   </button>
                 </div>
               </div>
               {/* Inline payments preview */}
               {rPays.length>0 && (
-                <div style={{ padding:'0 16px 10px' }}>
+                <div style={{ padding:'0 4px 4px', marginTop: 4 }}>
                   {rPays.slice(0,2).map(p => (
-                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', padding:'4px 10px', borderRadius:7, background:'#f8fafc', border:'1px solid #e2e8f0', marginBottom:3 }}>
+                    <div key={p.id} style={{ display:'flex', justifyContent:'space-between', padding:'4px 10px', borderRadius:8, background:'#f8fafc', border:'1px solid #e2e8f0', marginBottom:4 }}>
                       <span style={{ fontSize:11, color:'var(--text-secondary)', fontFamily:"'Poppins',sans-serif" }}>
                         {new Date(p.date+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}
                         {p.note && <span style={{ color:'var(--text-faint)', marginLeft:5 }}>{p.note}</span>}
@@ -561,7 +561,7 @@ function HutangPageInner() {
             <div style={MB} className="slide-up">
               <div style={{ padding:'16px 20px', borderBottom:'1px solid #e2e8f0', background:'#f8fafc', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <div style={{ width:40, height:40, borderRadius:'50%', background:'#eff6ff', border:'1.5px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div style={{ width:40, height:40, borderRadius:12, background:'#eff6ff', border:'1.5px solid #bfdbfe', display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <span style={{ fontSize:16, fontWeight:800, color:'#2563EB', fontFamily:'Helvetica,Arial,sans-serif' }}>{viewRecord.person_name[0].toUpperCase()}</span>
                   </div>
                   <div>
@@ -578,7 +578,7 @@ function HutangPageInner() {
                     { label:'Paid', value:viewRecord.amount_paid, color:'#16a34a', bg:'#f0fdf4' },
                     { label:'Remaining', value:viewRecord.remaining_balance, color:'#dc2626', bg:'#fef2f2' },
                   ].map(c => (
-                    <div key={c.label} style={{ borderRadius:12, background:c.bg, padding:'10px', textAlign:'center' }}>
+                    <div key={c.label} style={{ borderRadius:10, background:c.bg, padding:'10px', textAlign:'center' }}>
                       <p style={{ fontSize:10, fontWeight:600, color:c.color, margin:'0 0 3px', textTransform:'uppercase', fontFamily:"'Poppins',sans-serif" }}>{c.label}</p>
                       <p style={{ fontSize:13, fontWeight:800, color:c.color, margin:0, fontFamily:'monospace' }}>{formatCurrency(c.value)}</p>
                     </div>
@@ -623,7 +623,7 @@ function HutangPageInner() {
               <div style={{ padding:'12px 20px 20px', display:'flex', gap:10, borderTop:'1px solid #e2e8f0', flexShrink:0 }}>
                 {viewRecord.status!=='Paid' && (
                   <button onClick={() => { setPayDebtId(viewRecord.id); setViewRecord(null); setShowPay(true) }}
-                    style={{ flex:1, padding:'10px 0', borderRadius:999, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', cursor:'pointer' }}>Add Payment</button>
+                    style={{ flex:1, padding:'10px 0', borderRadius:10, fontSize:13, fontWeight:700, color:'white', background:'linear-gradient(135deg,#16a34a,#15803d)', border:'none', cursor:'pointer' }}>Add Payment</button>
                 )}
                 <button onClick={() => setViewRecord(null)} className="btn-cancel" style={{ flex: 1 }}>Close</button>
               </div>

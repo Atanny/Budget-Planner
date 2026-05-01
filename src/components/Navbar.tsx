@@ -177,7 +177,7 @@ export default function Navbar() {
               background: '#4F46E5', border: 'none', borderRadius: 16,
               cursor: 'pointer', fontWeight: 800, fontSize: 15, color: 'white',
               fontFamily: 'Nunito, sans-serif',
-              boxShadow: '0 4px 16px rgba(79,70,229,0.32)',
+              boxShadow: '0 4px 16px rgba(109,40,217,0.32)',
               animation: 'navSlide 0.28s ease',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
@@ -226,7 +226,7 @@ export default function Navbar() {
         <div style={{
           display: 'flex', alignItems: 'center',
           background: '#FFFFFF',
-          borderRadius: 999,
+          borderRadius: 10,
           boxShadow: '0 4px 24px rgba(15,23,42,0.12), 0 1px 4px rgba(15,23,42,0.06)',
           padding: '8px 14px',
           gap: 0,
@@ -242,7 +242,7 @@ export default function Navbar() {
                 background: '#4F46E5', border: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(79,70,229,0.40)',
+                boxShadow: '0 4px 14px rgba(109,40,217,0.40)',
                 transition: 'transform 0.2s, background 0.2s',
                 transform: open ? 'rotate(45deg)' : 'rotate(0)',
               }}
